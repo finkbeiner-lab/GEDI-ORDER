@@ -29,16 +29,20 @@ class Dataspring(Parser):
         cnt = dataset_cnt.reduce(0., lambda x, _: x + 1)
         return cnt
 
-    def reshape_ims(self, imgs, lbls, files):
+    def reshape_ims(self, imgs, lbls, files, randomcrop=True):
         if self.p.orig_size[-1] > self.p.target_size[-1]:
             # Remove alpha channel
             channels = tf.unstack(imgs, axis=-1)
             imgs = tf.stack([channels[0], channels[1], channels[2]], axis=-1)
-        if self.p.orig_size[0] > self.p.target_size[0]:
-            y0 = (self.p.orig_size[0] - self.p.target_size[0]) // 2
-            x0 = (self.p.orig_size[1] - self.p.target_size[1]) // 2
+        if randomcrop:
+            if self.p.orig_size[0] > self.p.target_size[0]:
+                imgs = tf.image.random_crop(imgs, size=[self.p.BATCH_SIZE, 224, 224, 1])
+        else:
+            if self.p.orig_size[0] > self.p.target_size[0]:
+                y0 = (self.p.orig_size[0] - self.p.target_size[0]) // 2
+                x0 = (self.p.orig_size[1] - self.p.target_size[1]) // 2
 
-            imgs = tf.image.crop_to_bounding_box(imgs, y0, x0, self.p.target_size[1], self.p.target_size[0])
+                imgs = tf.image.crop_to_bounding_box(imgs, y0, x0, self.p.target_size[1], self.p.target_size[0])
         return imgs, lbls, files
 
     def datagen_base(self, istraining=True):
@@ -75,7 +79,7 @@ class Dataspring(Parser):
 
         if self.p.augmentbool and istraining:
             ds = ds.map(self.augment, num_parallel_calls=self.p.num_parallel_calls)
-            ds = ds.map(self.cut_off_vals, num_parallel_calls=self.p.num_parallel_calls)
+            ds = ds.map(self.set_max_to_one, num_parallel_calls=self.p.num_parallel_calls)
 
         if (self.p.which_model == 'vgg16') or (self.p.which_model == 'vgg19'):
             print('Using {}'.format(self.p.which_model))
@@ -128,33 +132,33 @@ if __name__ == '__main__':
     # for i in range(1):
     #     imgs, lbls, files = Dat.datagen()
     #     for img, lbl in zip(imgs, lbls):
-            # plt.figure()
-        #     lbl = lbl.numpy()
-        #     # im = (img + 1) * 127.5
-        #     im = np.array(img)
-        #     print(np.min(im))
-        #     print(np.max(im))
-        #     im *= 255
-        #     im = np.uint8(im)
-        #     # im = np.uint8(np.reshape(im, (224, 224)))
-        #     plt.imshow(im)
-        #     plt.title(lbl)
-        # plt.show()
+    # plt.figure()
+    #     lbl = lbl.numpy()
+    #     # im = (img + 1) * 127.5
+    #     im = np.array(img)
+    #     print(np.min(im))
+    #     print(np.max(im))
+    #     im *= 255
+    #     im = np.uint8(im)
+    #     # im = np.uint8(np.reshape(im, (224, 224)))
+    #     plt.imshow(im)
+    #     plt.title(lbl)
+    # plt.show()
 
-    for i in range(1):
+    for i in range(2):
         imgs, lbls, files = Dat.datagen()
         for img, lbl in zip(imgs, lbls):
             plt.figure()
             lbl = lbl.numpy()
             img = img.numpy()
-            img[:,:,0] += p.VGG_MEAN[0]
-            img[:,:,1] += p.VGG_MEAN[1]
-            img[:,:,2] += p.VGG_MEAN[2]
+            img[:, :, 0] += p.VGG_MEAN[0]
+            img[:, :, 1] += p.VGG_MEAN[1]
+            img[:, :, 2] += p.VGG_MEAN[2]
             print(np.max(img))
             print(np.min(img))
             rgb = np.copy(img)
-            rgb[:,:,0] = img[:,:,2]
-            rgb[:,:,2] = img[:,:,0]
+            rgb[:, :, 0] = img[:, :, 2]
+            rgb[:, :, 2] = img[:, :, 0]
             im = np.uint8(rgb)
             plt.imshow(im)
             plt.title(lbl)

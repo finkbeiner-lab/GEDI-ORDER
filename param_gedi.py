@@ -14,31 +14,31 @@ import datetime
 class Param:
     def __init__(self):
 
-        self.vgg16_weight_path = '/home/jlamstein/Documents/pretrained_weights/vgg16.npy'
-
-        self.gedi_weight_path =  '/home/jlamstein/Documents/pretrained_weights/gedi_model.npy.npy'
-
-        self.fine_tune_layers = [
-            'conv4_1',
-            'conv4_2',
-            'conv4_3',
-            'conv5_1',
-            'conv5_2',
-            'conv5_3',
-            'fc6',
-            'fc7',
-            'fc8'
-        ]
+        # self.vgg16_weight_path = '/home/jlamstein/Documents/pretrained_weights/vgg16.npy'
+        #
+        # self.gedi_weight_path =  '/home/jlamstein/Documents/pretrained_weights/gedi_model.npy.npy'
+        #
+        # self.fine_tune_layers = [
+        #     'conv4_1',
+        #     'conv4_2',
+        #     'conv4_3',
+        #     'conv5_1',
+        #     'conv5_2',
+        #     'conv5_3',
+        #     'fc6',
+        #     'fc7',
+        #     'fc8'
+        # ]
 
 
 
         self.which_model = 'vgg16'
-        self.EPOCHS = 1
+        self.EPOCHS = 100
         self.learning_rate= 3e-4
-        self.BATCH_SIZE = 32
+        self.BATCH_SIZE = 16
 
-        self.holdlr = 1e-3
-        self.newlr = 1e-4
+        # self.holdlr = 1e-3
+        # self.newlr = 1e-4
 
         now = datetime.datetime.now()
         self.timestamp = '%d%02d%02d-%02d%02d%02d' % (now.year, now.month, now.day, now.hour, now.minute, now.second)
@@ -102,24 +102,13 @@ class Param:
         self.num_parallel_calls = 4
         self.num_parallel_reads = 4
 
-        self.vgg16_weight_path = '/home/jlamstein/Documents/pretrained_weights/vgg16.npy'
+        # self.vgg16_weight_path = '/home/jlamstein/Documents/pretrained_weights/vgg16.npy'
         # self.wd_layers = None
         # self.hold_lr = 1e-8
         # self.new_lr = 3e-4
-        self.wd_penalty = 1e-6
         self.shuffle_buffer_size = 1000
 
-        self.fine_tune_layers = [
-            'conv4_1',
-            'conv4_2',
-            'conv4_3',
-            'conv5_1',
-            'conv5_2',
-            'conv5_3',
-            'fc6',
-            'fc7',
-            'fc8'
-        ]
+
 
 
 

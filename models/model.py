@@ -1,7 +1,6 @@
 import tensorflow as tf
 from tensorflow.keras import layers
 from tensorflow.keras.models import Model
-from ops.model_ops import insert_layer_nonseq
 import param_gedi as param
 
 
@@ -45,7 +44,7 @@ class CNN:
             return layers.Dropout(rate=0.5, seed=11, name=name)
 
     def vgg16(self, imsize=(224, 224, 3)):
-        input = layers.Input(shape=(imsize[0], imsize[1], imsize[2]), name='imgs')
+        input = layers.Input(shape=(imsize[0], imsize[1], imsize[2]), name='imgs')  # NAME MATCHES DICT KEY
         base_model = tf.keras.applications.VGG16(include_top=False, weights='imagenet', input_tensor=input,
                                                  input_shape=(imsize[0], imsize[1], imsize[2]))
         for layr in base_model.layers:

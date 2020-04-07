@@ -12,7 +12,7 @@ tfrecord = p.data_train
 DEBUG = True
 gen = pipe.Dataspring(tfrecord)
 gen.datagen_base(istraining=False)
-timestamp = 'vgg16_2020_04_06_15_23_12'
+timestamp = 'vgg16_2020_04_06_17_10_19'
 import_path = os.path.join(p.models_dir, "{}.h5".format(timestamp))
 
 print('Loading model...')

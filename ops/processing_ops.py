@@ -192,24 +192,27 @@ class Parser:
         Returns:
 
         """
-        # assert_op = tf.Assert(tf.less_equal(tf.reduce_max(img), 1.0), [img])
-        # with tf.control_dependencies([assert_op]):
+        assert_op = tf.Assert(tf.less_equal(tf.reduce_max(img), 1.0), [img])
+        with tf.control_dependencies([assert_op]):
 
-        img = tf.image.random_flip_up_down(img)
-        img = tf.image.random_flip_left_right(img)
+            img = tf.image.random_flip_up_down(img)
+            img = tf.image.random_flip_left_right(img)
 
-        #
-        turns = tf.random.uniform(shape=[], minval=0, maxval=4, dtype=tf.int32)
+            #
+            turns = tf.random.uniform(shape=[], minval=0, maxval=4, dtype=tf.int32)
 
-        img = tf.cond(tf.equal(turns, tf.constant(1)), lambda: tf.image.rot90(img, 1), lambda: tf.identity(img))
+            img = tf.cond(tf.equal(turns, tf.constant(1)), lambda: tf.image.rot90(img, 1), lambda: tf.identity(img))
 
-        img = tf.cond(tf.equal(turns, tf.constant(2)), lambda: tf.image.rot90(img, 2), lambda: tf.identity(img))
+            img = tf.cond(tf.equal(turns, tf.constant(2)), lambda: tf.image.rot90(img, 2), lambda: tf.identity(img))
 
-        img = tf.cond(tf.equal(turns, tf.constant(3)), lambda: tf.image.rot90(img, 3), lambda: tf.identity(img))
+            img = tf.cond(tf.equal(turns, tf.constant(3)), lambda: tf.image.rot90(img, 3), lambda: tf.identity(img))
+
+        # tensorf object has no attribute ndim error
+        # img = tf.keras.preprocessing.image.random_shear(img, 1, row_axis=1, col_axis=2, channel_axis=3)
 
         img = tf.image.random_brightness(img,
-                                         max_delta=.1)  # Image normalized to 1, delta is amount of brightness to add/subtract
-        img = tf.image.random_contrast(img, 0.8, 1.2)  # (x- mean) * contrast factor + mean
+                                         max_delta=.2)  # Image normalized to 1, delta is amount of brightness to add/subtract
+        img = tf.image.random_contrast(img, 0.5, 2.0)  # (x- mean) * contrast factor + mean
 
         return img, lbls, files
 
