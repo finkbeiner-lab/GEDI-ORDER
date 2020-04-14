@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import os
 
+print('Running...')
 p = param.Param()
 make_directories(p)
 timestamp = update_timestring()

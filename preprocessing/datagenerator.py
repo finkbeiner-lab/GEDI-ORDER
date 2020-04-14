@@ -24,6 +24,7 @@ class Dataspring(Parser):
         self.it = None
 
     def count_data(self):
+        print('Counting {}'.format(self.tfrecord))
         dataset_cnt = tf.data.TFRecordDataset(self.tfrecord)
         dataset_cnt = dataset_cnt.repeat(1)
         cnt = dataset_cnt.reduce(0., lambda x, _: x + 1)
