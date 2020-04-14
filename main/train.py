@@ -84,7 +84,7 @@ tb_callback = tf.keras.callbacks.TensorBoard(
     log_dir='/home/jlamstein/PycharmProjects/ASYN/log/{}'.format(p.which_model),
     update_freq='epoch')
 
-callbacks = [cp_callback, tb_callback]
+callbacks = [cp_callback]
 history = model.fit(train_gen, steps_per_epoch=train_length // (p.BATCH_SIZE), epochs=p.EPOCHS,
                     class_weight=p.class_weights, validation_data=val_gen,
                     validation_steps=val_length // p.BATCH_SIZE, callbacks=callbacks)
