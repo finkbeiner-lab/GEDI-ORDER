@@ -22,9 +22,10 @@ class Param:
 
         now = datetime.datetime.now()
         self.timestamp = '%d%02d%02d-%02d%02d%02d' % (now.year, now.month, now.day, now.hour, now.minute, now.second)
-
-        self.parent_dir = '/mnt/data/GEDI-ORDER'
         os_name = platform.node()
+
+        self.parent_dir = {'hobbes':'/mnt/data/GEDI-ORDER',
+                           'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/Josh/GEDI-ORDER'}[os_name]
         self.tfrec_dir = {
         'hobbes': '/mnt/data/gedi/transfer/tfrecs',
         'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/GEDI_DATA/'
