@@ -14,31 +14,11 @@ import datetime
 class Param:
     def __init__(self):
 
-        # self.vgg16_weight_path = '/home/jlamstein/Documents/pretrained_weights/vgg16.npy'
-        #
-        # self.gedi_weight_path =  '/home/jlamstein/Documents/pretrained_weights/gedi_model.npy.npy'
-        #
-        # self.fine_tune_layers = [
-        #     'conv4_1',
-        #     'conv4_2',
-        #     'conv4_3',
-        #     'conv5_1',
-        #     'conv5_2',
-        #     'conv5_3',
-        #     'fc6',
-        #     'fc7',
-        #     'fc8'
-        # ]
-
-
 
         self.which_model = 'vgg16'
-        self.EPOCHS = 100
+        self.EPOCHS = 150
         self.learning_rate= 3e-4
         self.BATCH_SIZE = 16
-
-        # self.holdlr = 1e-3
-        # self.newlr = 1e-4
 
         now = datetime.datetime.now()
         self.timestamp = '%d%02d%02d-%02d%02d%02d' % (now.year, now.month, now.day, now.hour, now.minute, now.second)
@@ -57,7 +37,8 @@ class Param:
         self.ckpt_dir = os.path.join(self.parent_dir, 'saved_checkpoints')
         self.tfrecord_dir = os.path.join(self.parent_dir, 'TFRECORDS')
 
-        self.data_deploy = os.path.join(self.tfrecord_dir, 'BSMachineLearning_TestCuration_1.tfrecord')
+        self.data_deploy = os.path.join(self.tfrecord_dir, 'BSMachineLearning_TestCuration_4.tfrecord')
+        # self.data_deploy =os.path.join(self.tfrec_dir, 'all_data_val.tfrecords')
 
         self.orig_train_rec = os.path.join(self.tfrec_dir,
                                       'all_data_train.tfrecords')  # 187772 images {'dead': 50073, 'live': 137699}  2.749
@@ -92,11 +73,8 @@ class Param:
         self.vgg_height = 224
         self.vgg_width = 224
         # self.rescale = 1. / 255
-        self.shear_range = 0.2
-        self.zoom_range = 0.2
-        self.rotation_range = 0.2
-        self.horizontal_flip = False
-        self.vertical_flip = False
+        self.randomcrop = True
+
 
         self.shuffle_size = 100
         self.num_parallel_calls = 4
@@ -109,11 +87,11 @@ class Param:
         self.shuffle_buffer_size = 1000
 
 
-
-
-
         #Data generator
         self.augmentbool = True
+        self.random_brightness = 0.2
+        self.min_contrast = 0.5
+        self.max_contrast = 2.0
 
         self.hyperparams = {
             'timestamp': self.timestamp,
@@ -141,6 +119,5 @@ class Param:
 
         self.VGG_MEAN = [103.939, 116.779, 123.68]
         self.AUTOTUNE = True
-        self.num_parallel_calls = 4
 
 

@@ -2,6 +2,7 @@ import tensorflow as tf
 from tensorflow.keras import layers
 from tensorflow.keras.models import Model
 import param_gedi as param
+import numpy as np
 
 
 class CNN:
@@ -43,7 +44,7 @@ class CNN:
         else:
             return layers.Dropout(rate=0.5, seed=11, name=name)
 
-    def vgg16(self, imsize=(224, 224, 3)):
+    def vgg16(self, imsize=(224, 224, 3), batchnorm=False):
         input = layers.Input(shape=(imsize[0], imsize[1], imsize[2]), name='imgs')  # NAME MATCHES DICT KEY
         base_model = tf.keras.applications.VGG16(include_top=False, weights='imagenet', input_tensor=input,
                                                  input_shape=(imsize[0], imsize[1], imsize[2]))
@@ -54,6 +55,14 @@ class CNN:
                 layr.trainable = True
             else:
                 layr.trainable = False
+        glorot = tf.initializers.GlorotUniform()
+        for layr in base_model.layers:
+            if (('block4_conv' in layr.name) or ('block5_conv' in layr.name)):
+                _weights = layr.get_weights()
+                W = np.shape(_weights[0])
+                b = np.shape(_weights[1])
+                layr.set_weights([glorot(shape=W), glorot(shape=b)])
+
         drop1 = layers.Dropout(rate=0.5, name='dropout_1')
         drop2 = layers.Dropout(rate=0.5, name='dropout_2')
         drop3 = layers.Dropout(rate=0.5, name='dropout_3')
@@ -71,30 +80,26 @@ class CNN:
         conv5_2 = base_model.get_layer('block5_conv2')
         conv5_3 = base_model.get_layer('block5_conv3')
         block5_pool = base_model.get_layer('block5_pool')
-        y = bn1(conv5_1.output)
-        y = conv5_2(y)
-        y = bn2(y)
-        y = conv5_3(y)
-        y = bn3(y)
-        x = block5_pool(y)
 
         global_average_layer = tf.keras.layers.GlobalAveragePooling2D()
+        flatten = tf.keras.layers.Flatten()
 
-        fc1 = layers.Dense(256, activation='relu', name='dense_1')
-        fc2 = layers.Dense(256, activation='relu', name='dense_2')
-        fc3 = layers.Dense(256, activation='relu', name='dense_3')
+        fc1 = layers.Dense(4096, activation='relu', name='dense_1', kernel_initializer='TruncatedNormal', bias_initializer='TruncatedNormal')
+        fc2 = layers.Dense(4096, activation='relu', name='dense_2', kernel_initializer='TruncatedNormal', bias_initializer='TruncatedNormal')
+        # fc3 = layers.Dense(256, activation='relu', name='dense_3')
         prediction = layers.Dense(self.p.output_size, activation='softmax', name='output')
 
 
         # updated_model.summary()
         # x = updated_model(input)
-        x = global_average_layer(x)
+        # x = global_average_layer(x)
+        x = flatten(block5_pool.output)
         x = fc1(x)
+        x = drop1(x, training=self.trainable)
         # x = bn1(x)
-        x = drop1(x)
-        # x = bn2(x)
         x = fc2(x)
-        x = drop2(x)
+        x = drop2(x, training=self.trainable)
+        # x = bn2(x)
         x = prediction(x)
 
         raw_model = Model(inputs=base_model.input, outputs=x)

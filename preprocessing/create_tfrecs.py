@@ -41,7 +41,17 @@ import os
 
 class Record:
 
-    def __init__(self, images_dir_A, images_dir_B, tfrecord_dir, split):
+    def __init__(self, images_dir_A, images_dir_B, tfrecord_dir, split, scramble):
+        """
+
+        Args:
+            images_dir_A: Image direction with single label (i.e. 0)
+            images_dir_B: Image directory with different label (i.e. 1)
+            tfrecord_dir: Save directory for tfrecs
+            split: List to split data into training, validation, testing
+            scramble: Boolean to scramble labels, the random labels on the images can help tell if the model is learning patters or memorizing samples
+        """
+
         self.p = param.Param()
         self.images_dir_A = images_dir_A
         self.images_dir_B = images_dir_B
@@ -77,12 +87,19 @@ class Record:
         assert len(self.impaths_A) + len(self.impaths_B) == len(
             self._impaths), 'Summed lengths of image paths do not match'
         self.shuffled_idx = np.arange(len(self._impaths))
+        self.scrambled_idx = self.shuffled_idx.copy()
         np.random.seed(0)
         np.random.shuffle(self.shuffled_idx)
         print(self.shuffled_idx)
 
         self.impaths = self._impaths[self.shuffled_idx]
-        self.labels = self._labels[self.shuffled_idx]
+        if not scramble:
+            self.labels = self._labels[self.shuffled_idx]
+        else:
+            np.random.seed(1)
+
+            np.random.shuffle(self.scrambled_idx)
+            self.labels = self._labels[self.scrambled_idx]
 
         length = len(self.impaths)
 
@@ -156,10 +173,10 @@ if __name__ == '__main__':
     neg_dir = '/mnt/data/MJFOX/Crops/negative/Images'
     split = [.7, .15, .15]
 
-    Rec = Record(pos_dir, neg_dir, p.tfrecord_dir, split)
-    savetrain = os.path.join(p.tfrecord_dir, 'batch2_train_3_3_100.tfrecord')
-    saveval = os.path.join(p.tfrecord_dir, 'batch2_val_3_3_100.tfrecord')
-    savetest = os.path.join(p.tfrecord_dir, 'batch2_test_3_3_100.tfrecord')
+    Rec = Record(pos_dir, neg_dir, p.tfrecord_dir, split, scramble=False)
+    savetrain = os.path.join(p.tfrecord_dir, 'batch2_train_3_3_100_scrambled_labels.tfrecord')
+    saveval = os.path.join(p.tfrecord_dir, 'batch2_val_3_3_100_scrambled_labels.tfrecord')
+    savetest = os.path.join(p.tfrecord_dir, 'batch2_test_3_3_100_scrambled_labels.tfrecord')
     Rec.tiff2record(savetrain, Rec.trainpaths, Rec.trainlbls)
     Rec.tiff2record(saveval, Rec.valpaths, Rec.vallbls)
     Rec.tiff2record(savetest, Rec.testpaths, Rec.testlbls)

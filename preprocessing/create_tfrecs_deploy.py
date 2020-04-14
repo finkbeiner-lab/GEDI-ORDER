@@ -115,7 +115,7 @@ if __name__ == '__main__':
         lblstr = 'positive'
     elif lbl==0:
         lblstr= 'negative'
-    use_dir = '/mnt/finkbeinerlab/robodata/GalaxyTEMP/BSMachineLearning_TestCuration/batches/1'
+    use_dir = '/mnt/finkbeinerlab/robodata/GalaxyTEMP/BSMachineLearning_TestCuration/batches/5'
 
     Rec = Record(use_dir,  p.tfrecord_dir, lbl)
     savedeploy = os.path.join(p.tfrecord_dir, use_dir.split('/')[-3] + '_' +use_dir.split('/')[-1] + '.tfrecord')

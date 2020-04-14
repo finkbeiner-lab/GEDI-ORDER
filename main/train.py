@@ -25,7 +25,8 @@ run_info = {'model': p.which_model,
             'epochs': p.EPOCHS,
             'batch_size': p.BATCH_SIZE,
             'output_size': p.output_size,
-            'im_shape': p.target_size}
+            'im_shape': p.target_size,
+            'random_crop':p.randomcrop}
 print(run_info)
 
 Chk = pipe.Dataspring(p.data_train)
@@ -82,7 +83,7 @@ tb_callback = tf.keras.callbacks.TensorBoard(
     log_dir='/home/jlamstein/PycharmProjects/ASYN/log/{}'.format(p.which_model),
     update_freq='epoch')
 
-callbacks = [cp_callback]
+callbacks = [cp_callback, tb_callback]
 history = model.fit(train_gen, steps_per_epoch=train_length // (p.BATCH_SIZE), epochs=p.EPOCHS,
                     class_weight=p.class_weights, validation_data=val_gen,
                     validation_steps=val_length // p.BATCH_SIZE, callbacks=callbacks)

@@ -15,7 +15,7 @@ import param_gedi as param
 # CAT_CLASS_INDEX = 281
 
 class Gradcam:
-    def __init__(self, model, model_layer, layer_name, debug):
+    def __init__(self, model, layer_name, debug):
         self.model = model
         self.p = param.Param()
         # grad_model = tf.keras.models.Sequential()
@@ -33,7 +33,7 @@ class Gradcam:
         self.DEBUG = debug
         self.grad_model.summary()
 
-    def get_grads(self, img, lbl):
+    def get_grads(self, img, lbl, idx=0):
         with tf.GradientTape(persistent=True) as tape:
             predictions, conv_outputs = self.grad_model(img)
             # predictions = self.model(img)
@@ -41,9 +41,9 @@ class Gradcam:
             pos_loss = predictions[:, 1]
 
         # Extract filters and gradients
-        output = conv_outputs[0]
-        neg_grads = tape.gradient(neg_loss, conv_outputs)[0]
-        pos_grads = tape.gradient(pos_loss, conv_outputs)[0]
+        output = conv_outputs[idx]
+        neg_grads = tape.gradient(neg_loss, conv_outputs)[idx]
+        pos_grads = tape.gradient(pos_loss, conv_outputs)[idx]
         del tape
         return output, neg_grads, pos_grads
 
@@ -69,24 +69,28 @@ class Gradcam:
         return heatmap
 
     def guided_backprop(self, _img, lbl):
-        img = _img.copy()
-        output, neg_grads, pos_grads = self.get_grads(img, lbl)
+        output, neg_grads, pos_grads = self.get_grads(_img, lbl)
         pos_heatmap = self.get_single_heatmap(output, pos_grads)
         neg_heatmap = self.get_single_heatmap(output, neg_grads)
+        img = _img.numpy()
 
         # if np.amax(cam) > 0: cam /= np.amax(heatmap)
         # cam = cv2.applyColorMap(np.uint8(255 * heatmap), cv2.COLORMAP_JET)
-        img[:, :, 0] += self.p.VGG_MEAN[0]
-        img[:, :, 1] += self.p.VGG_MEAN[1]
-        img[:, :, 2] += self.p.VGG_MEAN[2]
-        img = np.reshape(img, (224, 224, 3))
+        img[:, :, :, 0] += self.p.VGG_MEAN[0]
+        img[:, :, :, 1] += self.p.VGG_MEAN[1]
+        img[:, :, :, 2] += self.p.VGG_MEAN[2]
+        img = np.reshape(img, (-1, 224, 224, 3))
 
         img = np.uint8(img)
         pos_heatmap *= 255
         neg_heatmap *= 255
+
         pos_heatmap = np.uint8(pos_heatmap)
         neg_heatmap = np.uint8(neg_heatmap)
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        # plt.figure()
+        # plt.imshow(pos_heatmap)
+        # plt.show()
+        gray = cv2.cvtColor(img[0], cv2.COLOR_BGR2GRAY)
         heatmap = np.dstack((gray, pos_heatmap, neg_heatmap))
         # output_image = cv2.addWeighted(cv2.cvtColor(img.astype('uint8'), cv2.COLOR_RGB2BGR), 0.5, cam, 1, 0)
 
@@ -95,11 +99,11 @@ class Gradcam:
             plt.imshow(heatmap)
             plt.title('gradcam')
             # plt.figure()
-            # # print(np.max(img))
-            # # print('min', np.min(img))
-            # img = np.abs(img)
-            # img = np.uint8(img * 3)
+            # print(np.max(img))
+            # print('min', np.min(img))
+            # img = np.abs(img[0])
+            # img = np.uint8(img)
             # plt.imshow(img)
-
+            #
             # plt.title('img')
             plt.show()

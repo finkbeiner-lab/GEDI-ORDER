@@ -29,12 +29,12 @@ class Dataspring(Parser):
         cnt = dataset_cnt.reduce(0., lambda x, _: x + 1)
         return cnt
 
-    def reshape_ims(self, imgs, lbls, files, randomcrop=True):
+    def reshape_ims(self, imgs, lbls, files):
         if self.p.orig_size[-1] > self.p.target_size[-1]:
             # Remove alpha channel
             channels = tf.unstack(imgs, axis=-1)
             imgs = tf.stack([channels[0], channels[1], channels[2]], axis=-1)
-        if randomcrop:
+        if self.p.randomcrop:
             if self.p.orig_size[0] > self.p.target_size[0]:
                 imgs = tf.image.random_crop(imgs, size=[self.p.BATCH_SIZE, 224, 224, 1])
         else:

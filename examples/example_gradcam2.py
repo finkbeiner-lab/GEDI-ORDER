@@ -16,7 +16,7 @@ img = tf.keras.preprocessing.image.img_to_array(img)
 imsize = (224,224,3)
 
 input = layers.Input(shape=(imsize[0], imsize[1], imsize[2]))
-base_model = tf.keras.applications.VGG16(include_top=False, weights='imagenet',
+base_model = tf.keras.applications.VGG16(include_top=False, weights='imagenet', input_tensor=input,
                                           input_shape=(imsize[0], imsize[1], imsize[2]))
 # base_model.trainable = False
 flat = layers.Flatten()
@@ -34,8 +34,9 @@ for layr in base_model.layers:
     else:
         layr.trainable = False
 
-x = base_model(input)
-x = global_average_layer(x)
+# x = base_model(input)
+block5_pool = base_model.get_layer('block5_pool')
+x = global_average_layer(block5_pool.output)
 x = fc1(x)
 x = fc2(x)
 x = prediction(x)
@@ -46,15 +47,15 @@ model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
                   metrics=['accuracy'])
 # Create a graph that outputs target convolution and output
 # grad_model = tf.keras.models.Model([model.inputs], [model.get_layer(LAYER_NAME).output, model.output])
-grad_model = tf.keras.models.Model(inputs = [model.get_layer(model_layer).input, model.input],
-                                   outputs=[model.get_layer(model_layer).get_layer(LAYER_NAME).output,
+grad_model = tf.keras.models.Model(inputs = [model.input],
+                                   outputs=[model.output,
                                             model.get_layer(model_layer).output])
 print(model.get_layer(model_layer).get_layer(LAYER_NAME).output)
 # Get the score for target class
 
 # Get the score for target class
 with tf.GradientTape() as tape:
-    conv_outputs, predictions = grad_model(np.array([img]))
+    predictions, conv_outputs = grad_model(np.array([img]))
     loss = predictions[:, 1]
 
 # Extract filters and gradients

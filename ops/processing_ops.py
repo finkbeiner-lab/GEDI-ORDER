@@ -211,8 +211,8 @@ class Parser:
         # img = tf.keras.preprocessing.image.random_shear(img, 1, row_axis=1, col_axis=2, channel_axis=3)
 
         img = tf.image.random_brightness(img,
-                                         max_delta=.2)  # Image normalized to 1, delta is amount of brightness to add/subtract
-        img = tf.image.random_contrast(img, 0.5, 2.0)  # (x- mean) * contrast factor + mean
+                                         max_delta=self.p.random_brightness)  # Image normalized to 1, delta is amount of brightness to add/subtract
+        img = tf.image.random_contrast(img, self.p.min_contrast, self.p.max_contrast)  # (x- mean) * contrast factor + mean
 
         return img, lbls, files
 
