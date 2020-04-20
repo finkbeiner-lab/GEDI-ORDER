@@ -27,6 +27,7 @@ class Dataspring(Parser):
         print('Counting {}'.format(self.tfrecord))
         dataset_cnt = tf.data.TFRecordDataset(self.tfrecord)
         dataset_cnt = dataset_cnt.repeat(1)
+        dataset_cnt = dataset_cnt.batch(1)
         cnt = dataset_cnt.reduce(0., lambda x, _: x + 1)
         return cnt
 
@@ -129,24 +130,24 @@ if __name__ == '__main__':
     #     label_lst.append(labels)
     #
     # print(np.mean(label_lst))
-
+    #
     # for i in range(1):
     #     imgs, lbls, files = Dat.datagen()
     #     for img, lbl in zip(imgs, lbls):
-    # plt.figure()
-    #     lbl = lbl.numpy()
-    #     # im = (img + 1) * 127.5
-    #     im = np.array(img)
-    #     print(np.min(im))
-    #     print(np.max(im))
-    #     im *= 255
-    #     im = np.uint8(im)
-    #     # im = np.uint8(np.reshape(im, (224, 224)))
-    #     plt.imshow(im)
-    #     plt.title(lbl)
-    # plt.show()
-
-    for i in range(2):
+    #         plt.figure()
+    #         lbl = lbl.numpy()
+    #         # im = (img + 1) * 127.5
+    #         im = np.array(img)
+    #         im = np.reshape(im, (224,224,3))
+    #         print(np.min(im))
+    #         print(np.max(im))
+    #         im = np.uint8(im)
+    #         # im = np.uint8(np.reshape(im, (224, 224)))
+    #         plt.imshow(im)
+    #         plt.title(lbl)
+    #     plt.show()
+    #
+    for i in range(1):
         imgs, lbls, files = Dat.datagen()
         for img, lbl in zip(imgs, lbls):
             plt.figure()

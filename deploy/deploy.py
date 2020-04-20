@@ -4,7 +4,7 @@ from models.model import CNN
 import preprocessing.datagenerator as pipe
 from ops.processing_ops import get_tfrecord_length
 import os
-import visualization.plot_ops as plotops
+import vis.plot_ops as plotops
 import datetime
 from utils.utils import update_timestring
 import numpy as np
@@ -15,7 +15,7 @@ SAVE_MONTAGE = False
 tfrecord = p.data_deploy
 ID_RESULTS = False
 CURATION=True
-timestamp = 'vgg16_2020_04_13_17_25_23'  # new data
+timestamp = 'vgg16_2020_04_16_18_23_50'  # new data
 tp = []
 tn = []
 fp = []
@@ -46,10 +46,13 @@ DatView = pipe.Dataspring(tfrecord)
 view_ds = DatView.datagen_base(istraining=False)
 
 print('Loading model...')
-model = tf.keras.models.load_model(import_path)
+model = tf.keras.models.load_model(import_path, compile=False)
 for lyr in model.layers:
     lyr.trainable=False
 model.trainable=False
+model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=p.learning_rate),
+                  loss='binary_crossentropy',
+                  metrics=['accuracy'])
 model.summary()
 res = model.predict(test_gen, steps=test_length // p.BATCH_SIZE)
 predictions = np.argmax(res, axis=1)

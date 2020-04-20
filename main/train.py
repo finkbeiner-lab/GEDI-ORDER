@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import os
 
+
 print('Running...')
 p = param.Param()
 make_directories(p)
@@ -29,7 +30,6 @@ run_info = {'model': p.which_model,
             'im_shape': p.target_size,
             'random_crop':p.randomcrop}
 print(run_info)
-
 Chk = pipe.Dataspring(p.data_train)
 train_length = Chk.count_data().numpy()
 del Chk
@@ -88,6 +88,9 @@ callbacks = [cp_callback]
 history = model.fit(train_gen, steps_per_epoch=train_length // (p.BATCH_SIZE), epochs=p.EPOCHS,
                     class_weight=p.class_weights, validation_data=val_gen,
                     validation_steps=val_length // p.BATCH_SIZE, callbacks=callbacks)
+# history = model.fit(train_gen, steps_per_epoch=train_length // (p.BATCH_SIZE), epochs=p.EPOCHS,
+#                     validation_data=val_gen,
+#                     validation_steps=val_length // p.BATCH_SIZE, callbacks=callbacks)
 
 # for _ in range(10):
 #     train_ims, train_lbls = DatTrain.datagen()
@@ -104,6 +107,7 @@ print('Evaluating model...')
 # Freeze model, especially necessary because I use dropout
 for lyr in model.layers:
     lyr.trainable = False
+model.trainable=False
 
 res = model.predict(test_gen, steps=test_length // p.BATCH_SIZE)
 test_accuracy_lst = []

@@ -1,6 +1,7 @@
 import tensorflow as tf
 from tensorflow.keras import layers
 from tensorflow.keras.models import Model
+import tensorflow_addons as tfa
 import param_gedi as param
 import numpy as np
 
@@ -49,7 +50,8 @@ class CNN:
         base_model = tf.keras.applications.VGG16(include_top=False, weights='imagenet', input_tensor=input,
                                                  input_shape=(imsize[0], imsize[1], imsize[2]))
         for layr in base_model.layers:
-            if (('block4' in layr.name) or ('block5' in layr.name)):
+            # if (('block4' in layr.name) or ('block5' in layr.name)):
+            if ('block5' in layr.name):
                 # if 'block5' in layr.name:
 
                 layr.trainable = True
@@ -57,7 +59,8 @@ class CNN:
                 layr.trainable = False
         glorot = tf.initializers.GlorotUniform()
         for layr in base_model.layers:
-            if (('block4_conv' in layr.name) or ('block5_conv' in layr.name)):
+            # if (('block4_conv' in layr.name) or ('block5_conv' in layr.name)):
+            if ('block5_conv' in layr.name):
                 _weights = layr.get_weights()
                 W = np.shape(_weights[0])
                 b = np.shape(_weights[1])
@@ -66,9 +69,11 @@ class CNN:
         drop1 = layers.Dropout(rate=0.5, name='dropout_1')
         drop2 = layers.Dropout(rate=0.5, name='dropout_2')
         drop3 = layers.Dropout(rate=0.5, name='dropout_3')
-        bn1 = layers.BatchNormalization(name='bn_1')
-        bn2 = layers.BatchNormalization(name='bn_2')
+        bn1 = layers.BatchNormalization(momentum=0.9, name='bn_1')
+        bn2 = layers.BatchNormalization(momentum=0.9, name='bn_2')
         bn3 = layers.BatchNormalization(name='bn_3')
+        instance1 = tfa.layers.InstanceNormalization(name='instance_1')
+        instance2 = tfa.layers.InstanceNormalization(name='instance_2')
         # updated_model = tf.keras.models.Sequential()
         # for layer in base_model.layers:
         #     updated_model.add(layer)
@@ -84,8 +89,8 @@ class CNN:
         global_average_layer = tf.keras.layers.GlobalAveragePooling2D()
         flatten = tf.keras.layers.Flatten()
 
-        fc1 = layers.Dense(4096, activation='relu', name='dense_1', kernel_initializer='TruncatedNormal', bias_initializer='TruncatedNormal')
-        fc2 = layers.Dense(4096, activation='relu', name='dense_2', kernel_initializer='TruncatedNormal', bias_initializer='TruncatedNormal')
+        fc1 = layers.Dense(4096,  name='dense_1', activation='relu', kernel_initializer='TruncatedNormal', bias_initializer='TruncatedNormal')
+        fc2 = layers.Dense(4096,  name='dense_2', activation='relu', kernel_initializer='TruncatedNormal', bias_initializer='TruncatedNormal')
         # fc3 = layers.Dense(256, activation='relu', name='dense_3')
         prediction = layers.Dense(self.p.output_size, activation='softmax', name='output')
 
@@ -95,11 +100,13 @@ class CNN:
         # x = global_average_layer(x)
         x = flatten(block5_pool.output)
         x = fc1(x)
-        x = drop1(x, training=self.trainable)
         # x = bn1(x)
+        # x = drop1(x, training=self.trainable)
+        # x = instance1(x)
         x = fc2(x)
-        x = drop2(x, training=self.trainable)
         # x = bn2(x)
+        x = drop2(x, training=self.trainable)
+        # x = instance2(x)
         x = prediction(x)
 
         raw_model = Model(inputs=base_model.input, outputs=x)

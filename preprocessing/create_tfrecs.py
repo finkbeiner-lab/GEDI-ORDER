@@ -37,7 +37,8 @@ import sys
 import glob
 import param_gedi as param
 import os
-
+import cv2
+import matplotlib.pyplot as plt
 
 class Record:
 
@@ -56,24 +57,24 @@ class Record:
         self.images_dir_A = images_dir_A
         self.images_dir_B = images_dir_B
         # Add dummy folder for batch two, different tree.
-        self.impaths_A = glob.glob(os.path.join(self.images_dir_A, '*', '*', '*.tif'))
-        self.impaths_B = glob.glob(os.path.join(self.images_dir_B, '*', '*', '*.tif'))
+        self.impaths_A = glob.glob(os.path.join(self.images_dir_A,'*.jpg'))
+        self.impaths_B = glob.glob(os.path.join(self.images_dir_B, '*.jpg'))
 
         self.tfrecord_dir = tfrecord_dir
         # ../images_dir_A/positive
         # ../images_dir_A/negative
-        positive_negative_A = images_dir_A.split('/')[-2]
-        if positive_negative_A == 'positive':
+        positive_negative_A = images_dir_A.split('/')[-1]
+        if positive_negative_A == 'cat':
             label_A = 1
-        elif positive_negative_A == 'negative':
+        elif positive_negative_A == 'dog':
             label_A = 0
         else:
             raise ValueError('Last folder A in image directory must be either \'positive\' or \'negative\'.')
 
-        positive_negative_B = images_dir_B.split('/')[-2]
-        if positive_negative_B == 'positive':
+        positive_negative_B = images_dir_B.split('/')[-1]
+        if positive_negative_B == 'cat':
             label_B = 1
-        elif positive_negative_B == 'negative':
+        elif positive_negative_B == 'dog':
             label_B = 0
         else:
             raise ValueError('Last folder B in image directory must be either \'positive\' or \'negative\'.')
@@ -114,6 +115,8 @@ class Record:
     def load_image(self, im_path):
         img = imageio.imread(im_path)
         # assume it's the correct size, otherwise resize here
+        img = cv2.resize(img, (230, 230), interpolation=cv2.INTER_AREA)
+
         img = img.astype(np.float32)
         return img
 
@@ -147,6 +150,7 @@ class Record:
 
                 img = self.load_image(filename)
 
+
                 label = labels[i]
                 filename = str(filename)
                 filename = str.encode(filename)
@@ -168,15 +172,14 @@ class Record:
 
 if __name__ == '__main__':
     p = param.Param()
-    pos_dir = '/mnt/data/MJFOX/batch2_3_3_2020-02-26-18-21-17/positive/Images'
-    neg_dir = '/mnt/data/MJFOX/batch2_3_3_2020-02-26-18-21-17/negative/Images'
-    neg_dir = '/mnt/data/MJFOX/Crops/negative/Images'
+    pos_dir = '/mnt/finkbeinerlab/robodata/Josh/dogs_vs_cats/train/cat'
+    neg_dir = '/mnt/finkbeinerlab/robodata/Josh/dogs_vs_cats/train/dog'
     split = [.7, .15, .15]
 
     Rec = Record(pos_dir, neg_dir, p.tfrecord_dir, split, scramble=False)
-    savetrain = os.path.join(p.tfrecord_dir, 'batch2_train_3_3_100_scrambled_labels.tfrecord')
-    saveval = os.path.join(p.tfrecord_dir, 'batch2_val_3_3_100_scrambled_labels.tfrecord')
-    savetest = os.path.join(p.tfrecord_dir, 'batch2_test_3_3_100_scrambled_labels.tfrecord')
+    savetrain = os.path.join(p.tfrecord_dir, 'catdog_train.tfrecord')
+    saveval = os.path.join(p.tfrecord_dir, 'catdog_val.tfrecord')
+    savetest = os.path.join(p.tfrecord_dir, 'catdog_test.tfrecord')
     Rec.tiff2record(savetrain, Rec.trainpaths, Rec.trainlbls)
     Rec.tiff2record(saveval, Rec.valpaths, Rec.vallbls)
     Rec.tiff2record(savetest, Rec.testpaths, Rec.testlbls)

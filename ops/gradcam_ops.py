@@ -6,13 +6,20 @@ https://morioh.com/p/64064daff26c
 import cv2
 import numpy as np
 import tensorflow as tf
-import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('qt5agg')
 import param_gedi as param
-
+plt = matplotlib.pyplot
 
 # IMAGE_PATH = '/home/jlamstein/PycharmProjects/GEDI-ORDER/examples/cat.3.jpg'
 # LAYER_NAME = 'block5_conv3'
 # CAT_CLASS_INDEX = 281
+
+@tf.RegisterGradient("GuidedRelu")
+def _GuidedReluGrad(op, grad):
+   gate_f = tf.cast(op.outputs[0] > 0, "float32") #for f^l > 0
+   gate_R = tf.cast(grad > 0, "float32") #for R^l+1 > 0
+   return gate_f * gate_R * grad
 
 class Gradcam:
     def __init__(self, model, layer_name, debug):
@@ -62,7 +69,7 @@ class Gradcam:
         for index, w in enumerate(weights):
             cam += w * output[:, :, index]
 
-        # Heatmap visualization
+        # Heatmap vis
         cam = cv2.resize(cam.numpy(), (224, 224))
         cam = np.maximum(cam, 0)
         heatmap = (cam - cam.min()) / (cam.max() - cam.min())

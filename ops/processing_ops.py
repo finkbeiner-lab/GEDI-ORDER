@@ -84,6 +84,45 @@ class Parser:
 
         return img, lbls, files
 
+    def demo_tfrec_batch_parse(self, row):
+        """
+        Abstracts away tfrecord formats
+
+        Args:
+            row:
+
+        Returns:
+
+        """
+        #
+        # features = {
+        #     # 'filename': tf.io.FixedLenFeature([], tf.string),
+        #     'image': tf.io.FixedLenFeature([], tf.string),
+        #     'label': tf.io.FixedLenFeature([], tf.int64)
+        # }
+
+        features = {
+
+            'image': tf.io.FixedLenFeature([], tf.string),
+            'label': tf.io.FixedLenFeature([], tf.int64)
+        }
+
+
+
+
+        parsed = tf.io.parse_example(row, features)
+        img = tf.io.decode_raw(parsed['image'], tf.float32)
+        lbl = tf.cast(parsed['label'], tf.int32)
+        lbls = tf.one_hot(lbl, 2)  # one hot, verify this in pytest
+        img = tf.reshape(img, [-1, self.p.orig_size[0], self.p.orig_size[1], self.p.orig_size[2]])
+        # if self.p.orig_size[0] > self.p.target_size[0]:
+        #     x0 = (self.p.orig_size[1] - self.p.target_size[1]) // 2
+        #     y0 = (self.p.orig_size[0] - self.p.target_size[0]) // 2
+        #     img = tf.image.crop_to_bounding_box(img, y0, x0, 224, 224)
+        # img = tf.divide(img, self.p.max_gedi)  # normalize here
+
+        return img, lbls
+
     @staticmethod
     def transformImg(imgIn, forward_transform):
         """
