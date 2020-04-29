@@ -5,18 +5,16 @@ import param_gedi as param
 
 
 class Parser:
+    """Parse tfrecord"""
     def __init__(self):
         self.p = param.Param()
-        # self.batcher_params = p.batcher_params
-        # self.vgg_normalize = p.vgg_normalize
-        # self.mean_bgr = p.mean_bgr
 
     def tfrec_parse(self, row):
         """
-        Abstracts away tfrecord formats
+        Parse single item in tfrecord. You most likely want tfrec_batch_parse.
 
         Args:
-            row:
+            row:  A scalar string Tensor, a single serialized Example.
 
         Returns:
 
@@ -45,20 +43,14 @@ class Parser:
 
     def tfrec_batch_parse(self, row):
         """
-        Abstracts away tfrecord formats
+        Parse tfrecord by batch.
 
         Args:
-            row:
+            row: A scalar string Tensor, a single serialized Example.
 
         Returns:
 
         """
-        #
-        # features = {
-        #     # 'filename': tf.io.FixedLenFeature([], tf.string),
-        #     'image': tf.io.FixedLenFeature([], tf.string),
-        #     'label': tf.io.FixedLenFeature([], tf.int64)
-        # }
 
         features = {
             'filename': tf.io.FixedLenFeature([], tf.string),
@@ -68,12 +60,11 @@ class Parser:
         }
 
 
-
-
         parsed = tf.io.parse_example(row, features)
         files = parsed['filename']
         img = tf.io.decode_raw(parsed['image'], tf.float32)
         lbl = tf.cast(parsed['label'], tf.int32)
+        ratio = parsed['ratio']  # useful to have ratio, but model is a binary classifier with binary ground truth.
         lbls = tf.one_hot(lbl, 2)  # one hot, verify this in pytest
         img = tf.reshape(img, [-1, self.p.orig_size[0], self.p.orig_size[1], self.p.orig_size[2]])
         # if self.p.orig_size[0] > self.p.target_size[0]:
@@ -84,44 +75,24 @@ class Parser:
 
         return img, lbls, files
 
-    def demo_tfrec_batch_parse(self, row):
+    def reshape_ims(self, imgs, lbls, files):
         """
-        Abstracts away tfrecord formats
-
-        Args:
-            row:
-
-        Returns:
-
+        Reshape images for model
         """
-        #
-        # features = {
-        #     # 'filename': tf.io.FixedLenFeature([], tf.string),
-        #     'image': tf.io.FixedLenFeature([], tf.string),
-        #     'label': tf.io.FixedLenFeature([], tf.int64)
-        # }
+        if self.p.orig_size[-1] > self.p.target_size[-1]:
+            # Remove alpha channel
+            channels = tf.unstack(imgs, axis=-1)
+            imgs = tf.stack([channels[0], channels[1], channels[2]], axis=-1)
+        if self.p.randomcrop:
+            if self.p.orig_size[0] > self.p.target_size[0]:
+                imgs = tf.image.random_crop(imgs, size=[self.p.BATCH_SIZE, 224, 224, 1])
+        else:
+            if self.p.orig_size[0] > self.p.target_size[0]:
+                y0 = (self.p.orig_size[0] - self.p.target_size[0]) // 2
+                x0 = (self.p.orig_size[1] - self.p.target_size[1]) // 2
 
-        features = {
-
-            'image': tf.io.FixedLenFeature([], tf.string),
-            'label': tf.io.FixedLenFeature([], tf.int64)
-        }
-
-
-
-
-        parsed = tf.io.parse_example(row, features)
-        img = tf.io.decode_raw(parsed['image'], tf.float32)
-        lbl = tf.cast(parsed['label'], tf.int32)
-        lbls = tf.one_hot(lbl, 2)  # one hot, verify this in pytest
-        img = tf.reshape(img, [-1, self.p.orig_size[0], self.p.orig_size[1], self.p.orig_size[2]])
-        # if self.p.orig_size[0] > self.p.target_size[0]:
-        #     x0 = (self.p.orig_size[1] - self.p.target_size[1]) // 2
-        #     y0 = (self.p.orig_size[0] - self.p.target_size[0]) // 2
-        #     img = tf.image.crop_to_bounding_box(img, y0, x0, 224, 224)
-        # img = tf.divide(img, self.p.max_gedi)  # normalize here
-
-        return img, lbls
+                imgs = tf.image.crop_to_bounding_box(imgs, y0, x0, self.p.target_size[1], self.p.target_size[0])
+        return imgs, lbls, files
 
     @staticmethod
     def transformImg(imgIn, forward_transform):
@@ -142,11 +113,13 @@ class Parser:
         return imgOut
 
     def use_binary_lbls(self, imgs, lbls, files):
+        """Convert from one-hot encoded labels to single digit label 0 or 1"""
         newlbls = tf.argmax(lbls, axis=1)
         newlbls = tf.cast(newlbls, dtype=tf.float32)
         return imgs, newlbls, files
 
     def inception_scale(self, imgs, lbls, files):
+        """Scaling for inception model"""
         assert_op = tf.Assert(tf.less_equal(tf.reduce_max(imgs), 1.0), [imgs])
         with tf.control_dependencies([assert_op]):
             images = tf.subtract(imgs, 1.0)
@@ -256,6 +229,7 @@ class Parser:
         return img, lbls, files
 
     def remove_negatives_in_img(self, img):
+        """If there are negatives in image, subtract by min to get make all values nonnegative"""
         _mins = tf.reduce_min(img, axis=0, keepdims=True)
         _mins = tf.reduce_min(_mins, axis=1, keepdims=True)
         _mins = tf.reduce_min(_mins, axis=2, keepdims=True)
@@ -265,6 +239,7 @@ class Parser:
         return img
 
     def divide_by_max_in_img(self, img):
+        """Divide by max in image by batch"""
         _maxs = tf.reduce_max(img, axis=0, keepdims=True)
         _maxs = tf.reduce_max(_maxs, axis=1, keepdims=True)
         _maxs = tf.reduce_max(_maxs, axis=2, keepdims=True)
@@ -273,10 +248,12 @@ class Parser:
         return img
 
     def cut_off_vals(self, imgs, lbls, files):
+        """Cut off values"""
         imgs = tf.clip_by_value(imgs, clip_value_min=0., clip_value_max=1.)
         return imgs, lbls, files
 
     def normalize_whitening(self, imgs, lbls):
+        """Scales each image in batch to have mean 0 and variance 1"""
         # imgs = tf.map_fn(lambda x: tf.image.per_image_standardization(x), imgs)
         imgs = tf.image.per_image_standardization(imgs)
 
@@ -291,17 +268,21 @@ class Parser:
             images = tf.image.resize(images, (self.p.target_size[0], self.p.target_size[1]))
         return images, lbls, files
 
-    def norm_to_one(self, imgs, lbls, files):
-        # imgs = tf.map_fn(lambda x: tf.divide(x, tf.reduce_max(x, axis=None, keepdims=True)), imgs)
-        imgs = imgs / 255.
-        return imgs, lbls, files
-
-    def set_max_to_one(self, imgs, lbls, files):
+    def set_max_to_one_by_image(self, imgs, lbls, files):
+        """Divide each image by its maximum"""
         imgs = tf.map_fn(lambda x: self.remove_negatives_in_img(x), imgs)
         imgs = tf.map_fn(lambda x: self.divide_by_max_in_img(x), imgs)
         return imgs, lbls, files
 
+    def set_max_to_one_by_batch(self, imgs, lbls, files):
+        """Divide each batch by its maximum"""
+        imgs = tf.map_fn(lambda x: self.remove_negatives_in_img(x), imgs)
+        imgs = imgs / tf.reduce_max(imgs, keepdims=True)
+        return imgs, lbls, files
+
+
     def normalize_resnet(self, img, lbls, files):
+        """Set up resnet"""
         rgb = img
         if int(rgb.get_shape()[-1]) == 1:
             red, green, blue = rgb, rgb, rgb
@@ -321,6 +302,16 @@ class Parser:
 
 
     def make_vgg(self, img, lbls, files):
+        """
+        Subtracts the vgg16 training mean by channel.
+        Args:
+            img:
+            lbls:
+            files:
+
+        Returns:
+
+        """
         rgb = img * 255.0
         if int(img.get_shape()[-1]) == 1:
             red, green, blue = rgb, rgb, rgb
@@ -342,21 +333,15 @@ class Parser:
 
         return bgr, lbls, files
 
-
-def get_tfrecord_length(tf_records, verbose=False, get_max=False):
-    # tf_records_filenames = [p.tf_train, p.tf_val, p.tf_test]
-    # print(tf_records_filenames)
-    assert isinstance(tf_records, list), 'Argument must be list'
-    cnt = 0
-    print('Counting...')
-    with tf.device('/cpu:0'):
-        for fn in tf_records:
-            for record in tf.io.tf_record_iterator(fn):
-                cnt += 1
-                if verbose:
-                    if not cnt % 100:
-                        print(cnt)
-    return cnt
 if __name__=='__main__':
-    p = param.param()
-    get_tfrecord_length(p.train_rec, get_max=True)
+    p = param.Param()
+    Parse = Parser()
+    # get_tfrecord_length(p.train_rec, get_max=True)
+    ds = tf.data.TFRecordDataset(p.data_test,
+                                 num_parallel_reads=p.num_parallel_calls)  # possibly use multiple record files
+    ds = ds.batch(p.BATCH_SIZE, drop_remainder=False)  # batch images, no skips
+    ds = ds.map(Parse.tfrec_batch_parse,
+                num_parallel_calls=p.num_parallel_calls)
+    it = iter(ds)
+    img, lbls, files, ratio = next(it)
+    print(ratio)

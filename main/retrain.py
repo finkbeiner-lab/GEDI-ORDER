@@ -1,5 +1,5 @@
 """
-Train model
+Retrain model with additional data
 """
 
 import tensorflow as tf
@@ -17,11 +17,11 @@ print('Running...')
 p = param.Param()
 make_directories(p)
 timestamp = update_timestring()
-export_path = os.path.join(p.models_dir, '{}_{}.h5'.format(p.which_model, timestamp))
-export_info_path = os.path.join(p.run_info_dir, '{}_{}.csv'.format(p.which_model, timestamp))
-save_checkpoint_path = os.path.join(p.ckpt_dir, '{}_{}.hdf5'.format(p.which_model, timestamp))
+export_path = os.path.join(p.retrain_models_dir, '{}_{}.h5'.format(p.which_model, timestamp))
+export_info_path = os.path.join(p.retrain_run_info_dir, '{}_{}.csv'.format(p.which_model, timestamp))
+save_checkpoint_path = os.path.join(p.retrain_ckpt_dir, '{}_{}.hdf5'.format(p.which_model, timestamp))
 run_info = {'model': p.which_model,
-            'retraining': '',
+            'retraining': p.base_gedi,
             'timestamp': timestamp,
             'model_timestamp': p.which_model + '_' + timestamp,
             'train_path': p.data_train,
@@ -35,7 +35,6 @@ run_info = {'model': p.which_model,
             'im_shape': p.target_size,
             'random_crop': p.randomcrop}
 print(run_info)
-
 # Get length of tfrecords
 Chk = pipe.Dataspring(p.data_train)
 train_length = Chk.count_data().numpy()
@@ -56,32 +55,27 @@ test_ds = DatTest.datagen_base(istraining=False)
 print('training length', train_length)
 print('validation length', val_length)
 print('test length', test_length)
+
+# uses retraining generator
+# train_gen = DatTrain.retrain_orig_generator()
+# val_gen = DatVal.retrain_orig_generator()
+# test_gen = DatTest.retrain_orig_generator()
 train_gen = DatTrain.generator()
 val_gen = DatVal.generator()
 test_gen = DatTest.generator()
 
-# for image_batch, label_batch in val_ds.take(1):
-#     print('min img', np.min(image_batch))
-#     for img, lbl in zip(image_batch, label_batch):
-#         plt.figure()
-#         im = (img + 1) /2
-#         plt.imshow(im)
-#         plt.title(lbl.numpy())
-#
-# plt.show()
-
-
-net = CNN()
-if p.which_model == 'vgg16':
-    model = net.vgg16(imsize=p.target_size)
-elif p.which_model == 'vgg19':
-    model = net.vgg19(imsize=p.target_size)
-elif p.which_model == 'mobilenet':
-    model = net.mobilenet(imsize=p.target_size)
-elif p.which_model == 'inceptionv3':
-    model = net.inceptionv3(imsize=p.target_size)
-else:
-    model = net.standard_model(imsize=p.target_size)
+print('Loading model...')
+model = tf.keras.models.load_model(p.base_gedi, compile=False)
+# FREEZE PART OF THE MODEL FOR FINETUNING
+for lyr in model.layers:
+    if 'dense' in lyr.name:
+        lyr.trainable = True
+    else:
+        lyr.trainable = False
+model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=p.learning_rate),
+              loss='binary_crossentropy',
+              metrics=['accuracy'])
+model.summary()
 
 # callbacks, save checkpoints and tensorboard logs
 cp_callback = tf.keras.callbacks.ModelCheckpoint(save_checkpoint_path, monitor='val_accuracy', verbose=1,
@@ -95,15 +89,7 @@ callbacks = [cp_callback]
 history = model.fit(train_gen, steps_per_epoch=train_length // (p.BATCH_SIZE), epochs=p.EPOCHS,
                     class_weight=p.class_weights, validation_data=val_gen,
                     validation_steps=val_length // p.BATCH_SIZE, callbacks=callbacks)
-# history = model.fit(train_gen, steps_per_epoch=train_length // (p.BATCH_SIZE), epochs=p.EPOCHS,
-#                     validation_data=val_gen,
-#                     validation_steps=val_length // p.BATCH_SIZE, callbacks=callbacks)
 
-# for _ in range(10):
-#     train_ims, train_lbls = DatTrain.datagen()
-#     val_ims, val_lbls = DatVal.datagen()
-#     history = model.fit(train_ims, train_lbls, steps_per_epoch=p.BATCH_SIZE, epochs=1, validation_data=(val_ims, val_lbls),
-#                         validation_steps=p.BATCH_SIZE, callbacks=callbacks)
 train_acc = history.history['accuracy']
 val_acc = history.history['val_accuracy']
 
@@ -123,10 +109,10 @@ test_accuracy_lst = []
 for i in range(int(test_length // p.BATCH_SIZE)):
     imgs, lbls, files = DatTest.datagen()
     nplbls = lbls.numpy()
-    if p.output_size == 2:
+    if p.output_size == 2: # output size is two. One hot encoded binary classifier
         test_results = np.argmax(res[i * p.BATCH_SIZE: (i + 1) * p.BATCH_SIZE], axis=1)
         labels = np.argmax(nplbls, axis=1)
-    elif p.output_size == 1:
+    elif p.output_size == 1:  # only for output size one, so far not used
         test_results = np.where(res > 0, 1, 0)
         labels = nplbls
     test_acc = np.array(test_results) == np.array(labels)
@@ -135,6 +121,7 @@ for i in range(int(test_length // p.BATCH_SIZE)):
 
 test_accuracy = np.mean(test_accuracy_lst)
 print('test accuracy', test_accuracy)
+# Add test info to output csv
 run_info['train_accuracy'] = train_acc[-1]
 run_info['val_accuracy'] = val_acc[-1]
 run_info['test_accuracy'] = test_accuracy

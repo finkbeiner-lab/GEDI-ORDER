@@ -1,7 +1,5 @@
 """
-Process tfrecord
-
-Run to visualize tfrecords. If normalizing, unnormalize.
+Class for piping data from tfrecord to model. If you run this, it plots images that the model will see.
 
 Vgg scales image in ./models/model.py.
 """
@@ -24,6 +22,7 @@ class Dataspring(Parser):
         self.it = None
 
     def count_data(self):
+        "Count items in tfrecord"
         print('Counting {}'.format(self.tfrecord))
         dataset_cnt = tf.data.TFRecordDataset(self.tfrecord)
         dataset_cnt = dataset_cnt.repeat(1)
@@ -31,37 +30,16 @@ class Dataspring(Parser):
         cnt = dataset_cnt.reduce(0., lambda x, _: x + 1)
         return cnt
 
-    def reshape_ims(self, imgs, lbls, files):
-        if self.p.orig_size[-1] > self.p.target_size[-1]:
-            # Remove alpha channel
-            channels = tf.unstack(imgs, axis=-1)
-            imgs = tf.stack([channels[0], channels[1], channels[2]], axis=-1)
-        if self.p.randomcrop:
-            if self.p.orig_size[0] > self.p.target_size[0]:
-                imgs = tf.image.random_crop(imgs, size=[self.p.BATCH_SIZE, 224, 224, 1])
-        else:
-            if self.p.orig_size[0] > self.p.target_size[0]:
-                y0 = (self.p.orig_size[0] - self.p.target_size[0]) // 2
-                x0 = (self.p.orig_size[1] - self.p.target_size[1]) // 2
 
-                imgs = tf.image.crop_to_bounding_box(imgs, y0, x0, self.p.target_size[1], self.p.target_size[0])
-        return imgs, lbls, files
 
     def datagen_base(self, istraining=True):
         """
-        Generator for extracting data from tfrecords
 
         Args:
-            path: Path(s) to tfrecords
-            batch_size: ..
-            buffer_size: Shuffle buffer size; no shuffle if 1
-            row_parser: Method to parse single record
-            img_parser: Method to transform images individually
-            transform_params: Args to ImageDataGenerator augmentation constructor
-            parallel_reads: ..
+            istraining: boolean for whether model should be trainable or not. Maybe changed later, could change some functionality in layers
 
         Returns:
-            Is a generator; each next call gives numpy tensor of shape (batch_size, img_height, img_width, channels)
+            ds: tf dataset object
 
         """
         ds = tf.data.TFRecordDataset(self.tfrecord,
@@ -76,12 +54,13 @@ class Dataspring(Parser):
             ds = ds.map(self.use_binary_lbls, self.p.num_parallel_calls)
         ds = ds.map(self.reshape_ims, num_parallel_calls=self.p.num_parallel_calls)
 
-        # Divides by 255
-        ds = ds.map(self.set_max_to_one, num_parallel_calls=self.p.num_parallel_calls)
+        # Normalization
+        ds = ds.map(self.set_max_to_one_by_batch, num_parallel_calls=self.p.num_parallel_calls)
 
         if self.p.augmentbool and istraining:
             ds = ds.map(self.augment, num_parallel_calls=self.p.num_parallel_calls)
-            ds = ds.map(self.set_max_to_one, num_parallel_calls=self.p.num_parallel_calls)
+            # Normalize again
+            ds = ds.map(self.set_max_to_one_by_batch, num_parallel_calls=self.p.num_parallel_calls)
 
         if (self.p.which_model == 'vgg16') or (self.p.which_model == 'vgg19'):
             print('Using {}'.format(self.p.which_model))
@@ -102,15 +81,39 @@ class Dataspring(Parser):
 
     @tf.function
     def datagen(self):
-        # lbls, imgs, filenames = next(self.it)
+        """
+        Generator returning parsed features
+        Returns:
+            imgs: batch of images
+            lbls: batch of labels
+            files: batch of files
+
+        """
         imgs, lbls, files = next(self.it)
         return imgs, lbls, files
 
     def generator(self):
+        """
+        Generator returning parsed features as dictionary. Dict is used for keras model.fit
+        Returns:
+            X: dict
+            lbls: labels
+
+        """
         while True:
             imgs, lbls, files = next(self.it)
-            X = {'imgs': imgs, 'files': files}
+            X = {'input_1': imgs, 'files': files}
             yield X, lbls
+
+    def retrain_orig_generator(self):
+        """
+        Generator for retraining. Original gedi model from tf 1.x isn't set up for dictionary.
+        Returns:
+
+        """
+        while True:
+            imgs, lbls, files = next(self.it)
+            yield imgs, lbls
 
 
 if __name__ == '__main__':
@@ -161,7 +164,7 @@ if __name__ == '__main__':
             rgb = np.copy(img)
             rgb[:, :, 0] = img[:, :, 2]
             rgb[:, :, 2] = img[:, :, 0]
-            im = np.uint8(rgb)
+            im = np.uint8(rgb * 2)
             plt.imshow(im)
             plt.title(lbl)
         plt.show()

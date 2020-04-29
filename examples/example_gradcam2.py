@@ -76,7 +76,7 @@ cam = np.ones(output.shape[0:2], dtype=np.float32)
 for index, w in enumerate(weights):
     cam += w * output[:, :, index]
 
-# Heatmap vis
+# Heatmap vis_old
 cam = cv2.resize(cam.numpy(), (224, 224))
 cam = np.maximum(cam, 0)
 heatmap = (cam - cam.min()) / (cam.max() - cam.min())

@@ -118,10 +118,11 @@ def process_fold(g, source_fold, dead_fold, live_fold, dest_path, conf_mat_paths
 
 p = param.Param()
 
-g = Grads(prefix + '/robodata/Gennadi/tf_to_k_v2.h5')
-# timestamp = 'vgg16_2020_04_16_18_23_50'
-# import_path = os.path.join(p.models_dir, "{}.h5".format(timestamp))
-# g = Grads(import_path)
+# g = Grads(prefix + '/robodata/Gennadi/tf_to_k_v2.h5')
+# timestamp = 'vgg16_2020_04_20_15_05_47' #2drop, 2bn
+timestamp = 'vgg16_2020_04_21_10_08_00' #1drop, 2bn
+import_path = os.path.join(p.models_dir, "{}.h5".format(timestamp))
+g = Grads(import_path)
 gops = GradOps(vgg_normalize=True)
 
 # main_fold = prefix + '/robodata/GalaxyTEMP/BSMachineLearning_TestCuration'
@@ -138,13 +139,13 @@ main_fold = prefix + '/robodata/Josh/Gradcam/ObjectCrops'
 source_fold_prefix = main_fold
 dead_fold = os.path.join(main_fold, 'master', 'DEAD')
 live_fold = os.path.join(main_fold, 'master', 'LIVE')
-dest_path_prefix = prefix + '/robodata/Josh/Gradcam/results/tf2_tf_to_k_model'
+dest_path_prefix = prefix + '/robodata/Josh/Gradcam/results/tf2_new_model_2bn_1drop'
 conf_mat_paths = [['dead_true', 'dead_false'], ['live_false', 'live_true']]
 
 batch_size = 10
 parser = lambda img: gops.img_parse(img)
-# layer_name = 'block5_conv3'
-layer_name = 'block1_conv1'
+layer_name = 'block5_conv3'
+# layer_name = 'block1_conv1'
 
 # # Example usage
 # process_fold(g, source_fold, dead_fold, live_fold, dest_path, conf_mat_paths, batch_size=batch_size, parser=parser, layer_name=layer_name)

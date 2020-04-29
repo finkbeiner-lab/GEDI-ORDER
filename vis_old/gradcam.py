@@ -1,3 +1,7 @@
+"""
+Gradcam in tf.20 - BROKEN, currently tf2.0 doesn't grab layers like in tf1.x. Use store_viz_stacks.py.
+"""
+
 import tensorflow as tf
 from ops.gradcam_ops import Gradcam
 import preprocessing.datagenerator as pipe

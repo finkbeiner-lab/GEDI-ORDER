@@ -1,12 +1,13 @@
+"""
+Deploy trained model
+Compare original gedi model to newly trained gedi model to human curation
+"""
+
 import tensorflow as tf
 import param_gedi as param
-from models.model import CNN
 import preprocessing.datagenerator as pipe
-from ops.processing_ops import get_tfrecord_length
 import os
 import vis.plot_ops as plotops
-import datetime
-from utils.utils import update_timestring
 import numpy as np
 import pandas as pd
 
@@ -14,15 +15,19 @@ p = param.Param()
 SAVE_MONTAGE = False
 tfrecord = p.data_deploy
 ID_RESULTS = False
-CURATION=True
-timestamp = 'vgg16_2020_04_16_18_23_50'  # new data
+CURATION = True
+# Load model by setting model_id
+model_id = 'vgg16_2020_04_21_10_08_00'  # new data
 tp = []
 tn = []
 fp = []
 fn = []
 res_dict = {'predictions': []}
-import_path = os.path.join(p.models_dir, "{}.h5".format(timestamp))
+
+# if testing on CURATION
+import_path = os.path.join(p.models_dir, "{}.h5".format(model_id))
 curation_folder = '/mnt/finkbeinerlab/robodata/GalaxyTEMP/BSMachineLearning_TestCuration/batches/curation_results/v_oza/'
+# Get results from original cnn in csv format
 orig_cnn_folder = '/mnt/finkbeinerlab/robodata/GalaxyTEMP/BSMachineLearning_TestCuration/batches/curation_results/'
 # df = pd.read_csv(os.path.join(curation_folder, 'Batch1_CurationData_29.3761.csv'))
 # df = pd.read_csv(os.path.join(curation_folder, 'Batch1_CurationData_VO_15.234.csv'))
@@ -32,9 +37,10 @@ df = pd.read_csv(os.path.join(curation_folder, 'Batch4_CurationData_VO_140.0766.
 # df = pd.read_csv(os.path.join(curation_folder, 'Batch5_CurationData_VO_10.4167.csv'))
 orig = pd.read_csv(os.path.join(orig_cnn_folder, 'batch4_gedicnn.csv'))
 
-save_res = os.path.join(p.res_csv_deploy, tfrecord.split('/')[-1].split('.')[0] + '.csv')
-Plops = plotops.Plotty(timestamp)
+save_res = os.path.join(p.res_csv_deploy, tfrecord.split('/')[-1].split('.')[0] + '.csv')  # save results
+Plops = plotops.Plotty(model_id)
 
+# Count samples in tfrecord
 Chk = pipe.Dataspring(tfrecord)
 test_length = Chk.count_data().numpy()
 del Chk
@@ -45,15 +51,17 @@ test_gen = DatTest.generator()
 DatView = pipe.Dataspring(tfrecord)
 view_ds = DatView.datagen_base(istraining=False)
 
+# Load model
 print('Loading model...')
 model = tf.keras.models.load_model(import_path, compile=False)
 for lyr in model.layers:
-    lyr.trainable=False
-model.trainable=False
+    lyr.trainable = False
+model.trainable = False
 model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=p.learning_rate),
-                  loss='binary_crossentropy',
-                  metrics=['accuracy'])
+              loss='binary_crossentropy',
+              metrics=['accuracy'])
 model.summary()
+# Predict
 res = model.predict(test_gen, steps=test_length // p.BATCH_SIZE)
 predictions = np.argmax(res, axis=1)
 test_accuracy_lst = []
@@ -90,10 +98,10 @@ for i in range(int(test_length // p.BATCH_SIZE)):
     nplbls = lbls.numpy()
     if p.output_size == 2:
         # For tfrecs with solid ground truth
-        test_results = predictions[i * p.BATCH_SIZE: (i+1) * p.BATCH_SIZE]
+        test_results = predictions[i * p.BATCH_SIZE: (i + 1) * p.BATCH_SIZE]
         labels = np.argmax(nplbls, axis=1)
-#         test_results = np.argmax(res[i * p.BATCH_SIZE: (i + 1) * p.BATCH_SIZE], axis=1)
-#         labels = np.argmax(nplbls, axis=1)
+    #         test_results = np.argmax(res[i * p.BATCH_SIZE: (i + 1) * p.BATCH_SIZE], axis=1)
+    #         labels = np.argmax(nplbls, axis=1)
     elif p.output_size == 1:
         test_results = np.where(res > 0, 1, 0)
         labels = nplbls
@@ -137,14 +145,14 @@ if not CURATION:
     print('test accuracy', test_accuracy)
 else:
     verdict_df = pd.DataFrame(verdict)
-    verdict_df.curation = np.abs(verdict_df.curation -2)
+    verdict_df.curation = np.abs(verdict_df.curation - 2)
     pred_cur = len(verdict_df[verdict_df.curation == verdict_df.prediction])
     pred_cur_acc = pred_cur / len(verdict_df)
     pred_cnn = len(verdict_df[verdict_df.prediction == verdict_df.orig_cnn])
-    pred_cnn_acc = pred_cnn/ len(verdict_df)
+    pred_cnn_acc = pred_cnn / len(verdict_df)
     cnn_cur = len(verdict_df[verdict_df.orig_cnn == verdict_df.curation])
-    cnn_cur_acc = cnn_cur/ len(verdict_df)
-    print('pos/tot', verdict_df.prediction.sum()/len(verdict_df))
+    cnn_cur_acc = cnn_cur / len(verdict_df)
+    print('pos/tot', verdict_df.prediction.sum() / len(verdict_df))
     print('pred vs curation acc', pred_cur_acc)
     print('pred vs orig cnn acc', pred_cnn_acc)
     print('orig cnn vs curation acc', cnn_cur_acc)

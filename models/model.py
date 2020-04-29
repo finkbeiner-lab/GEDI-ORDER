@@ -1,3 +1,7 @@
+"""
+Model class.
+"""
+
 import tensorflow as tf
 from tensorflow.keras import layers
 from tensorflow.keras.models import Model
@@ -12,6 +16,14 @@ class CNN:
         self.trainable = trainable
 
     def standard_model(self, imsize):
+        """
+        Model with a few conv layers, no transfer learning
+        Args:
+            imsize:
+
+        Returns:
+
+        """
         head = tf.keras.Sequential()
         head.add(layers.Conv2D(32, (3, 3), input_shape=(imsize[0], imsize[1], imsize[2])))
         head.add(layers.BatchNormalization())
@@ -46,7 +58,16 @@ class CNN:
             return layers.Dropout(rate=0.5, seed=11, name=name)
 
     def vgg16(self, imsize=(224, 224, 3), batchnorm=False):
-        input = layers.Input(shape=(imsize[0], imsize[1], imsize[2]), name='imgs')  # NAME MATCHES DICT KEY
+        """
+        VGG16 model. Based on model in original tf 1.x gedi repo.
+        Args:
+            imsize: Image size
+            batchnorm: Boolean to use batch norm or not
+
+        Returns:
+            model: compiled model
+        """
+        input = layers.Input(shape=(imsize[0], imsize[1], imsize[2]), name='input_1')  # NAME MATCHES DICT KEY
         base_model = tf.keras.applications.VGG16(include_top=False, weights='imagenet', input_tensor=input,
                                                  input_shape=(imsize[0], imsize[1], imsize[2]))
         for layr in base_model.layers:
@@ -100,52 +121,16 @@ class CNN:
         # x = global_average_layer(x)
         x = flatten(block5_pool.output)
         x = fc1(x)
-        # x = bn1(x)
-        # x = drop1(x, training=self.trainable)
+        x = bn1(x)
+        x = drop1(x, training=self.trainable)
         # x = instance1(x)
         x = fc2(x)
-        # x = bn2(x)
-        x = drop2(x, training=self.trainable)
+        x = bn2(x)
+        # x = drop2(x, training=self.trainable)
         # x = instance2(x)
         x = prediction(x)
 
         raw_model = Model(inputs=base_model.input, outputs=x)
-        raw_model.summary()
-
-        raw_model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=self.p.learning_rate),
-                          loss='binary_crossentropy',
-                          metrics=['accuracy'])
-        return raw_model
-
-    def xvgg16(self, imsize):
-        input = layers.Input(shape=(imsize[0], imsize[1], imsize[2]), name='image_input')
-        base_model = tf.keras.applications.VGG16(include_top=False, weights='imagenet',
-                                                 input_shape=(imsize[0], imsize[1], imsize[2]))
-        # base_model.trainable = False
-        flat = layers.Flatten()
-        dropped = layers.Dropout(0.5)
-        global_average_layer = tf.keras.layers.GlobalAveragePooling2D()
-
-        fc1 = layers.Dense(16, activation='relu', name='dense_1')
-        fc2 = layers.Dense(16, activation='relu', name='dense_2')
-        fc3 = layers.Dense(128, activation='relu', name='dense_3')
-        prediction = layers.Dense(self.p.output_size, activation='softmax', name='result')
-        for layr in base_model.layers:
-            if ('block5' in layr.name):
-
-                layr.trainable = True
-            else:
-                layr.trainable = False
-
-        base_model.summary()
-
-        raw_model = tf.keras.Sequential([
-            base_model,
-            global_average_layer,
-            fc1,
-            fc2,
-            prediction
-        ])
         raw_model.summary()
 
         raw_model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=self.p.learning_rate),
