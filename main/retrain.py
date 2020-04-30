@@ -68,7 +68,7 @@ print('Loading model...')
 model = tf.keras.models.load_model(p.base_gedi, compile=False)
 # FREEZE PART OF THE MODEL FOR FINETUNING
 for lyr in model.layers:
-    if 'dense' in lyr.name:
+    if 'fc' in lyr.name:
         lyr.trainable = True
     else:
         lyr.trainable = False
