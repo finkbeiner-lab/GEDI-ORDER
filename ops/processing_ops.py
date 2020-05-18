@@ -263,7 +263,7 @@ class Parser:
         assert_op = tf.Assert(tf.less_equal(tf.reduce_max(imgs), 1.0), [imgs])
         with tf.control_dependencies([assert_op]):
             images = tf.cast(imgs, tf.float32)
-            images = images * 255.
+            images = images * 255.0
             images = (images / 127.5) - 1.0
             images = tf.image.resize(images, (self.p.target_size[0], self.p.target_size[1]))
         return images, lbls, files
@@ -278,6 +278,16 @@ class Parser:
         """Divide each batch by its maximum"""
         imgs = tf.map_fn(lambda x: self.remove_negatives_in_img(x), imgs)
         imgs = imgs / tf.reduce_max(imgs, keepdims=True)
+        return imgs, lbls, files
+
+    def rescale_im_and_clip_16bit(self, imgs, lbls, files):
+        imgs = tf.map_fn(lambda x: (x - self.p.orig_min_value) / (self.p.orig_max_value - self.p.orig_min_value), imgs)
+        imgs = tf.clip_by_value(imgs, clip_value_min=0., clip_value_max=1.)
+        return imgs, lbls, files
+
+    def rescale_im_and_clip_renorm(self, imgs, lbls, files):
+        imgs = tf.map_fn(lambda x: (x - self.p.training_min_value) / (self.p.training_max_value - self.p.training_min_value), imgs)
+        imgs = tf.clip_by_value(imgs, clip_value_min=0., clip_value_max=1.)
         return imgs, lbls, files
 
 
@@ -332,6 +342,38 @@ class Parser:
         assert bgr.get_shape().as_list()[1:] == [224, 224, 3]
 
         return bgr, lbls, files
+
+    def chk_make_vgg(self, img, lbls, files):
+        """
+        Subtracts the vgg16 training mean by channel.
+        Args:
+            img:
+            lbls:
+            files:
+
+        Returns:
+
+        """
+        if int(img.get_shape()[-1]) == 1:
+            red, green, blue = rgb, rgb, rgb
+        else:
+            red, green, blue = tf.split(
+                axis=3, num_or_size_splits=3, value=rgb)
+
+        assert_op = tf.Assert(tf.reduce_all(tf.equal(red.get_shape()[1:], tf.constant([224, 224, 1]))), [red])
+        with tf.control_dependencies([assert_op]):
+            assert red.get_shape().as_list()[1:] == [224, 224, 1]
+            assert green.get_shape().as_list()[1:] == [224, 224, 1]
+            assert blue.get_shape().as_list()[1:] == [224, 224, 1]
+            bgr = tf.concat(axis=3, values=[
+                blue - self.p.VGG_MEAN[0],
+                green - self.p.VGG_MEAN[1],
+                red - self.p.VGG_MEAN[2],
+            ], name='bgr')
+        assert bgr.get_shape().as_list()[1:] == [224, 224, 3]
+
+        return bgr, lbls, files
+
 
 if __name__=='__main__':
     p = param.Param()

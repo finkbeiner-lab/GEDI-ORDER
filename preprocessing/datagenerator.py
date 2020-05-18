@@ -55,12 +55,15 @@ class Dataspring(Parser):
         ds = ds.map(self.reshape_ims, num_parallel_calls=self.p.num_parallel_calls)
 
         # Normalization
-        ds = ds.map(self.set_max_to_one_by_batch, num_parallel_calls=self.p.num_parallel_calls)
+        # ds = ds.map(self.set_max_to_one_by_batch, num_parallel_calls=self.p.num_parallel_calls)
+        ds = ds.map(self.rescale_im_and_clip_16bit, num_parallel_calls=self.p.num_parallel_calls)
 
         if self.p.augmentbool and istraining:
             ds = ds.map(self.augment, num_parallel_calls=self.p.num_parallel_calls)
             # Normalize again
-            ds = ds.map(self.set_max_to_one_by_batch, num_parallel_calls=self.p.num_parallel_calls)
+            ds = ds.map(self.cut_off_vals, num_parallel_calls=self.p.num_parallel_calls)
+        ds = ds.map(self.rescale_im_and_clip_renorm, num_parallel_calls=self.p.num_parallel_calls)
+
 
         if (self.p.which_model == 'vgg16') or (self.p.which_model == 'vgg19'):
             print('Using {}'.format(self.p.which_model))
@@ -71,9 +74,11 @@ class Dataspring(Parser):
         elif self.p.which_model == 'inceptionv3':
             print('Using inceptionv3')
             ds = ds.map(self.inception_scale, num_parallel_calls=self.p.num_parallel_calls)
-        else:
+        elif self.p.which_model == 'raw':
             print('Using standard model')
             ds = ds.map(self.normalize_whitening, num_parallel_calls=self.p.num_parallel_calls)
+        else:
+            print('no model processing')
         ds = ds.prefetch(1)
         self.it = iter(ds)
 
@@ -119,20 +124,27 @@ class Dataspring(Parser):
 if __name__ == '__main__':
     p = param.Param()
     print(p.which_model)
-    tfrecord = p.data_val
+    tfrecord = p.data_deploy
     Chk = Dataspring(tfrecord)
     test_length = Chk.count_data().numpy()
     print(test_length)
     del Chk
     Dat = Dataspring(tfrecord)
-    Dat.datagen_base(istraining=True)
+    Dat.datagen_base(istraining=False)
     label_lst = []
-    # for i in range(int(test_length//p.BATCH_SIZE)):
-    #     imgs, lbls = Dat.datagen()
-    #     labels = list(np.argmax(lbls, axis=1))
-    #     label_lst.append(labels)
-    #
-    # print(np.mean(label_lst))
+    for i in range(1):
+        imgs, lbls, files = Dat.datagen()
+        for img, lbl, file in zip(imgs, lbls, files):
+
+            lbl = lbl.numpy()
+            img = img.numpy()
+
+            print(img)
+            # print('f', file)
+            print(np.max(img))
+            print(np.min(img))
+            print(img[-1,:,0]*255.0)
+
     #
     # for i in range(1):
     #     imgs, lbls, files = Dat.datagen()
@@ -149,22 +161,30 @@ if __name__ == '__main__':
     #         plt.imshow(im)
     #         plt.title(lbl)
     #     plt.show()
+    # #
+
+    ###### VGG16 #######
+    # for i in range(3):
+    #     imgs, lbls, files = Dat.datagen()
+    #     for img, lbl, file in zip(imgs, lbls, files):
     #
-    for i in range(1):
-        imgs, lbls, files = Dat.datagen()
-        for img, lbl in zip(imgs, lbls):
-            plt.figure()
-            lbl = lbl.numpy()
-            img = img.numpy()
-            img[:, :, 0] += p.VGG_MEAN[0]
-            img[:, :, 1] += p.VGG_MEAN[1]
-            img[:, :, 2] += p.VGG_MEAN[2]
-            print(np.max(img))
-            print(np.min(img))
-            rgb = np.copy(img)
-            rgb[:, :, 0] = img[:, :, 2]
-            rgb[:, :, 2] = img[:, :, 0]
-            im = np.uint8(rgb * 2)
-            plt.imshow(im)
-            plt.title(lbl)
-        plt.show()
+    #         plt.figure()
+    #         lbl = lbl.numpy()
+    #         img = img.numpy()
+    #         img[:, :, 0] += p.VGG_MEAN[0]
+    #         img[:, :, 1] += p.VGG_MEAN[1]
+    #         img[:, :, 2] += p.VGG_MEAN[2]
+    #         print(img)
+    #         print('f', file)
+    #         print(np.max(img))
+    #         print(np.min(img))
+    #         rgb = np.copy(img)
+    #         rgb[:, :, 0] = img[:, :, 2]
+    #         rgb[:, :, 2] = img[:, :, 0]
+    #         rgb = np.float32(rgb)
+    #         rgb *= 3
+    #         rgb[rgb > 255] = 255
+    #         im = np.uint8(rgb)
+    #         plt.imshow(im)
+    #         plt.title(lbl)
+    #     plt.show()

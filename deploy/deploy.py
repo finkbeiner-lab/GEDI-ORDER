@@ -14,18 +14,20 @@ import pandas as pd
 p = param.Param()
 SAVE_MONTAGE = False
 tfrecord = p.data_deploy
-ID_RESULTS = False
-CURATION = True
+SAVECSV = True
+CURATION = False
 # Load model by setting model_id
 model_id = 'vgg16_2020_04_21_10_08_00'  # new data
 tp = []
 tn = []
 fp = []
 fn = []
-res_dict = {'predictions': []}
+res_dict = {'filepath': [], 'prediction': [], 'label': []}
 
 # if testing on CURATION
 import_path = os.path.join(p.models_dir, "{}.h5".format(model_id))
+import_path = os.path.join(p.ckpt_dir, "{}.hdf5".format(model_id))
+import_path = p.base_gedi
 curation_folder = '/mnt/finkbeinerlab/robodata/GalaxyTEMP/BSMachineLearning_TestCuration/batches/curation_results/v_oza/'
 # Get results from original cnn in csv format
 orig_cnn_folder = '/mnt/finkbeinerlab/robodata/GalaxyTEMP/BSMachineLearning_TestCuration/batches/curation_results/'
@@ -33,9 +35,9 @@ orig_cnn_folder = '/mnt/finkbeinerlab/robodata/GalaxyTEMP/BSMachineLearning_Test
 # df = pd.read_csv(os.path.join(curation_folder, 'Batch1_CurationData_VO_15.234.csv'))
 # df = pd.read_csv(os.path.join(curation_folder, 'Batch2_CurationData_VO_9.2609.csv'))
 # df = pd.read_csv(os.path.join(curation_folder, 'Batch3_CurationData_VO_11.5307.csv'))
-df = pd.read_csv(os.path.join(curation_folder, 'Batch4_CurationData_VO_140.0766.csv'))
-# df = pd.read_csv(os.path.join(curation_folder, 'Batch5_CurationData_VO_10.4167.csv'))
-orig = pd.read_csv(os.path.join(orig_cnn_folder, 'batch4_gedicnn.csv'))
+# df = pd.read_csv(os.path.join(curation_folder, 'Batch4_CurationData_VO_140.0766.csv'))
+df = pd.read_csv(os.path.join(curation_folder, 'Batch5_CurationData_VO_10.4167.csv'))
+orig = pd.read_csv(os.path.join(orig_cnn_folder, 'batch5_gedicnn.csv'))
 
 save_res = os.path.join(p.res_csv_deploy, tfrecord.split('/')[-1].split('.')[0] + '.csv')  # save results
 Plops = plotops.Plotty(model_id)
@@ -53,7 +55,22 @@ view_ds = DatView.datagen_base(istraining=False)
 
 # Load model
 print('Loading model...')
-model = tf.keras.models.load_model(import_path, compile=False)
+if 1:
+    base_model = tf.keras.models.load_model(import_path, compile=False)
+    drop1 = tf.keras.layers.Dropout(rate=0.5, seed=0, name='dropout_1')
+    drop2 = tf.keras.layers.Dropout(rate=0.5, seed=0, name='dropout_2')
+
+    fc1 = base_model.get_layer('fc1')
+    fc2= base_model.get_layer('fc2')
+    pred_layer= base_model.get_layer('predictions')
+    x = drop1(fc1.output)
+    x = fc2(x)
+    x = drop2(x)
+    x = pred_layer(x)
+    model = tf.keras.models.Model(inputs=base_model.input, outputs=x)
+else:
+    model = tf.keras.models.load_model(import_path, compile=False)
+
 for lyr in model.layers:
     lyr.trainable = False
 model.trainable = False
@@ -61,8 +78,14 @@ model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=p.learning_rate),
               loss='binary_crossentropy',
               metrics=['accuracy'])
 model.summary()
+tb_callback = tf.keras.callbacks.TensorBoard(
+    log_dir=os.path.join(p.tb_log_dir, p.which_model),
+    update_freq='epoch')
+
+callbacks = [tb_callback]
+
 # Predict
-res = model.predict(test_gen, steps=test_length // p.BATCH_SIZE)
+res = model.predict(test_gen, steps=test_length // p.BATCH_SIZE, callbacks=callbacks)
 predictions = np.argmax(res, axis=1)
 test_accuracy_lst = []
 verdict = {'prediction': [], 'curation': [], 'orig_cnn': [], 'Filename': []}
@@ -106,7 +129,11 @@ for i in range(int(test_length // p.BATCH_SIZE)):
         test_results = np.where(res > 0, 1, 0)
         labels = nplbls
         assert 0
-    for j, (t, ell) in enumerate(zip(test_results, labels)):
+    for j, (t, ell, _file) in enumerate(zip(test_results, labels, files)):
+        file = _file.decode('utf-8')
+        res_dict['filepath'].append(file)
+        res_dict['prediction'].append(t)
+        res_dict['label'].append(ell)
         if t == ell:
             if t == 1:
                 tp.append([files[j], lbls[j]])
@@ -120,8 +147,7 @@ for i in range(int(test_length // p.BATCH_SIZE)):
     test_acc = np.array(test_results) == np.array(labels)
     test_acc_batch_avg = np.mean(test_acc)
     test_accuracy_lst.append(test_acc)
-    if ID_RESULTS:
-        res_dict['predictions'] = list(predictions)
+
 #
 # if SAVE_MONTAGE:
 #     if not os.path.exists(p.confusion_dir):
@@ -131,11 +157,12 @@ for i in range(int(test_length // p.BATCH_SIZE)):
 #     Plops.make_montage(fp, title='False Positives', size=p.BATCH_SIZE)
 #     Plops.make_montage(fn, title='False Negatives', size=p.BATCH_SIZE)
 #
-# if ID_RESULTS:
-#     if not os.path.exists(p.res_csv_deploy):
-#         os.mkdir(p.res_csv_deploy)
-#     res_df = pd.DataFrame(res_dict)
-#     res_df.to_csv(save_res)
+if SAVECSV:
+    if not os.path.exists(p.res_csv_deploy):
+        os.mkdir(p.res_csv_deploy)
+    res_df = pd.DataFrame(res_dict)
+    res_df.to_csv(save_res)
+    print('Result csv saved to {}'.format(save_res))
 if not CURATION:
     print('tp', np.shape(tp))
     print('tn', len(tn))

@@ -122,7 +122,7 @@ class CNN:
         x = flatten(block5_pool.output)
         x = fc1(x)
         x = bn1(x)
-        x = drop1(x, training=self.trainable)
+        # x = drop1(x, training=self.trainable)
         # x = instance1(x)
         x = fc2(x)
         x = bn2(x)

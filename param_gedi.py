@@ -10,14 +10,20 @@ GEDI CNN RESULTS
 import platform
 import os
 import datetime
+import numpy as np
 
 
 class Param:
     def __init__(self):
         self.which_model = 'vgg16'  # vgg16
-        self.EPOCHS = 1
+        self.EPOCHS = 10
         self.learning_rate = 3e-4
-        self.BATCH_SIZE = 16
+        self.BATCH_SIZE = 1
+        self.orig_max_value = 16117.0  # max value of dataset from original model
+        self.orig_min_value = 0  # min value of dataset from original model
+        # self.training_max_value = np.float32(1.0001860857009888)
+        self.training_max_value = 1.0001861
+        self.training_min_value = 0
 
         now = datetime.datetime.now()
         self.timestamp = '%d%02d%02d-%02d%02d%02d' % (now.year, now.month, now.day, now.hour, now.minute, now.second)
@@ -40,6 +46,7 @@ class Param:
         self.res_csv_deploy = os.path.join(self.parent_dir, 'deploy_results')
         self.models_dir = os.path.join(self.parent_dir, 'saved_models')
         self.ckpt_dir = os.path.join(self.parent_dir, 'saved_checkpoints')
+        self.tb_log_dir = os.path.join(self.parent_dir, 'logs')
         self.tfrecord_dir = os.path.join(self.parent_dir, 'TFRECORDS')
         # self.tfrecord_dir = '/mnt/data/CatsAndDogs'
         self.retrain_run_info_dir = os.path.join(self.parent_dir, 'RETRAIN', 'model_info')
@@ -69,15 +76,19 @@ class Param:
         self.catdog_val = os.path.join('/mnt/data/CatsAndDogs/catdog_val.tfrecord')
         self.catdog_test = os.path.join('/mnt/data/CatsAndDogs/catdog_test.tfrecord')
 
-        self.data_train = self.orig_train_rec
-        self.data_val = self.orig_val_rec
-        self.data_test = self.orig_test_rec
+        self.data_retrain = os.path.join(self.tfrecord_dir, 'vor_LINCS092016A_train.tfrecord')
+        self.data_reval = os.path.join(self.tfrecord_dir, 'vor_LINCS092016A_val.tfrecord')
+        self.data_retest = os.path.join(self.tfrecord_dir, 'vor_LINCS092016A_test.tfrecord')
+
+        self.data_train = self.data_retrain
+        self.data_val = self.data_retest
+        self.data_test = self.data_reval
 
         # self.data_deploy=self.data_val
+        self.save_csv_deploy = ''
+        self.data_deploy = os.path.join(self.tfrecord_dir, 'BSMachineLearning_TestCuration_5.tfrecord')
 
-        self.data_deploy = os.path.join(self.tfrecord_dir, 'BSMachineLearning_TestCuration_4.tfrecord')
-
-        self.class_weights = {0: 2.75, 1: 1.}  # rough ratio  # 2.75 vs 1
+        self.class_weights = {0:1., 1: 1.}  # rough ratio  # 2.75 vs 1
 
         # self.max_gedi = 16117. # max value of training set
         self.output_size = 2
@@ -89,7 +100,7 @@ class Param:
         self.vgg_height = 224
         self.vgg_width = 224
         # self.rescale = 1. / 255
-        self.randomcrop = True
+        self.randomcrop = False
 
         # self.shuffle_size = 200
         self.num_parallel_calls = 4
@@ -102,10 +113,10 @@ class Param:
         self.shuffle_buffer_size = 1000
 
         # Data generator
-        self.augmentbool = True
-        self.random_brightness = 0.2
-        self.min_contrast = 0.5
-        self.max_contrast = 2.0
+        self.augmentbool = False
+        self.random_brightness = 0.1
+        self.min_contrast = 0.8
+        self.max_contrast = 1.2
 
         self.hyperparams = {
             'timestamp': self.timestamp,

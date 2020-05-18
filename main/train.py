@@ -52,7 +52,7 @@ DatTest = pipe.Dataspring(p.data_test)
 
 train_ds = DatTrain.datagen_base(istraining=True)
 val_ds = DatVal.datagen_base(istraining=True)
-test_ds = DatTest.datagen_base(istraining=False)
+test_ds = DatTest.datagen_base(istraining=True)
 print('training length', train_length)
 print('validation length', val_length)
 print('test length', test_length)
@@ -88,7 +88,7 @@ cp_callback = tf.keras.callbacks.ModelCheckpoint(save_checkpoint_path, monitor='
                                                  save_best_only=True, mode='max')
 
 tb_callback = tf.keras.callbacks.TensorBoard(
-    log_dir='/home/jlamstein/PycharmProjects/ASYN/log/{}'.format(p.which_model),
+    log_dir=os.path.join(p.tb_log_dir, p.which_model),
     update_freq='epoch')
 
 callbacks = [cp_callback]

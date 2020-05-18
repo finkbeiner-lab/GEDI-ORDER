@@ -21,6 +21,8 @@ def make_directories(p):
         os.mkdir(p.models_dir)
     if not os.path.exists(p.ckpt_dir):
         os.mkdir(p.ckpt_dir)
+    if not os.path.exists(p.tb_log_dir):
+        os.mkdir(p.tb_log_dir)
 
     if not os.path.exists(p.retrain_run_info_dir):
         os.makedirs(p.retrain_run_info_dir, exist_ok=False)
