@@ -16,9 +16,9 @@ import numpy as np
 class Param:
     def __init__(self):
         self.which_model = 'vgg16'  # vgg16
-        self.EPOCHS = 10
+        self.EPOCHS = 1
         self.learning_rate = 3e-4
-        self.BATCH_SIZE = 1
+        self.BATCH_SIZE = 16
         self.orig_max_value = 16117.0  # max value of dataset from original model
         self.orig_min_value = 0  # min value of dataset from original model
         # self.training_max_value = np.float32(1.0001860857009888)
@@ -39,6 +39,9 @@ class Param:
 
         self.base_gedi = {'hobbes': '/mnt/finkbeinerlab/robodata/GEDI_CLUSTER/tf_to_k_v2.h5',
                           'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/tf_to_k_v2.h5'}[
+            os_name]
+        self.base_gedi_dropout = {'hobbes': '/mnt/finkbeinerlab/robodata/GEDI_CLUSTER/base_gedi_dropout.h5',
+                                  'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/base_gedi_dropout.h5'}[
             os_name]
 
         self.run_info_dir = os.path.join(self.parent_dir, 'model_info')
@@ -76,24 +79,28 @@ class Param:
         self.catdog_val = os.path.join('/mnt/data/CatsAndDogs/catdog_val.tfrecord')
         self.catdog_test = os.path.join('/mnt/data/CatsAndDogs/catdog_test.tfrecord')
 
-        self.data_retrain = os.path.join(self.tfrecord_dir, 'vor_LINCS092016A_train.tfrecord')
-        self.data_reval = os.path.join(self.tfrecord_dir, 'vor_LINCS092016A_val.tfrecord')
-        self.data_retest = os.path.join(self.tfrecord_dir, 'vor_LINCS092016A_test.tfrecord')
+        # self.data_retrain = os.path.join(self.tfrecord_dir, 'vor_LINCS092016A_train.tfrecord')
+        # self.data_reval = os.path.join(self.tfrecord_dir, 'vor_LINCS092016A_val.tfrecord')
+        # self.data_retest = os.path.join(self.tfrecord_dir, 'vor_LINCS092016A_test.tfrecord')
 
-        self.data_train = self.data_retrain
-        self.data_val = self.data_retest
-        self.data_test = self.data_reval
+        self.data_retrain = os.path.join(self.tfrecord_dir, 'vor_GEDIbiosensor_train.tfrecord')
+        self.data_reval = os.path.join(self.tfrecord_dir, 'vor_GEDIbiosensor_val.tfrecord')
+        self.data_retest = os.path.join(self.tfrecord_dir, 'vor_GEDIbiosensor_test.tfrecord')
+
+        self.data_train = self.catdog_train
+        self.data_val = self.catdog_val
+        self.data_test = self.catdog_val
 
         # self.data_deploy=self.data_val
         self.save_csv_deploy = ''
         self.data_deploy = os.path.join(self.tfrecord_dir, 'BSMachineLearning_TestCuration_5.tfrecord')
 
-        self.class_weights = {0:1., 1: 1.}  # rough ratio  # 2.75 vs 1
+        self.class_weights = {0: 1., 1: 1.}  # rough ratio  # 2.75 vs 1
 
         # self.max_gedi = 16117. # max value of training set
         self.output_size = 2
         self.target_size = (224, 224, 3)
-        self.orig_size = (300, 300, 1)
+        self.orig_size = (230, 230, 3)  # (230, 230, 3) for catdog tfrecord
         self.orig_width = 300
         self.orig_height = 300
         self.orig_channels = 1

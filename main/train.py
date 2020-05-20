@@ -112,16 +112,17 @@ val_loss = history.history['val_loss']
 
 print('Evaluating model...')
 # Freeze whole model for evaluation
-for lyr in model.layers:
-    lyr.trainable = False
-model.trainable = False
+# for lyr in model.layers:
+#     lyr.trainable = False
+# model.trainable = False
 
 # Predict on test dataset
 res = model.predict(test_gen, steps=test_length // p.BATCH_SIZE)
 test_accuracy_lst = []
 # Get accuracy, compare predictions with labels
 for i in range(int(test_length // p.BATCH_SIZE)):
-    imgs, lbls, files = DatTest.datagen()
+    X, lbls = DatTest.generator()
+
     nplbls = lbls.numpy()
     if p.output_size == 2:
         test_results = np.argmax(res[i * p.BATCH_SIZE: (i + 1) * p.BATCH_SIZE], axis=1)

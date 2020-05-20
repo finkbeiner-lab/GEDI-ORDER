@@ -67,7 +67,7 @@ val_gen = DatVal.generator()
 test_gen = DatTest.generator()
 
 print('Loading model...')
-base_model = tf.keras.models.load_model(p.base_gedi, compile=False)
+model = tf.keras.models.load_model(p.base_gedi_dropout, compile=False)
 # visualize kernels to check model weights
 # if rapid chagne and plateu check data, biases chenged with grad descent
 # check base model included in graph and weigths are  changing
@@ -81,28 +81,13 @@ base_model = tf.keras.models.load_model(p.base_gedi, compile=False)
 # histogram matching of old vs new data histogram normalization
 # represent every image by mean intensity
 # learn affine transformation, scale and intercept, on average transform human to rat
-fc3 = tf.keras.layers.Dense(256, name='fc3', activation='relu', kernel_initializer='TruncatedNormal',
-                   bias_initializer='TruncatedNormal')
-fc4 = tf.keras.layers.Dense(256, name='fc4', activation='relu', kernel_initializer='TruncatedNormal',
-                   bias_initializer='TruncatedNormal')
-bn3 = tf.keras.layers.BatchNormalization(momentum=0.9, name='bn_3')
-bn4 = tf.keras.layers.BatchNormalization(momentum=0.9, name='bn_4')
-model_prediction = tf.keras.layers.Dense(p.output_size, activation='softmax', name='output')
 
-# FREEZE PART OF THE MODEL FOR FINETUNING
-fc2 = base_model.get_layer('fc2')
-x = bn3(fc2.output)
-x = fc3(x)
-x = bn4(x)
-x = fc4(x)
-x = model_prediction(x)
-model = tf.keras.models.Model(inputs=base_model.input, outputs=x)
 
 for lyr in model.layers:
-    if 'fc3' in lyr.name or 'fc4' in lyr.name:
+    if 'block5' in lyr.name or 'fc1' in lyr.name or 'fc2' in lyr.name:
         lyr.trainable = True
     else:
-        lyr.trainable = True
+        lyr.trainable = False
 model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=p.learning_rate),
               loss='binary_crossentropy',
               metrics=['accuracy'])

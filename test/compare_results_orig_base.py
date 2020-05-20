@@ -23,6 +23,7 @@ for i, row in o.iterrows():
         print(f)
     if  o_pred!=n_pred:
         miss += 1
+        print('pred', n_pred)
         print(f)
         # print('1.x', o_pred)
         # print('2.0', n_pred)

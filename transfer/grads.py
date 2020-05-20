@@ -177,7 +177,7 @@ class Grads:
             The above may apply to all batch methods that follow
 
         """
-
+        print('batch grads')
         with self.using_default(guided=guided):
             func = Grads.raw_grad_func(self.model_g if guided else self.model_n, pick_preds=class_id is None, ret_preds=True)
             if class_id is None:
@@ -190,6 +190,7 @@ class Grads:
         return [grads]
 
     def batch_heatmaps(self, batch, layer_name, class_id=None, ret_preds=False):
+        print('batch_heatmaps')
         with self.using_default():
             func = Grads.layer_grad_func(self.model_n, layer_name, pick_preds=class_id is None, ret_preds=True)
             if class_id is None:
@@ -227,6 +228,7 @@ class Grads:
         return [grads]
 
     def guided_gradcam_gray(self, batch, layer_name, class_id=None, ret_preds=False):
+        print('guided gradcam gray')
         grads, preds = self.batch_grads(batch, guided=True, class_id=class_id, ret_preds=True)
         heatmaps, _ = self.batch_heatmaps(batch, layer_name, class_id=class_id, ret_preds=True)
 
@@ -248,7 +250,7 @@ class Grads:
 
     def gen_ggcam_stacks(self, imgs, lbls, layer_name, ret_preds=True):
         # defaults to 8bit
-
+        print('gen ggcam stacks')
         def tif_format(img):
             img = img.astype(dtype=np.float)
             img -= np.amin(img)

@@ -4,11 +4,13 @@ import platform
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
+import param_gedi as param
 
 
 class GradOps:
     def __init__(self, vgg_normalize=True):
         os_type = platform.system()
+        self.p = param.Param()
         if os_type == 'Darwin':
             os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'  # Mac has KMP issues
 
@@ -151,8 +153,11 @@ class GradOps:
                 delta //= 2
             img = img[delta[0]:delta[0] + target_size[0], delta[1]:delta[1] + target_size[1], :]
 
-        img -= np.amin(img)
-        img /= np.amax(img)
+        # img -= np.amin(img)  # 2020/5/18, commented to match GEDI3-master normalization
+        # img /= np.amax(img)
+
+        img = (img - self.p.orig_min_value) / (self.p.orig_max_value - self.p.orig_min_value)
+        img = (img - self.p.training_min_value) / (self.p.training_max_value-self.p.training_min_value)
 
         # Normalize according to VGG specs
         if self.vgg_normalize:
