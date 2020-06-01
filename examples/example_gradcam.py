@@ -22,7 +22,7 @@ img = tf.keras.preprocessing.image.img_to_array(img)
 model = tf.keras.applications.vgg16.VGG16(weights='imagenet', include_top=True)
 
 # Create a graph that outputs target convolution and output
-grad_model = tf.keras.models.Model([model.inputs], [model.get_layer(LAYER_NAME).output, model.output])
+grad_model = tf.keras.models.Model(model.inputs, [model.get_layer(LAYER_NAME).output, model.output])
 print(model.get_layer(LAYER_NAME).output)
 # Get the score for target class
 with tf.GradientTape() as tape:

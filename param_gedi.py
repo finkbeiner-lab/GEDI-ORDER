@@ -16,8 +16,8 @@ import numpy as np
 class Param:
     def __init__(self):
         self.which_model = 'vgg16'  # vgg16
-        self.EPOCHS = 1
-        self.learning_rate = 3e-4
+        self.EPOCHS = 100
+        self.learning_rate = 3e-4  # 3e-4
         self.BATCH_SIZE = 16
         self.orig_max_value = 16117.0  # max value of dataset from original model
         self.orig_min_value = 0  # min value of dataset from original model
@@ -87,20 +87,25 @@ class Param:
         self.data_reval = os.path.join(self.tfrecord_dir, 'vor_GEDIbiosensor_val.tfrecord')
         self.data_retest = os.path.join(self.tfrecord_dir, 'vor_GEDIbiosensor_test.tfrecord')
 
+        self.data_retrain = self.orig_train_rec
+        self.data_reval = self.orig_val_rec
+        self.data_retest = self.orig_test_rec
+
         self.data_train = self.catdog_train
         self.data_val = self.catdog_val
-        self.data_test = self.catdog_val
+        self.data_test = self.catdog_test
 
         # self.data_deploy=self.data_val
         self.save_csv_deploy = ''
-        self.data_deploy = os.path.join(self.tfrecord_dir, 'BSMachineLearning_TestCuration_5.tfrecord')
+        # self.data_deploy = os.path.join(self.tfrecord_dir, 'BSMachineLearning_TestCuration_5.tfrecord')
+        self.data_deploy = self.orig_val_rec
 
-        self.class_weights = {0: 1., 1: 1.}  # rough ratio  # 2.75 vs 1
+        self.class_weights = {0: 2.75, 1: 1.}  # rough ratio  # 2.75 vs 1
 
         # self.max_gedi = 16117. # max value of training set
         self.output_size = 2
         self.target_size = (224, 224, 3)
-        self.orig_size = (230, 230, 3)  # (230, 230, 3) for catdog tfrecord
+        self.orig_size = (300, 300, 1)  # (230, 230, 3) for catdog tfrecord / (300,300,1) for cells
         self.orig_width = 300
         self.orig_height = 300
         self.orig_channels = 1
@@ -120,7 +125,7 @@ class Param:
         self.shuffle_buffer_size = 1000
 
         # Data generator
-        self.augmentbool = False
+        self.augmentbool = True
         self.random_brightness = 0.1
         self.min_contrast = 0.8
         self.max_contrast = 1.2

@@ -124,11 +124,11 @@ class Dataspring(Parser):
 if __name__ == '__main__':
     p = param.Param()
     print(p.which_model)
-    tfrecord = p.data_train
-    Chk = Dataspring(tfrecord)
-    test_length = Chk.count_data().numpy()
-    print(test_length)
-    del Chk
+    tfrecord = p.data_retrain
+    # Chk = Dataspring(tfrecord)
+    # test_length = Chk.count_data().numpy()
+    # print(test_length)
+    # del Chk
     Dat = Dataspring(tfrecord)
     Dat.datagen_base(istraining=False)
     label_lst = []

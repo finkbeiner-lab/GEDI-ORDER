@@ -49,10 +49,12 @@ del Chk
 DatTrain = pipe.Dataspring(p.data_train)
 DatVal = pipe.Dataspring(p.data_val)
 DatTest = pipe.Dataspring(p.data_test)
+DatTest2 = pipe.Dataspring(p.data_test)
 
 train_ds = DatTrain.datagen_base(istraining=True)
 val_ds = DatVal.datagen_base(istraining=True)
-test_ds = DatTest.datagen_base(istraining=True)
+test_ds = DatTest.datagen_base(istraining=False)
+test_ds2 = DatTest2.datagen_base(istraining=False)
 print('training length', train_length)
 print('validation length', val_length)
 print('test length', test_length)
@@ -94,7 +96,7 @@ tb_callback = tf.keras.callbacks.TensorBoard(
 callbacks = [cp_callback]
 history = model.fit(train_gen, steps_per_epoch=train_length // (p.BATCH_SIZE), epochs=p.EPOCHS,
                     class_weight=p.class_weights, validation_data=val_gen,
-                    validation_steps=val_length // p.BATCH_SIZE, callbacks=callbacks)
+                    validation_steps=val_length // p.BATCH_SIZE, callbacks=callbacks, workers=4, use_multiprocessing=True)
 # history = model.fit(train_gen, steps_per_epoch=train_length // (p.BATCH_SIZE), epochs=p.EPOCHS,
 #                     validation_data=val_gen,
 #                     validation_steps=val_length // p.BATCH_SIZE, callbacks=callbacks)
@@ -117,12 +119,12 @@ print('Evaluating model...')
 # model.trainable = False
 
 # Predict on test dataset
-res = model.predict(test_gen, steps=test_length // p.BATCH_SIZE)
+res = model.predict(test_gen, steps=test_length // p.BATCH_SIZE, workers=4, use_multiprocessing=True)
 test_accuracy_lst = []
 # Get accuracy, compare predictions with labels
 for i in range(int(test_length // p.BATCH_SIZE)):
-    X, lbls = DatTest.generator()
-
+    imgs, lbls, files = DatTest2.datagen()
+    # res = model.predict((imgs, lbls), steps=test_length // p.BATCH_SIZE, workers=4, use_multiprocessing=True)
     nplbls = lbls.numpy()
     if p.output_size == 2:
         test_results = np.argmax(res[i * p.BATCH_SIZE: (i + 1) * p.BATCH_SIZE], axis=1)
