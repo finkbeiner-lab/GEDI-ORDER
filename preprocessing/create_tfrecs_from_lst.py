@@ -29,6 +29,8 @@ import param_gedi as param
 import os
 import cv2
 import matplotlib.pyplot as plt
+from utils.utils import get_timepoint
+import random
 
 class Record:
 
@@ -42,7 +44,7 @@ class Record:
             split: List to split data into training, validation, testing
             scramble: Boolean to scramble labels, the random labels on the images can help tell if the model is learning patters or memorizing samples
         """
-
+        assert isinstance(images_lst_dead, list), 'images_lst_dead must be list'
         self.p = param.Param()
 
 
@@ -147,14 +149,23 @@ class Record:
 
 if __name__ == '__main__':
     p = param.Param()
-    pos_dir = '/mnt/finkbeinerlab/robodata/Josh/dogs_vs_cats/train/cat'
-    neg_dir = '/mnt/finkbeinerlab/robodata/Josh/dogs_vs_cats/train/dog'
+    pos_dir = '/mnt/finkbeinerlab/robodata/JeremyTEMP/GalaxyTEMP/LINCS072017RGEDI-A/LiveVoronoi'
+    neg_dir = '/mnt/finkbeinerlab/robodata/JeremyTEMP/GalaxyTEMP/LINCS072017RGEDI-A/DeadVoronoi'
     split = [.7, .15, .15]
+    _poss = glob.glob(os.path.join(pos_dir, '*.tif'))
+    _negs = glob.glob(os.path.join(neg_dir, '*.tif'))
+    poss = [f for f in _poss if get_timepoint(f) < 11]
+    negs = [f for f in _negs if get_timepoint(f) < 11]
 
-    Rec = Record(pos_dir, neg_dir, p.tfrecord_dir, split, scramble=False)
-    savetrain = os.path.join(p.tfrecord_dir, 'catdog_train.tfrecord')
-    saveval = os.path.join(p.tfrecord_dir, 'catdog_val.tfrecord')
-    savetest = os.path.join(p.tfrecord_dir, 'catdog_test.tfrecord')
+    if len(poss) > len(negs):
+        poss = random.sample(poss, len(negs))
+        assert len(poss) == len(negs), 'expect negative and positive list to be same length'
+
+
+    Rec = Record(poss, negs, p.tfrecord_dir, split, scramble=False)
+    savetrain = os.path.join(p.tfrecord_dir, 'LINCS072017RGEDI-A_train.tfrecord')
+    saveval = os.path.join(p.tfrecord_dir, 'LINCS072017RGEDI-A_val.tfrecord')
+    savetest = os.path.join(p.tfrecord_dir, 'LINCS072017RGEDI-A_test.tfrecord')
     Rec.tiff2record(savetrain, Rec.trainpaths, Rec.trainlbls)
     Rec.tiff2record(saveval, Rec.valpaths, Rec.vallbls)
     Rec.tiff2record(savetest, Rec.testpaths, Rec.testlbls)

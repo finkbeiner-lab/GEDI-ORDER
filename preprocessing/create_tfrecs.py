@@ -36,56 +36,47 @@ import numpy as np
 import sys
 import glob
 import param_gedi as param
+import random
 import os
 import cv2
 import matplotlib.pyplot as plt
 
+
 class Record:
 
-    def __init__(self, images_dir_A, images_dir_B, tfrecord_dir, split, scramble):
+    def __init__(self, images_dir_live, images_dir_dead, tfrecord_dir, split, balance_method, scramble):
         """
 
         Args:
-            images_dir_A: Image direction with single label (i.e. 0)
-            images_dir_B: Image directory with different label (i.e. 1)
+            images_dir_live: Image direction with single label (i.e. 0)
+            images_dir_dead: Image directory with different label (i.e. 1)
             tfrecord_dir: Save directory for tfrecs
             split: List to split data into training, validation, testing
+            balance_method: Method to balance binary classes
             scramble: Boolean to scramble labels, the random labels on the images can help tell if the model is learning patters or memorizing samples
         """
 
         self.p = param.Param()
-        self.images_dir_A = images_dir_A
-        self.images_dir_B = images_dir_B
+        self.images_dir_live = images_dir_live
+        self.images_dir_dead = images_dir_dead
         # Add dummy folder for batch two, different tree.
-        self.impaths_A = glob.glob(os.path.join(self.images_dir_A,'*.jpg'))
-        self.impaths_B = glob.glob(os.path.join(self.images_dir_B, '*.jpg'))
-
+        self.impaths_live = glob.glob(os.path.join(self.images_dir_live, '*.tif'))
+        self.impaths_dead = glob.glob(os.path.join(self.images_dir_dead, '*.tif'))
+        if len(self.impaths_dead) < len(self.impaths_live):
+            self.impaths_dead, self.impaths_live = \
+                self.balance_dataset(method=balance_method, smaller_lst=self.impaths_dead, larger_lst=self.impaths_live)
         self.tfrecord_dir = tfrecord_dir
-        # ../images_dir_A/positive
-        # ../images_dir_A/negative
-        positive_negative_A = images_dir_A.split('/')[-1]
-        if positive_negative_A == 'cat':
-            label_A = 1
-        elif positive_negative_A == 'dog':
-            label_A = 0
-        else:
-            raise ValueError('Last folder A in image directory must be either \'positive\' or \'negative\'.')
 
-        positive_negative_B = images_dir_B.split('/')[-1]
-        if positive_negative_B == 'cat':
-            label_B = 1
-        elif positive_negative_B == 'dog':
-            label_B = 0
-        else:
-            raise ValueError('Last folder B in image directory must be either \'positive\' or \'negative\'.')
+        label_live = 1
+        label_dead = 0
 
-        self.labels_A = np.int16(np.ones(len(self.impaths_A)) * label_A)
-        self.labels_B = np.int16(np.ones(len(self.impaths_B)) * label_B)
+        self.labels_live = np.int16(np.ones(len(self.impaths_live)) * label_live)
+        self.labels_dead = np.int16(np.ones(len(self.impaths_dead)) * label_dead)
 
-        self._impaths = np.array(self.impaths_A + self.impaths_B)
-        self._labels = np.append(self.labels_A, self.labels_B)
+        self._impaths = np.array(self.impaths_live + self.impaths_dead)
+        self._labels = np.append(self.labels_live, self.labels_dead)
         assert len(self._impaths) == len(self._labels), 'Length of images and labels do not match.'
-        assert len(self.impaths_A) + len(self.impaths_B) == len(
+        assert len(self.impaths_live) + len(self.impaths_dead) == len(
             self._impaths), 'Summed lengths of image paths do not match'
         self.shuffled_idx = np.arange(len(self._impaths))
         self.scrambled_idx = self.shuffled_idx.copy()
@@ -101,6 +92,7 @@ class Record:
 
             np.random.shuffle(self.scrambled_idx)
             self.labels = self._labels[self.scrambled_idx]
+            print('WARNING: LABELS SCRAMBLED AND INACCURATE FOR DEBUGGING')
 
         length = len(self.impaths)
 
@@ -115,7 +107,7 @@ class Record:
     def load_image(self, im_path):
         img = imageio.imread(im_path)
         # assume it's the correct size, otherwise resize here
-        img = cv2.resize(img, (230, 230), interpolation=cv2.INTER_AREA)
+        # img = cv2.resize(img, (230, 230), interpolation=cv2.INTER_AREA)
 
         img = img.astype(np.float32)
         return img
@@ -129,6 +121,27 @@ class Record:
 
     def _bytes_feature(self, value):
         return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
+
+    def balance_dataset(self, method, smaller_lst, larger_lst):
+        if len(smaller_lst) != len(larger_lst):
+
+            if method == 'multiply':
+                small_new = []
+                i = 0
+                while len(small_new) < len(larger_lst):
+                    small_new.append(smaller_lst[i % len(smaller_lst)])
+                    i += 1
+                assert len(small_new) == len(larger_lst), 'lengths do not match in multiply'
+                return small_new, larger_lst
+            elif method == 'cutoff':
+                big_new = random.sample(larger_lst, len(smaller_lst))
+                assert len(smaller_lst) == len(big_new), 'lengths do not match in cutoff'
+                return smaller_lst, big_new
+            else:
+                print('Unbalanced dataset: smaller: {}, larger: {}'.format(len(smaller_lst), len(larger_lst)))
+
+        return smaller_lst, larger_lst
+
 
     def tiff2record(self, tf_data_name, filepaths, labels):
         """
@@ -149,7 +162,6 @@ class Record:
                 filename = str(filepaths[i])
 
                 img = self.load_image(filename)
-
 
                 label = labels[i]
                 filename = str(filename)
@@ -172,14 +184,17 @@ class Record:
 
 if __name__ == '__main__':
     p = param.Param()
-    pos_dir = '/mnt/finkbeinerlab/robodata/Josh/dogs_vs_cats/train/cat'
-    neg_dir = '/mnt/finkbeinerlab/robodata/Josh/dogs_vs_cats/train/dog'
+    # pos_dir = '/mnt/finkbeinerlab/robodata/Josh/dogs_vs_cats/train/cat'
+    # neg_dir = '/mnt/finkbeinerlab/robodata/Josh/dogs_vs_cats/train/dog'
+    pos_dir = '/mnt/finkbeinerlab/robodata/JeremyTEMP/GalaxyTEMP/LINCS072017RGEDI-A/Livetraining2'
+    neg_dir = '/mnt/finkbeinerlab/robodata/JeremyTEMP/GalaxyTEMP/LINCS072017RGEDI-A/Deadtraining2'
     split = [.7, .15, .15]
+    balance_method = 'cutoff'
 
-    Rec = Record(pos_dir, neg_dir, p.tfrecord_dir, split, scramble=False)
-    savetrain = os.path.join(p.tfrecord_dir, 'catdog_train.tfrecord')
-    saveval = os.path.join(p.tfrecord_dir, 'catdog_val.tfrecord')
-    savetest = os.path.join(p.tfrecord_dir, 'catdog_test.tfrecord')
+    Rec = Record(pos_dir, neg_dir, p.tfrecord_dir, split, balance_method=balance_method, scramble=False)
+    savetrain = os.path.join(p.tfrecord_dir, 'LINCS072017RGEDI-A_train.tfrecord')
+    saveval = os.path.join(p.tfrecord_dir, 'LINCS072017RGEDI-A_val.tfrecord')
+    savetest = os.path.join(p.tfrecord_dir, 'LINCS072017RGEDI-A_test.tfrecord')
     Rec.tiff2record(savetrain, Rec.trainpaths, Rec.trainlbls)
     Rec.tiff2record(saveval, Rec.valpaths, Rec.vallbls)
     Rec.tiff2record(savetest, Rec.testpaths, Rec.testlbls)

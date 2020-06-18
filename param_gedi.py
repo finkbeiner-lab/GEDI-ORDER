@@ -40,8 +40,8 @@ class Param:
         self.base_gedi = {'hobbes': '/mnt/finkbeinerlab/robodata/GEDI_CLUSTER/tf_to_k_v2.h5',
                           'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/tf_to_k_v2.h5'}[
             os_name]
-        self.base_gedi_dropout = {'hobbes': '/mnt/finkbeinerlab/robodata/GEDI_CLUSTER/base_gedi_dropout.h5',
-                                  'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/base_gedi_dropout.h5'}[
+        self.base_gedi_dropout = {'hobbes': '/mnt/finkbeinerlab/robodata/GEDI_CLUSTER/base_gedi_dropout_bn.h5',
+                                  'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/base_gedi_dropout_bn.h5'}[
             os_name]
 
         self.run_info_dir = os.path.join(self.parent_dir, 'model_info')
@@ -66,6 +66,9 @@ class Param:
                                          'all_data_val.tfrecords')  # 20863 images {'dead': 5625, 'live': 15238}  2.708
         self.orig_test_rec = os.path.join(self.tfrec_dir,
                                           'all_data_test.tfrecords')  # 16758 images {'dead': 1372, 'live':15386} 11.2
+        self.lincs_train = os.path.join(self.tfrecord_dir, 'LINCS072017RGEDI-A_train.tfrecord')
+        self.lincs_val = os.path.join(self.tfrecord_dir, 'LINCS072017RGEDI-A_val.tfrecord')
+        self.lincs_test = os.path.join(self.tfrecord_dir, 'LINCS072017RGEDI-A_test.tfrecord')
 
         self.jk_train = os.path.join(self.tfrec_dir, 'jk_train.tfrecord')
         self.jk_val = os.path.join(self.tfrec_dir, 'jk_val.tfrecord')
@@ -79,21 +82,25 @@ class Param:
         self.catdog_val = os.path.join('/mnt/data/CatsAndDogs/catdog_val.tfrecord')
         self.catdog_test = os.path.join('/mnt/data/CatsAndDogs/catdog_test.tfrecord')
 
-        # self.data_retrain = os.path.join(self.tfrecord_dir, 'vor_LINCS092016A_train.tfrecord')
-        # self.data_reval = os.path.join(self.tfrecord_dir, 'vor_LINCS092016A_val.tfrecord')
-        # self.data_retest = os.path.join(self.tfrecord_dir, 'vor_LINCS092016A_test.tfrecord')
+        self.data_retrain = os.path.join(self.tfrecord_dir, 'vor_LINCS092016A_train.tfrecord')
+        self.data_reval = os.path.join(self.tfrecord_dir, 'vor_LINCS092016A_val.tfrecord')
+        self.data_retest = os.path.join(self.tfrecord_dir, 'vor_LINCS092016A_test.tfrecord')
 
-        self.data_retrain = os.path.join(self.tfrecord_dir, 'vor_GEDIbiosensor_train.tfrecord')
-        self.data_reval = os.path.join(self.tfrecord_dir, 'vor_GEDIbiosensor_val.tfrecord')
-        self.data_retest = os.path.join(self.tfrecord_dir, 'vor_GEDIbiosensor_test.tfrecord')
+        # self.data_retrain = os.path.join(self.tfrecord_dir, 'vor_GEDIbiosensor_train.tfrecord')
+        # self.data_reval = os.path.join(self.tfrecord_dir, 'vor_GEDIbiosensor_val.tfrecord')
+        # self.data_retest = os.path.join(self.tfrecord_dir, 'vor_GEDIbiosensor_test.tfrecord')
+        #
+        # self.data_retrain = self.orig_train_rec
+        # self.data_reval = self.orig_val_rec
+        # self.data_retest = self.orig_test_rec
 
-        self.data_retrain = self.orig_train_rec
-        self.data_reval = self.orig_val_rec
-        self.data_retest = self.orig_test_rec
+        self.data_train = self.data_retrain
+        self.data_val = self.data_retrain
+        self.data_test = self.data_retrain
 
-        self.data_train = self.catdog_train
-        self.data_val = self.catdog_val
-        self.data_test = self.catdog_test
+        # self.data_train = self.lincs_train
+        # self.data_val = self.lincs_val
+        # self.data_test = self.lincs_test
 
         # self.data_deploy=self.data_val
         self.save_csv_deploy = ''

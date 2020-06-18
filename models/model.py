@@ -66,6 +66,7 @@ class CNN:
 
         Returns:
             model: compiled model
+        todo: save model with batchnorm after dropout and test, compare to GEDI2-master in Documents.
         """
         input = layers.Input(shape=(imsize[0], imsize[1], imsize[2]), name='input_1')  # NAME MATCHES DICT KEY
         base_model = tf.keras.applications.VGG16(include_top=False, weights='imagenet', input_tensor=input,
@@ -92,7 +93,7 @@ class CNN:
         drop3 = layers.Dropout(rate=0.5, name='dropout_3')
         bn1 = layers.BatchNormalization(momentum=0.9, name='bn_1')
         bn2 = layers.BatchNormalization(momentum=0.9, name='bn_2')
-        bn3 = layers.BatchNormalization(name='bn_3')
+        bn3 = layers.BatchNormalization(momentum=0.9, name='bn_3')
         instance1 = tfa.layers.InstanceNormalization(name='instance_1')
         instance2 = tfa.layers.InstanceNormalization(name='instance_2')
         # updated_model = tf.keras.models.Sequential()
@@ -110,11 +111,12 @@ class CNN:
         global_average_layer = tf.keras.layers.GlobalAveragePooling2D()
         flatten = tf.keras.layers.Flatten()
 
-        fc1 = layers.Dense(4096,  name='dense_1', activation='relu', kernel_initializer='TruncatedNormal', bias_initializer='TruncatedNormal')
-        fc2 = layers.Dense(4096,  name='dense_2', activation='relu', kernel_initializer='TruncatedNormal', bias_initializer='TruncatedNormal')
+        fc1 = layers.Dense(4096, name='dense_1', activation='relu', kernel_initializer='TruncatedNormal',
+                           bias_initializer='TruncatedNormal')
+        fc2 = layers.Dense(4096, name='dense_2', activation='relu', kernel_initializer='TruncatedNormal',
+                           bias_initializer='TruncatedNormal')
         # fc3 = layers.Dense(256, activation='relu', name='dense_3')
-        prediction = layers.Dense(self.p.output_size, activation='softmax', name='output')
-
+        fc3 = layers.Dense(self.p.output_size, activation='softmax', name='fc3')
 
         # updated_model.summary()
         # x = updated_model(input)
@@ -128,7 +130,9 @@ class CNN:
         x = bn2(x)
         # x = drop2(x, training=self.trainable)
         # x = instance2(x)
-        x = prediction(x)
+        x = fc3(x)
+        x = bn3(x)
+        x = tf.keras.layers.Softmax(name='output')(x)
 
         raw_model = Model(inputs=base_model.input, outputs=x)
         raw_model.summary()
@@ -189,7 +193,6 @@ class CNN:
         fc2 = layers.Dense(16, activation='relu', name='dense_2')
         fc3 = layers.Dense(128, activation='softmax', name='dense_3')
         prediction = layers.Dense(self.p.output_size, activation='softmax', name='output')
-        # todo: set the layers necessary to trainable
         raw_model = tf.keras.Sequential([
             base_model,
             global_average_layer,

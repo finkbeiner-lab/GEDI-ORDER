@@ -34,3 +34,10 @@ def make_directories(p):
         os.makedirs(p.retrain_models_dir, exist_ok=False)
     if not os.path.exists(p.retrain_ckpt_dir):
         os.makedirs(p.retrain_ckpt_dir, exist_ok=False)
+
+def get_timepoint(s):
+    t = s.split('/')[-1].split('_')[2]
+    # print('timepoint', t)
+    assert t[0] == 'T'
+    assert t[1].isnumeric()
+    return int(t[1:])
