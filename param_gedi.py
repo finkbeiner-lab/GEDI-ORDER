@@ -129,7 +129,7 @@ class Param:
         # self.wd_layers = None
         # self.hold_lr = 1e-8
         # self.new_lr = 3e-4
-        self.shuffle_buffer_size = 1000
+        self.shuffle_buffer_size = 200
 
         # Data generator
         self.augmentbool = True
