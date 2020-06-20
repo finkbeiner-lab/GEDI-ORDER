@@ -24,6 +24,8 @@ class Param:
         # self.training_max_value = np.float32(1.0001860857009888)
         self.training_max_value = 1.0001861
         self.training_min_value = 0
+        self.class_weights = {0: 2.75, 1: 1.}  # rough ratio  # 2.75 vs 1
+
 
         now = datetime.datetime.now()
         self.timestamp = '%d%02d%02d-%02d%02d%02d' % (now.year, now.month, now.day, now.hour, now.minute, now.second)
@@ -90,9 +92,9 @@ class Param:
         # self.data_reval = os.path.join(self.tfrecord_dir, 'vor_GEDIbiosensor_val.tfrecord')
         # self.data_retest = os.path.join(self.tfrecord_dir, 'vor_GEDIbiosensor_test.tfrecord')
         #
-        # self.data_retrain = self.orig_train_rec
-        # self.data_reval = self.orig_val_rec
-        # self.data_retest = self.orig_test_rec
+        self.data_retrain = self.orig_train_rec
+        self.data_reval = self.orig_val_rec
+        self.data_retest = self.orig_test_rec
 
         self.data_train = self.data_retrain
         self.data_val = self.data_retrain
@@ -107,7 +109,6 @@ class Param:
         # self.data_deploy = os.path.join(self.tfrecord_dir, 'BSMachineLearning_TestCuration_5.tfrecord')
         self.data_deploy = self.orig_val_rec
 
-        self.class_weights = {0: 2.75, 1: 1.}  # rough ratio  # 2.75 vs 1
 
         # self.max_gedi = 16117. # max value of training set
         self.output_size = 2
