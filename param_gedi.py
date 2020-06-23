@@ -24,7 +24,7 @@ class Param:
         # self.training_max_value = np.float32(1.0001860857009888)
         self.training_max_value = 1.0001861
         self.training_min_value = 0
-        self.class_weights = {0: 2.75, 1: 1.}  # rough ratio  # 2.75 vs 1
+        self.class_weights = {0: 1., 1: 1.}  # rough ratio  # 2.75 vs 1
 
 
         now = datetime.datetime.now()
@@ -42,7 +42,7 @@ class Param:
         self.base_gedi = {'hobbes': '/mnt/finkbeinerlab/robodata/GEDI_CLUSTER/tf_to_k_v2.h5',
                           'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/tf_to_k_v2.h5'}[
             os_name]
-        self.base_gedi_dropout = {'hobbes': '/mnt/finkbeinerlab/robodata/GEDI_CLUSTER/base_gedi_dropout_bn.h5',
+        self.base_gedi_dropout_bn = {'hobbes': '/mnt/finkbeinerlab/robodata/GEDI_CLUSTER/base_gedi_dropout_bn.h5',
                                   'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/base_gedi_dropout_bn.h5'}[
             os_name]
 
@@ -83,7 +83,7 @@ class Param:
         self.catdog_train = os.path.join('/mnt/data/CatsAndDogs/catdog_train.tfrecord')
         self.catdog_val = os.path.join('/mnt/data/CatsAndDogs/catdog_val.tfrecord')
         self.catdog_test = os.path.join('/mnt/data/CatsAndDogs/catdog_test.tfrecord')
-
+        #################SET TRAIN AND RETRAIN TFRECORDS#####################
         self.data_retrain = os.path.join(self.tfrecord_dir, 'vor_LINCS092016A_train.tfrecord')
         self.data_reval = os.path.join(self.tfrecord_dir, 'vor_LINCS092016A_val.tfrecord')
         self.data_retest = os.path.join(self.tfrecord_dir, 'vor_LINCS092016A_test.tfrecord')
@@ -91,7 +91,7 @@ class Param:
         # self.data_retrain = os.path.join(self.tfrecord_dir, 'vor_GEDIbiosensor_train.tfrecord')
         # self.data_reval = os.path.join(self.tfrecord_dir, 'vor_GEDIbiosensor_val.tfrecord')
         # self.data_retest = os.path.join(self.tfrecord_dir, 'vor_GEDIbiosensor_test.tfrecord')
-        #
+        # #
         self.data_retrain = self.orig_train_rec
         self.data_reval = self.orig_val_rec
         self.data_retest = self.orig_test_rec

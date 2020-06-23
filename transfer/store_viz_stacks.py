@@ -148,7 +148,7 @@ p = param.Param()
 # timestamp = 'vgg16_2020_04_20_15_05_47' #2drop, 2bn
 # timestamp = 'vgg16_2020_04_21_10_08_00' #1drop, 2bn
 # import_path = os.path.join(p.models_dir, "{}.h5".format(timestamp))
-import_path = os.path.join(p.base_gedi_dropout)
+import_path = os.path.join(p.base_gedi_dropout_bn)
 g = Grads(import_path)
 gops = GradOps(vgg_normalize=True)
 

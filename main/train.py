@@ -34,8 +34,6 @@ run_info = {'model': p.which_model,
             'output_size': p.output_size,
             'im_shape': p.target_size,
             'random_crop': p.randomcrop}
-print(run_info)
-
 # Get length of tfrecords
 Chk = pipe.Dataspring(p.data_train)
 train_length = Chk.count_data().numpy()
@@ -58,6 +56,8 @@ test_ds2 = DatTest2.datagen_base(istraining=False)
 print('training length', train_length)
 print('validation length', val_length)
 print('test length', test_length)
+for _key, _val in run_info.items():
+    print(f'{_key} : {_val}')
 train_gen = DatTrain.generator()
 val_gen = DatVal.generator()
 test_gen = DatTest.generator()

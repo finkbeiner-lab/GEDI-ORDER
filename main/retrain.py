@@ -23,7 +23,7 @@ export_path = os.path.join(p.retrain_models_dir, '{}_{}.h5'.format(p.which_model
 export_info_path = os.path.join(p.retrain_run_info_dir, '{}_{}.csv'.format(p.which_model, timestamp))
 save_checkpoint_path = os.path.join(p.retrain_ckpt_dir, '{}_{}.hdf5'.format(p.which_model, timestamp))
 run_info = {'model': p.which_model,
-            'retraining': p.base_gedi,
+            'retraining': p.base_gedi_dropout_bn,
             'timestamp': timestamp,
             'model_timestamp': p.which_model + '_' + timestamp,
             'train_path': p.data_retrain,
@@ -36,7 +36,6 @@ run_info = {'model': p.which_model,
             'output_size': p.output_size,
             'im_shape': p.target_size,
             'random_crop': p.randomcrop}
-print(run_info)
 # Get length of tfrecords
 Chk = pipe.Dataspring(p.data_retrain)
 train_length = Chk.count_data().numpy()
@@ -59,6 +58,8 @@ test_ds2 = DatTest2.datagen_base(istraining=False)
 print('training length', train_length)
 print('validation length', val_length)
 print('test length', test_length)
+for _key, _val in run_info.items():
+    print(f'{_key} : {_val}')
 
 # uses retraining generator
 # train_gen = DatTrain.retrain_orig_generator()
@@ -70,7 +71,7 @@ test_gen = DatTest.generator()
 test_gen2 = DatTest2.generator()
 
 print('Loading model...')
-base_model = tf.keras.models.load_model(p.base_gedi_dropout, compile=False)
+base_model = tf.keras.models.load_model(p.base_gedi_dropout_bn, compile=False)
 # visualize kernels to check model weights
 # if rapid chagne and plateu check data, biases chenged with grad descent
 # check base model included in graph and weigths are  changing

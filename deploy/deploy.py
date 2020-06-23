@@ -27,7 +27,7 @@ res_dict = {'filepath': [], 'prediction': [], 'label': []}
 # if testing on CURATION
 import_path = os.path.join(p.models_dir, "{}.h5".format(model_id))
 import_path = os.path.join(p.ckpt_dir, "{}.hdf5".format(model_id))
-import_path = p.base_gedi_dropout
+import_path = p.base_gedi_dropout_bn
 curation_folder = '/mnt/finkbeinerlab/robodata/GalaxyTEMP/BSMachineLearning_TestCuration/batches/curation_results/v_oza/'
 # Get results from original cnn in csv format
 orig_cnn_folder = '/mnt/finkbeinerlab/robodata/GalaxyTEMP/BSMachineLearning_TestCuration/batches/curation_results/'
@@ -68,7 +68,7 @@ if 0:
     x = drop2(x)
     x = pred_layer(x)
     model = tf.keras.models.Model(inputs=base_model.input, outputs=x)
-    model.save(p.base_gedi_dropout)
+    model.save(p.base_gedi_dropout_bn)
 else:
     model = tf.keras.models.load_model(import_path, compile=False)
 
