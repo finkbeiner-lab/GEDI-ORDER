@@ -16,7 +16,7 @@ import numpy as np
 class Param:
     def __init__(self):
         self.which_model = 'vgg16'  # vgg16
-        self.EPOCHS = 100
+        self.EPOCHS = 20
         self.learning_rate = 3e-4  # 3e-4
         self.BATCH_SIZE = 16
         self.orig_max_value = 16117.0  # max value of dataset from original model
@@ -24,7 +24,7 @@ class Param:
         # self.training_max_value = np.float32(1.0001860857009888)
         self.training_max_value = 1.0001861
         self.training_min_value = 0
-        self.class_weights = {0: 1., 1: 1.}  # rough ratio  # 2.75 vs 1
+        self.class_weights = {0: 2.75, 1: 1.}  # rough ratio  # 2.75 vs 1 for original training dataset
 
 
         now = datetime.datetime.now()
