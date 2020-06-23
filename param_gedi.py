@@ -26,24 +26,27 @@ class Param:
         self.training_min_value = 0
         self.class_weights = {0: 2.75, 1: 1.}  # rough ratio  # 2.75 vs 1 for original training dataset
 
-
         now = datetime.datetime.now()
         self.timestamp = '%d%02d%02d-%02d%02d%02d' % (now.year, now.month, now.day, now.hour, now.minute, now.second)
         os_name = platform.node()
 
         self.parent_dir = {'hobbes': '/mnt/data/GEDI-ORDER',
-                           'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/Josh/GEDI-ORDER'}[
+                           'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/Josh/GEDI-ORDER',
+                           'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/Josh/GEDI-ORDER'}[
             os_name]
         self.tfrec_dir = {
             'hobbes': '/mnt/data/gedi/transfer/tfrecs',
-            'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/GEDI_DATA/'
+            'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/GEDI_DATA/',
+            'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/GEDI_DATA/'
         }[os_name]
 
         self.base_gedi = {'hobbes': '/mnt/finkbeinerlab/robodata/GEDI_CLUSTER/tf_to_k_v2.h5',
-                          'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/tf_to_k_v2.h5'}[
+                          'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/tf_to_k_v2.h5',
+                          'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/tf_to_k_v2.h5'}[
             os_name]
         self.base_gedi_dropout_bn = {'hobbes': '/mnt/finkbeinerlab/robodata/GEDI_CLUSTER/base_gedi_dropout_bn.h5',
-                                  'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/base_gedi_dropout_bn.h5'}[
+                                     'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/base_gedi_dropout_bn.h5',
+                                     'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/base_gedi_dropout_bn.h5'}[
             os_name]
 
         self.run_info_dir = os.path.join(self.parent_dir, 'model_info')
@@ -108,7 +111,6 @@ class Param:
         self.save_csv_deploy = ''
         # self.data_deploy = os.path.join(self.tfrecord_dir, 'BSMachineLearning_TestCuration_5.tfrecord')
         self.data_deploy = self.orig_val_rec
-
 
         # self.max_gedi = 16117. # max value of training set
         self.output_size = 2
