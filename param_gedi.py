@@ -31,21 +31,21 @@ class Param:
         os_name = platform.node()
 
         self.parent_dir = {'hobbes': '/mnt/data/GEDI-ORDER',
-                           'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/Josh/GEDI-ORDER',
+                           'fb-gpu-compute01': '/finkbeiner/imaging/smb-robodata/Josh/GEDI-ORDER',
                            'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/Josh/GEDI-ORDER'}[
             os_name]
         self.tfrec_dir = {
             'hobbes': '/mnt/data/gedi/transfer/tfrecs',
-            'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/GEDI_DATA/',
+            'fb-gpu-compute01': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/GEDI_DATA/',
             'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/GEDI_DATA/'
         }[os_name]
 
         self.base_gedi = {'hobbes': '/mnt/finkbeinerlab/robodata/GEDI_CLUSTER/tf_to_k_v2.h5',
-                          'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/tf_to_k_v2.h5',
+                          'fb-gpu-compute01': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/tf_to_k_v2.h5',
                           'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/tf_to_k_v2.h5'}[
             os_name]
         self.base_gedi_dropout_bn = {'hobbes': '/mnt/finkbeinerlab/robodata/GEDI_CLUSTER/base_gedi_dropout_bn.h5',
-                                     'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/base_gedi_dropout_bn.h5',
+                                     'fb-gpu-compute01': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/base_gedi_dropout_bn.h5',
                                      'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/base_gedi_dropout_bn.h5'}[
             os_name]
 
