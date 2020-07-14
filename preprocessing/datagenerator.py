@@ -62,7 +62,7 @@ class Dataspring(Parser):
             ds = ds.map(self.augment, num_parallel_calls=self.p.num_parallel_calls)
             # Normalize again
             ds = ds.map(self.cut_off_vals, num_parallel_calls=self.p.num_parallel_calls)
-        ds = ds.map(self.rescale_im_and_clip_renorm, num_parallel_calls=self.p.num_parallel_calls)
+        ds = ds.map(self.set_max_to_one_by_image, num_parallel_calls=self.p.num_parallel_calls)
 
 
         if (self.p.which_model == 'vgg16') or (self.p.which_model == 'vgg19'):

@@ -16,7 +16,7 @@ import numpy as np
 class Param:
     def __init__(self):
         self.which_model = 'vgg16'  # vgg16
-        self.EPOCHS = 1
+        self.EPOCHS = 5
         self.learning_rate = 3e-4
         self.BATCH_SIZE = 16
         self.orig_max_value = 16117.0  # max value of dataset from original model
@@ -30,18 +30,23 @@ class Param:
         os_name = platform.node()
 
         self.parent_dir = {'hobbes': '/mnt/data/GEDI-ORDER',
-                           'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/Josh/GEDI-ORDER'}[
+                           'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/Josh/GEDI-ORDER',
+                           'LAXUFB07501.local': '/Users/stephanielam/Desktop/Gladstone/GEDI-ORDER'}[
             os_name]
         self.tfrec_dir = {
             'hobbes': '/mnt/data/gedi/transfer/tfrecs',
-            'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/GEDI_DATA/'
+            'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/GEDI_DATA/',
+            'LAXUFB07501.local': '/Users/stephanielam/Desktop/Gladstone/GEDI-ORDER'
         }[os_name]
 
         self.base_gedi = {'hobbes': '/mnt/finkbeinerlab/robodata/GEDI_CLUSTER/tf_to_k_v2.h5',
-                          'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/tf_to_k_v2.h5'}[
+                          'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/tf_to_k_v2.h5',
+                          'LAXUFB07501.local':''}[
             os_name]
+
         self.base_gedi_dropout = {'hobbes': '/mnt/finkbeinerlab/robodata/GEDI_CLUSTER/base_gedi_dropout.h5',
-                                  'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/base_gedi_dropout.h5'}[
+                                  'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/base_gedi_dropout.h5',
+                                  'LAXUFB07501.local':''}[
             os_name]
 
         self.run_info_dir = os.path.join(self.parent_dir, 'model_info')
@@ -87,9 +92,9 @@ class Param:
         self.data_reval = os.path.join(self.tfrecord_dir, 'vor_GEDIbiosensor_val.tfrecord')
         self.data_retest = os.path.join(self.tfrecord_dir, 'vor_GEDIbiosensor_test.tfrecord')
 
-        self.data_train = self.catdog_train
-        self.data_val = self.catdog_val
-        self.data_test = self.catdog_val
+        self.data_train = '/Users/stephanielam/Desktop/Gladstone/GEDI-ORDER/TFRECORDS/test_train.tfrecord'
+        self.data_val = '/Users/stephanielam/Desktop/Gladstone/GEDI-ORDER/TFRECORDS/test_val.tfrecord'
+        self.data_test = '/Users/stephanielam/Desktop/Gladstone/GEDI-ORDER/TFRECORDS/test_test.tfrecord'
 
         # self.data_deploy=self.data_val
         self.save_csv_deploy = ''
@@ -100,7 +105,7 @@ class Param:
         # self.max_gedi = 16117. # max value of training set
         self.output_size = 2
         self.target_size = (224, 224, 3)
-        self.orig_size = (230, 230, 3)  # (230, 230, 3) for catdog tfrecord
+        self.orig_size = (300, 300, 1)  # (230, 230, 3) for catdog tfrecord
         self.orig_width = 300
         self.orig_height = 300
         self.orig_channels = 1
