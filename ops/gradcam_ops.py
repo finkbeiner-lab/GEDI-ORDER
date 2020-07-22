@@ -114,3 +114,4 @@ class Gradcam:
             #
             # plt.title('img')
             plt.show()
+#todo: try hsv for visualizing gradcam

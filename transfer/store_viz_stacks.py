@@ -10,6 +10,7 @@ from transfer.grads import Grads
 from transfer.grad_ops import GradOps
 import glob
 import param_gedi as param
+from memory_profiler import profile
 
 os_type = platform.system()
 if os_type == 'Linux':
@@ -46,10 +47,10 @@ def batches_from_fold(source_fold, dead_fold, live_fold, batch_size, parser=lamb
         _imgs = list(map(lambda file: parser(imread(file)), _files))
         print('batch from fold 2')
 
-
         yield tuple(map(np.array, (_imgs, _lbls, _names)))
 
 
+# @profile
 def batches_from_fold_no_labels(source_fold, dead_fold, live_fold, batch_size, parser=lambda x: x):
     # check_files = check_output(['find {}'.format(os.path.join(source_fold, '**', '*.tif'))], shell=True).decode().split()
     check_files = glob.glob(os.path.join(source_fold, '*.tif'))
@@ -78,6 +79,7 @@ def batches_from_fold_no_labels(source_fold, dead_fold, live_fold, batch_size, p
         yield tuple(map(np.array, (_imgs, _lbls, _names)))
 
 
+# @profile
 def save_batch(g, imgs, lbls, base_path, conf_mat_paths, fnames=None, makepaths=True, layer_name='block5_conv3'):
     """
     Method computes the Guided GradCAM visualization of an image for both classes; saves these representations as a three-channel (image;correct_label_grad;wrong_label_grad) tif image
@@ -121,6 +123,7 @@ def save_batch(g, imgs, lbls, base_path, conf_mat_paths, fnames=None, makepaths=
     return res_dict
 
 
+#@profile
 def process_fold(g, source_fold, dead_fold, live_fold, dest_path, conf_mat_paths, batch_size=10, parser=lambda x: x,
                  layer_name='block5_conv3', has_labels=True):
     pred_df = pd.DataFrame({'filename': [], 'label': [], 'prediction': []})
@@ -149,11 +152,16 @@ p = param.Param()
 # timestamp = 'vgg16_2020_04_21_10_08_00' #1drop, 2bn
 # import_path = os.path.join(p.models_dir, "{}.h5".format(timestamp))
 import_path = os.path.join(p.base_gedi_dropout_bn)
-g = Grads(import_path)
+guidedbool = True
+
+g = Grads(import_path, guidedbool=guidedbool)
 gops = GradOps(vgg_normalize=True)
 
-main_fold = prefix + '/robodata/GalaxyTEMP/BSMachineLearning_TestCuration'
-source_fold_prefix = os.path.join(main_fold, 'batches')
+# main_fold = prefix + '/robodata/GalaxyTEMP/BSMachineLearning_TestCuration'
+# main_fold = prefix +'/robodata/JeremyTEMP/GalaxyTEMP/GXYTMPShijieHEK/ObjectCrops'
+main_fold = prefix + '/robodata/Gennadi/batches16bit/10'
+# source_fold_prefix = os.path.join(main_fold, 'batches')
+source_fold_prefix = os.path.join(main_fold)
 # dead_fold = os.path.join(main_fold, 'master', 'DEAD')
 # live_fold = os.path.join(main_fold, 'master', 'LIVE')
 # dest_path_prefix = prefix + '/robodata/Gennadi/batches_grads2'
@@ -167,13 +175,15 @@ source_fold_prefix = os.path.join(main_fold, 'batches')
 # source_fold_prefix = main_fold
 dead_fold = os.path.join(main_fold, 'master', 'DEAD')
 live_fold = os.path.join(main_fold, 'master', 'LIVE')
-dest_path_prefix = prefix + '/robodata/Josh/Gradcam/results/batches_grads_2020-5-18'
+# dest_path_prefix = prefix + '/robodata/Josh/Gradcam/results/batches_grads_2020-5-18'
+# dest_path_prefix = prefix + '/robodata/Josh/Gradcam/results/GXYTMPShijieHEK'
+dest_path_prefix = prefix + '/robodata/Josh/Gradcam/results/batches16bit'
 conf_mat_paths = [['dead_true', 'dead_false'], ['live_false', 'live_true']]
 
-batch_size = 10
+batch_size = 1
 parser = lambda img: gops.img_parse(img)
 layer_name = 'block5_conv3'
-LABELLED=True
+LABELLED = False
 # layer_name = 'block1_conv1'
 
 # # Example usage
@@ -182,8 +192,8 @@ subdirs = glob.glob(os.path.join(main_fold, '**'))
 wells = [w.split('/')[-1] for w in subdirs]
 # wells = [w for w in wells if w not in ['E5', 'B2', 'H10', 'B8', 'F7', 'H9', 'H3', 'C1', 'B10', 'E11', 'G4', 'F12', 'G12', 'D11', 'G9', 'G3', 'C10']]
 # wells = ['HumanIncorrectDeadNoInnerSoma', 'HumanIncorrectLiveNoInnerSoma', 'HumanCorrectLiveInnerSoma']
-for well in map(str, range(3, 20 + 1)):
-    # for well in wells:
+# for well in map(str, range(3, 20 + 1)):
+for well in ['10_single']:
     print('Running {}'.format(well))
     cur_source_fold = os.path.join(source_fold_prefix, well)
     cur_dest_path = os.path.join(dest_path_prefix, well)

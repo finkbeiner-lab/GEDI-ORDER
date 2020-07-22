@@ -15,9 +15,10 @@ p = param.Param()
 SAVE_MONTAGE = False
 tfrecord = p.data_deploy
 SAVECSV = True
-CURATION = False
+CURATION = True
 # Load model by setting model_id
-model_id = 'vgg16_2020_04_21_10_08_00'  # new data
+# model_id = 'vgg16_2020_04_21_10_08_00'  # new data
+model_id = 'vgg16_2020_06_25_10_57_54'  # retrained on base_dropuout_bn 06/25/2020
 tp = []
 tn = []
 fp = []
@@ -25,9 +26,11 @@ fn = []
 res_dict = {'filepath': [], 'prediction': [], 'label': []}
 
 # if testing on CURATION
-import_path = os.path.join(p.models_dir, "{}.h5".format(model_id))
-import_path = os.path.join(p.ckpt_dir, "{}.hdf5".format(model_id))
-import_path = p.base_gedi_dropout_bn
+# import_path = os.path.join(p.models_dir, "{}.h5".format(model_id))
+import_path = os.path.join(p.retrain_models_dir, "{}.h5".format(model_id))
+# import_path = os.path.join(p.ckpt_dir, "{}.hdf5".format(model_id))
+import_path = p.base_gedi_dropout
+# import_path = p.base_gedi_dropout_bn
 curation_folder = '/mnt/finkbeinerlab/robodata/GalaxyTEMP/BSMachineLearning_TestCuration/batches/curation_results/v_oza/'
 # Get results from original cnn in csv format
 orig_cnn_folder = '/mnt/finkbeinerlab/robodata/GalaxyTEMP/BSMachineLearning_TestCuration/batches/curation_results/'
@@ -69,6 +72,25 @@ if 0:
     x = pred_layer(x)
     model = tf.keras.models.Model(inputs=base_model.input, outputs=x)
     model.save(p.base_gedi_dropout_bn)
+elif 1:
+    #todo: remove bn layers and run
+    base_model = tf.keras.models.load_model(import_path, compile=False)
+    block5_pool = base_model.get_layer('block5_pool')
+
+    drop1 = base_model.get_layer('dropout_1')
+    drop2 = base_model.get_layer('dropout_2')
+    fc1 = base_model.get_layer('fc1')
+    fc2 = base_model.get_layer('fc2')
+    fc3 = base_model.get_layer('fc3')
+    # output = base_model.get_layer('output')
+
+    x = drop1(fc1.output)
+    x = drop1(x)
+    x = fc2(x)
+    x = drop2(x)
+    x = fc3(x)
+    # x = output(x)
+    model = tf.keras.models.Model(inputs=base_model.input, outputs=x)
 else:
     model = tf.keras.models.load_model(import_path, compile=False)
 

@@ -66,7 +66,6 @@ class CNN:
 
         Returns:
             model: compiled model
-        todo: save model with batchnorm after dropout and test, compare to GEDI2-master in Documents.
         """
         input = layers.Input(shape=(imsize[0], imsize[1], imsize[2]), name='input_1')  # NAME MATCHES DICT KEY
         base_model = tf.keras.applications.VGG16(include_top=False, weights='imagenet', input_tensor=input,

@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import os
 
-savename = '/mnt/finkbeinerlab/robodata/GEDI_CLUSTER/base_gedi_dropout_bn.h5'
+savename = '/mnt/finkbeinerlab/robodata/GEDI_CLUSTER/base_gedi_dropout2.h5'
 
 p = param.Param()
 
@@ -55,13 +55,13 @@ fc2 = base_model.get_layer('fc2')
 x = flatten(block5_pool.output)
 x = fc1(x)
 x = drop1(x)
-x = bn1(x)
+# x = bn1(x)
 x = fc2(x)
 x = drop2(x)
-x = bn2(x)
+# x = bn2(x)
 x = fc3(x)
-x = bn3(x)
-x = tf.keras.layers.Softmax(name='output')(x)
+# x = bn3(x)
+# x = tf.keras.layers.Softmax(name='output')(x)
 model = tf.keras.models.Model(inputs=base_model.input, outputs=x)
 
 model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=p.learning_rate),
