@@ -7,6 +7,13 @@ from tensorflow import RegisterGradient
 import tensorflow.keras.backend as K
 from tensorflow.keras.models import load_model
 from memory_profiler import profile
+import sys
+from pympler import asizeof
+
+
+def mem(obj, name):
+    m = asizeof.asizeof(obj)
+    print(name, m)
 
 
 @RegisterGradient('GuidedRelu')
@@ -29,6 +36,8 @@ class Grads:
         self.normal = self.new_context_pair()
         self.guided = self.new_context_pair()
         self.guidedbool = guidedbool
+        self.raw_func = None
+        self.layer_func = None
 
         with Grads.using_context(*self.normal):
             self.model_n = load_model(model_path)
@@ -88,7 +97,7 @@ class Grads:
             yield
 
     @staticmethod
-#    @profile
+    #    @profile
     def raw_grad_func(model, pick_preds=True, ret_preds=False):
         """
         Returns a context-dependent function computing gradients of output class(es) with respect to inputs
@@ -101,7 +110,7 @@ class Grads:
         Returns: a Keras function
 
         """
-
+        print('raw grad func')
         inp = model.input
         preds = model.output
         out = preds.op.inputs[0]  # eliminates activation layer interference
@@ -123,7 +132,7 @@ class Grads:
         return K.function(inp_arr, out_arr)
 
     @staticmethod
-#    @profile
+    #    @profile
     def layer_grad_func(model, layer_name, pick_preds=True, ret_preds=False):
         """
         Returns a context-dependent function computing gradients of output class(es) with respect layer values
@@ -137,7 +146,7 @@ class Grads:
         Returns: a Keras function
 
         """
-
+        print('layer_grad_func')
         inp = model.input
         preds = model.output
         out = preds.op.inputs[0]
@@ -154,13 +163,14 @@ class Grads:
             logits = out[:, class_var]
             out_arr.append(K.gradients(logits, layer)[0])
         out_arr.append(layer)
-
+        mem(out_arr, 'out_arr')
+        mem(inp_arr, 'inp_arr')
         if ret_preds:
             out_arr.append(preds)
 
         return K.function(inp_arr, out_arr)
 
-#    @profile
+    #    @profile
     def batch_grads(self, batch, guided=False, class_id=None, ret_preds=False):
         """
         Operates on a batch of inputs; returns class gradient wrt. respective inputs
@@ -185,26 +195,34 @@ class Grads:
         """
         print('batch grads')
         with self.using_default(guided=guided):
-            func = Grads.raw_grad_func(self.model_g if guided else self.model_n, pick_preds=class_id is None,
-                                       ret_preds=True)
+            if self.raw_func is None:
+                self.raw_func = Grads.raw_grad_func(self.model_g if guided else self.model_n,
+                                                    pick_preds=class_id is None,
+                                                    ret_preds=True)
+            # func = Grads.raw_grad_func(self.model_g if guided else self.model_n, pick_preds=class_id is None,
+            #                            ret_preds=True)
             if class_id is None:
-                grads, preds = func([batch])
+                grads, preds = self.raw_func([batch])
             else:
-                grads, preds = func([batch, class_id])
-
+                grads, preds = self.raw_func([batch, class_id])
+        mem(grads, 'grads')
+        mem(preds, 'preds')
+        mem(self.model_g, 'model_g')
+        mem(self.model_n, 'model_n')
         if ret_preds:
             return [grads, preds]
         return [grads]
 
-#    @profile
+    #    @profile
     def batch_heatmaps(self, batch, layer_name, class_id=None, ret_preds=False):
         print('batch_heatmaps')
         with self.using_default():
-            func = Grads.layer_grad_func(self.model_n, layer_name, pick_preds=class_id is None, ret_preds=True)
+            if self.layer_func is None:
+                self.layer_func = Grads.layer_grad_func(self.model_n, layer_name, pick_preds=class_id is None, ret_preds=True)
             if class_id is None:
-                grads, layer, preds = func([batch])
+                grads, layer, preds = self.layer_func([batch])
             else:
-                grads, layer, preds = func([batch, class_id])
+                grads, layer, preds = self.layer_func([batch, class_id])
 
         heatmaps = []
         print('batch_heatmaps_loop')
@@ -215,12 +233,15 @@ class Grads:
                 # layer[i, ..., j] *= np.sum(grads[i, ..., j])
             heatmaps.append(np.sum(layer[i], axis=-1))
         heatmaps = np.maximum(np.array(heatmaps), 0)  # ReLU
+        mem(batch, 'batch')
+        mem(heatmaps, 'heatmaps')
+        mem(layer, 'layer')
         print('return_batch_heatmaps')
         if ret_preds:
             return [heatmaps, preds]
         return [heatmaps]
 
-#    @profile
+    #    @profile
     def guided_gradcam(self, batch, layer_name, class_id=None, ret_preds=False):
         grads, preds = self.batch_grads(batch, guided=self.guidedbool, class_id=class_id, ret_preds=True)
         heatmaps, _ = self.batch_heatmaps(batch, layer_name, class_id=class_id, ret_preds=True)
@@ -234,15 +255,16 @@ class Grads:
                 grads[i, ..., ch] *= heatmap
 
             if np.amax(grads[i]) > 0: grads[i] /= np.amax(grads[i])  # 0-1 normalization over composite image
-
+        mem(grads, 'guided grads')
+        mem(heatmaps, 'guided heatmaps')
         if ret_preds:
             return [grads, preds]
         return [grads]
 
-#    @profile
+    #    @profile
     def guided_gradcam_gray(self, batch, layer_name, class_id=None, ret_preds=False):
         print('guided gradcam gray')
-        #guided backprop
+        # guided backprop
         grads, preds = self.batch_grads(batch, guided=self.guidedbool, class_id=class_id, ret_preds=True)
         # gradCAM heatmaps from targeted layer_name
         heatmaps, _ = self.batch_heatmaps(batch, layer_name, class_id=class_id, ret_preds=True)
@@ -253,18 +275,26 @@ class Grads:
             grads[i] = np.maximum(grads[i], 0)
             grad = np.max(grads[i], axis=-1)
             heatmap = resize(heatmaps[i], (224, 224))
+            # _f = '/mnt/finkbeinerlab/robodata/Josh/Gradcam/results/batches16bit/10_single_unnormalized'
+            # np.save(_f + f'/neg_backprop_grads_label_{class_id}.npy', grad)
+            # np.save(_f + f'/neg_gradcam_label_{class_id}.npy', heatmap)
             if self.guidedbool:
                 # multiply guided backprop * gradCAM heatmap
                 grad *= heatmap
+                # np.save(_f + f'/neg_guided_label_{class_id}.npy', grad)
 
             if np.amax(grad) > 0: grad /= np.amax(grad)
             grads_final.append(grad)
-
+        mem(grads, 'gray guided grads')
+        mem(heatmaps, 'gray guided heatmaps')
+        mem(grad, 'gray guided grad')
+        mem(heatmap, 'gray guided heatmap')
+        mem(batch, 'gray batch')
         if ret_preds:
             return [grads_final, preds]
         return [grads_final]
 
-#    @profile
+    #    @profile
     def gen_ggcam_stacks(self, imgs, lbls, layer_name, ret_preds=True):
         # defaults to 8bit
         print('gen ggcam stacks')
@@ -289,6 +319,8 @@ class Grads:
             show_group = list(map(tif_format, show_group))
 
             res = [np.dstack(show_group)]
+            mem(res, 'res')
+            mem(show_group, 'show_group')
             if ret_preds:
                 res.append(pred)
             yield res

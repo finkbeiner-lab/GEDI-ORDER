@@ -11,12 +11,20 @@ from transfer.grad_ops import GradOps
 import glob
 import param_gedi as param
 from memory_profiler import profile
+import sys
+from pympler import asizeof
+
 
 os_type = platform.system()
 if os_type == 'Linux':
     prefix = '/mnt/finkbeinerlab'
 if os_type == 'Darwin':
     prefix = '/Volumes/data'
+
+
+def mem(obj, name):
+    m = asizeof.asizeof(obj)
+    print(name, m)
 
 
 def batches_from_fold(source_fold, dead_fold, live_fold, batch_size, parser=lambda x: x):
@@ -119,11 +127,15 @@ def save_batch(g, imgs, lbls, base_path, conf_mat_paths, fnames=None, makepaths=
                 res_dict['prediction'].append(np.argmax(preds))
         except:
             print('Could not write image at index {}'.format(i))
-
+    mem(ggcam_gen, 'ggcam')
+    mem(g_stack, 'g_strack')
+    mem(writes, 'writes')
+    mem(res_dict, 'res_dict')
+    mem(imgs, 'imgs2')
     return res_dict
 
 
-#@profile
+# @profile
 def process_fold(g, source_fold, dead_fold, live_fold, dest_path, conf_mat_paths, batch_size=10, parser=lambda x: x,
                  layer_name='block5_conv3', has_labels=True):
     pred_df = pd.DataFrame({'filename': [], 'label': [], 'prediction': []})
@@ -141,8 +153,17 @@ def process_fold(g, source_fold, dead_fold, live_fold, dest_path, conf_mat_paths
         print('pred df')
 
         pred_df = pd.concat((pred_df, df), ignore_index=True)
+        mem(batch_gen, 'batch_gen')
+        mem(pred_df, 'pred_df')
+        mem(imgs, 'imgs')
+        mem(lbls, 'lbls')
+        mem(d, 'd')
+        mem(g, 'g')
+
     print('to csv')
+
     pred_df.to_csv(os.path.join(dest_path, dest_path.split('/')[-1] + '.csv'))
+    return 0
 
 
 p = param.Param()
@@ -180,7 +201,7 @@ live_fold = os.path.join(main_fold, 'master', 'LIVE')
 dest_path_prefix = prefix + '/robodata/Josh/Gradcam/results/batches16bit'
 conf_mat_paths = [['dead_true', 'dead_false'], ['live_false', 'live_true']]
 
-batch_size = 1
+batch_size = 10
 parser = lambda img: gops.img_parse(img)
 layer_name = 'block5_conv3'
 LABELLED = False
@@ -193,7 +214,7 @@ wells = [w.split('/')[-1] for w in subdirs]
 # wells = [w for w in wells if w not in ['E5', 'B2', 'H10', 'B8', 'F7', 'H9', 'H3', 'C1', 'B10', 'E11', 'G4', 'F12', 'G12', 'D11', 'G9', 'G3', 'C10']]
 # wells = ['HumanIncorrectDeadNoInnerSoma', 'HumanIncorrectLiveNoInnerSoma', 'HumanCorrectLiveInnerSoma']
 # for well in map(str, range(3, 20 + 1)):
-for well in ['10_single']:
+for well in ['10']:
     print('Running {}'.format(well))
     cur_source_fold = os.path.join(source_fold_prefix, well)
     cur_dest_path = os.path.join(dest_path_prefix, well)
