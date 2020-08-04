@@ -22,25 +22,19 @@ Go to the [GEDI-ORDER github](https://github.com/finkbeiner-lab/GEDI-ORDER) and 
 #### Dependencies
 The code is tested in python 3.6 using pip to install packages. Instructions for installing pip may be found [here](https://pip.pypa.io/en/stable/installing/).
 
-The code uses dependencies found in requirements.txt. If you're installing without requirements.txt, the notable dependencies are:
+The code uses dependencies found in requirements.txt. You may install the dependencies with:
+    pip install -r requirements.txt
+Depending on your computer system, you may need to replace `pip` with `pip3`, and Windows, Mac and Linux may have different names for modules, such as matplotlib may be referred to as python-matplotlib.
+
+If you're installing without requirements.txt, the notable dependencies are:
 1. tensorflow-gpu==2.0.0 (if you don't use a gpu for machine learning, install tensorflow==2.0.0 instead)
 2. imageio==2.8.0
 3. opencv-python==4.2.0.34
 4. pandas==1.0.3
 5. matplotlib==3.2.1
 
+If you're using CUDA with a gpu, tensorflow-gpu 2.0 pairs with CUDA 10.0. 
+
 #### Run the Code
 
 
-
-### 
-
-Gedi Cnn in TF 2.0
-CNN is a binary classifier that uses cell morphology to determine death. 
-Model may be trained, retrained from a base model, and deployed. 
-
-The original data, already preprocessed into tfrecords, is available on the NAS as is the origianl gedi model in 
-/mnt/finkbeinerlab/robodata/GEDI_CLUSTER.
-
-To run, create a virtual environment with pip. This repo was created with python 3.6. Pip is currently preferred 
-over anaconda because pip has support for the package tf-addons, but conda does not. The tensorflow version is 2.0, with cuda version 10.1. 
