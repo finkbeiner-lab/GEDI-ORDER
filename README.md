@@ -35,6 +35,6 @@ If you're installing without requirements.txt, the notable dependencies are:
 
 If you're using CUDA with a gpu, tensorflow-gpu 2.0 pairs with CUDA 10.0. 
 
-#### Run the Code
-
+#### Run the Code 
+_We are currently working to make GEDI-CNN more user-friendly. Stay tuned._
 
