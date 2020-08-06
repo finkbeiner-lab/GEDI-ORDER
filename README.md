@@ -1,7 +1,8 @@
 # GEDI-CNN: Genetically Encoded Death Indicator Convolutional Neural Network
 
 ## About
-![]('examples/neuron.png')
+![Neuron](/examples/neuron.png)
+Format: ![Alt Text](url)
 
 ### What the GEDI-CNN Does
 
