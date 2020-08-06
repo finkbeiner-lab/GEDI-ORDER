@@ -1,11 +1,13 @@
 # GEDI-CNN: Genetically Encoded Death Indicator Convolutional Neural Network
 
 ## About
-![Neuron](/examples/neuron.png)
 
 ### What the GEDI-CNN Does
 
 The Convolutional Neural Network (CNN) is a binary classifier that predicts if a neuron is alive or dead. The CNN relies on cell morphology to judge a cell's vitality and uses an image of a cell to run. Life and death for a cell can be difficult to define; the GEDI biomarker, described below, is used as the ground truth. With a curator, thousands of images may be generated with the GEDI biomarker, which we argue is more reliable than human curation. 
+
+![Neuron](/examples/neuron.png)
+The image are two examples of neurons predicted to be live. 
 
 ### How the Genetically Encoded Death Indicator (GEDI) Works
 
@@ -17,6 +19,7 @@ The paper, Genetically encoded cell-death indicators (GEDI) to detect an early i
 
 Neural networks can be frustrating because they are essentially a black box. The millions of weights multiplied in linear algebra can appear unrelated to biological functions. This work includes GRAD-CAM with guided backpropagation to visualize what of the neuron the neural network weights with importance. This visualization can give new and powerful insights into biological functions if the computer is seeing subtle something that the human eye does not. 
 
+In the image below, green is neuron inputted into the GEDI-CNN, blue is weighted as a death signal, and red is a live signal.  
 ![Gradcam](/examples/gradcam.png)
 
 ## How to Use
