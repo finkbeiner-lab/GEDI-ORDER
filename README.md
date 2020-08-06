@@ -2,7 +2,6 @@
 
 ## About
 ![Neuron](/examples/neuron.png)
-Format: ![Alt Text](url)
 
 ### What the GEDI-CNN Does
 
@@ -13,6 +12,12 @@ The Convolutional Neural Network (CNN) is a binary classifier that predicts if a
 Cell death is a critical process that occurs normally in health and disease. GEDI specifically detects an intracellular Ca2+ level that cells achieve early in the cell death process and marks a stage at which cells are irreversibly committed to die. The time-resolved nature of GEDI delineates a binary demarcation of cell life and death in real time, reformulating the definition of cell death. 
 
 The paper, Genetically encoded cell-death indicators (GEDI) to detect an early irreversible commitment to neurodegeneration, is available on [bioRxiv](https://www.biorxiv.org/content/10.1101/726588v1).
+
+### How It Works
+
+Neural networks can be frustrating because they are essentially a black box. The millions of weights multiplied in linear algebra can appear unrelated to biological functions. This work includes GRAD-CAM with guided backpropagation to visualize what of the neuron the neural network weights with importance. This visualization can give new and powerful insights into biological functions if the computer is seeing subtle something that the human eye does not. 
+
+![Gradcam](/examples/gradcam.png)
 
 ## How to Use
 
