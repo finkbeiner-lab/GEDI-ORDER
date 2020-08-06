@@ -15,11 +15,12 @@ import param_gedi as param
 
 
 class Dataspring(Parser):
-    def __init__(self, tfrecord):
+    def __init__(self, tfrecord, verbose=False):
         super().__init__()
         self.tfrecord = tfrecord
         self.p = param.Param()
         self.it = None
+        self.verbose = verbose
 
     def count_data(self):
         "Count items in tfrecord"
@@ -29,8 +30,6 @@ class Dataspring(Parser):
         dataset_cnt = dataset_cnt.batch(1)
         cnt = dataset_cnt.reduce(0., lambda x, _: x + 1)
         return cnt
-
-
 
     def datagen_base(self, istraining=True):
         """
@@ -64,18 +63,21 @@ class Dataspring(Parser):
             ds = ds.map(self.cut_off_vals, num_parallel_calls=self.p.num_parallel_calls)
         ds = ds.map(self.rescale_im_and_clip_renorm, num_parallel_calls=self.p.num_parallel_calls)
 
-
         if (self.p.which_model == 'vgg16') or (self.p.which_model == 'vgg19'):
-            print('Using {}'.format(self.p.which_model))
+            if self.verbose:
+                print('Using {}'.format(self.p.which_model))
             ds = ds.map(self.make_vgg, num_parallel_calls=self.p.num_parallel_calls)
         elif self.p.which_model == 'mobilenet':
-            print('Using mobilenet')
+            if self.verbose:
+                print('Using mobilenet')
             ds = ds.map(self.format_example, num_parallel_calls=self.p.num_parallel_calls)
         elif self.p.which_model == 'inceptionv3':
-            print('Using inceptionv3')
+            if self.verbose:
+                print('Using inceptionv3')
             ds = ds.map(self.inception_scale, num_parallel_calls=self.p.num_parallel_calls)
         elif self.p.which_model == 'raw':
-            print('Using standard model')
+            if self.verbose:
+                print('Using standard model')
             ds = ds.map(self.normalize_whitening, num_parallel_calls=self.p.num_parallel_calls)
         else:
             print('no model processing')
@@ -167,7 +169,6 @@ if __name__ == '__main__':
     for i in range(3):
         imgs, lbls, files = Dat.datagen()
         for img, lbl, file in zip(imgs, lbls, files):
-
             plt.figure()
             lbl = lbl.numpy()
             img = img.numpy()

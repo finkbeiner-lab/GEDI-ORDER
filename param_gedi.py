@@ -14,7 +14,7 @@ import numpy as np
 
 
 class Param:
-    def __init__(self):
+    def __init__(self, parent_dir=None, tfrec_dir=None, res_dir=None):
         self.which_model = 'vgg16'  # vgg16
         self.EPOCHS = 100
         self.learning_rate = 3e-4  # 3e-4
@@ -29,29 +29,33 @@ class Param:
         now = datetime.datetime.now()
         self.timestamp = '%d%02d%02d-%02d%02d%02d' % (now.year, now.month, now.day, now.hour, now.minute, now.second)
         os_name = platform.node()
+        if parent_dir is None:
+            self.parent_dir = {'hobbes': '/mnt/data/GEDI-ORDER',
+                               'fb-gpu-compute01': '/finkbeiner/imaging/smb-robodata/Josh/GEDI-ORDER',
+                               'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/Josh/GEDI-ORDER'}[
+                os_name]
+        else:
+            self.parent_dir = parent_dir
+        if tfrec_dir is None:
+            self.tfrec_dir = {
+                'hobbes': '/mnt/data/gedi/transfer/tfrecs',
+                'fb-gpu-compute01': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/GEDI_DATA/',
+                'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/GEDI_DATA/'
+            }[os_name]
+        else:
+            self.tfrec_dir = tfrec_dir
 
-        self.parent_dir = {'hobbes': '/mnt/data/GEDI-ORDER',
-                           'fb-gpu-compute01': '/finkbeiner/imaging/smb-robodata/Josh/GEDI-ORDER',
-                           'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/Josh/GEDI-ORDER'}[
-            os_name]
-        self.tfrec_dir = {
-            'hobbes': '/mnt/data/gedi/transfer/tfrecs',
-            'fb-gpu-compute01': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/GEDI_DATA/',
-            'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/GEDI_DATA/'
-        }[os_name]
+        if res_dir is None:
+            self.res_dir = {'hobbes': '/mnt/finkbeinerlab/robodata/GEDI_CLUSTER',
+                            'fb-gpu-compute01': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER',
+                            'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER'}[
+                os_name]
+        else:
+            self.res_dir = res_dir
+        self.base_gedi = os.path.join(self.res_dir, 'tf_to_k_v2.h5')
+        self.base_gedi_dropout = os.path.join(self.res_dir, 'base_gedi_dropout2.h5')
+        self.base_gedi_dropout_bn = os.path.join(self.res_dir, 'base_gedi_dropout_bn.h5')
 
-        self.base_gedi = {'hobbes': '/mnt/finkbeinerlab/robodata/GEDI_CLUSTER/tf_to_k_v2.h5',
-                          'fb-gpu-compute01': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/tf_to_k_v2.h5',
-                          'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/tf_to_k_v2.h5'}[
-            os_name]
-        self.base_gedi_dropout = {'hobbes': '/mnt/finkbeinerlab/robodata/GEDI_CLUSTER/base_gedi_dropout2.h5',
-                                     'fb-gpu-compute01': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/base_gedi_dropout2.h5',
-                                     'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/base_gedi_dropout2.h5'}[
-            os_name]
-        self.base_gedi_dropout_bn = {'hobbes': '/mnt/finkbeinerlab/robodata/GEDI_CLUSTER/base_gedi_dropout_bn.h5',
-                                     'fb-gpu-compute01': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/base_gedi_dropout_bn.h5',
-                                     'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/base_gedi_dropout_bn.h5'}[
-            os_name]
 
         self.run_info_dir = os.path.join(self.parent_dir, 'model_info')
         self.confusion_dir = os.path.join(self.parent_dir, 'confusion_images')
