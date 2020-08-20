@@ -8,7 +8,7 @@ import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 
-IMAGE_PATH = '/home/jlamstein/PycharmProjects/GEDI-ORDER/examples/cat.3.jpg'
+IMAGE_PATH = '/home/ksridhar/PycharmProjects/GEDI-ORDER/examples/cat.3.jpg'
 LAYER_NAME = 'block5_conv3'
 CAT_CLASS_INDEX = 281
 
