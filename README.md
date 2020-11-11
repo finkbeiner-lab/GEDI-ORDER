@@ -11,7 +11,7 @@ The image are two examples of neurons predicted to be live.
 ## Video: Biomarker Optimized Convolutional Neural Networks
 
 Presented by Jeremy Linsley.
-[!Biomarker Optimized Convolutional Neural Networks](http://i.imgur.com/Ot5DWAW.png)](https://youtu.be/v_vf1eisGr4 "Biomarker Optimized Convolutional Neural Networks")
+[![Biomarker Optimized Convolutional Neural Networks](/examples/bocnn_video.PNG)](https://youtu.be/v_vf1eisGr4 "Biomarker Optimized Convolutional Neural Networks")
 
 ## How the Genetically Encoded Death Indicator (GEDI) Works
 
