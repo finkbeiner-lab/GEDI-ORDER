@@ -15,7 +15,79 @@ class CNN:
         self.p = param.Param()
         self.trainable = trainable
 
-    def standard_model(self, imsize):
+    def custom_model(self, imsize):
+        act = 'relu'
+        inputs = tf.keras.Input(shape=(imsize), name='inputs')
+        x = layers.Conv2D(32, (3, 3), activation=act)(inputs)
+        x = layers.BatchNormalization()(x)
+        x = layers.MaxPooling2D((2, 2))(x)
+        x = layers.Conv2D(32, (3, 3), activation=act)(x)
+        x = layers.BatchNormalization()(x)
+        x = layers.MaxPooling2D((2, 2))(x)
+        x = layers.Conv2D(64, (3, 3), activation=act)(x)
+        x = layers.BatchNormalization()(x)
+        x = layers.MaxPooling2D((2, 2))(x)
+        x = layers.AveragePooling2D()(x)
+        x = layers.Flatten()(x)
+        x = layers.Dense(self.p.output_size, activation='sigmoid')(x)
+
+        raw_model = tf.keras.Model(inputs=inputs, outputs=x)
+        raw_model.summary()
+        optimizer = tf.keras.optimizers.Adam(learning_rate=self.p.learning_rate)
+        # optimizer = tfa.optimizers.AdamW(learning_rate=self.p.learning_rate, weight_decay=self.p.wd)
+        raw_model.compile(optimizer=optimizer,
+                          loss='binary_crossentropy',
+                          metrics=['accuracy'])
+
+        return raw_model
+
+    def custom_model2(self, imsize):
+        act = 'selu'
+        switch = 'instance'
+
+        def bn(x):
+            return layers.BatchNormalization()(x)
+
+        def instance(x):
+            return tfa.layers.InstanceNormalization(axis=3,
+                                                    center=True,
+                                                    scale=True,
+                                                    beta_initializer="random_uniform",
+                                                    gamma_initializer="random_uniform")(x)
+
+        norm = bn if switch == 'bn' else instance
+        inputs = tf.keras.Input(shape=(imsize), name='inputs')
+        x = layers.Conv2D(64, (3, 3), activation=act)(inputs)
+        x = norm(x)
+        x = layers.MaxPooling2D((2, 2))(x)
+        x = layers.Conv2D(64, (3, 3), activation=act)(x)
+        x = norm(x)
+        x = layers.MaxPooling2D((2, 2))(x)
+        x = layers.Conv2D(128, (3, 3), activation=act)(x)
+        x = norm(x)
+        x = layers.MaxPooling2D((2, 2))(x)
+        x = layers.Conv2D(128, (3, 3), activation=act)(x)
+        x = norm(x)
+        x = layers.MaxPooling2D((2, 2))(x)
+        x = layers.Conv2D(128, (3, 3), activation=act)(x)
+        x = norm(x)
+        x = layers.MaxPooling2D((2, 2))(x)
+        x = layers.AveragePooling2D()(x)
+        x = layers.Flatten()(x)
+        x = layers.Dense(self.p.output_size, activation='sigmoid')(x)
+
+        raw_model = tf.keras.Model(inputs=inputs, outputs=x)
+        raw_model.summary()
+        optimizer = tf.keras.optimizers.Adam(learning_rate=self.p.learning_rate)
+        # optimizer = tfa.optimizers.AdamW(learning_rate=self.p.learning_rate, weight_decay=self.p.wd)
+        raw_model.compile(optimizer=optimizer,
+                          loss='binary_crossentropy',
+                          metrics=['accuracy'])
+
+        return raw_model
+
+
+    def _custom_model(self, imsize):
         """
         Model with a few conv layers, no transfer learning
         Args:
