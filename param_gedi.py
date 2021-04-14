@@ -32,7 +32,8 @@ class Param:
         if parent_dir is None:
             self.parent_dir = {'hobbes': '/mnt/data/GEDI-ORDER',
                                'fb-gpu-compute01': '/finkbeiner/imaging/smb-robodata/Josh/GEDI-ORDER',
-                               'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/Josh/GEDI-ORDER'}[
+                               'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/Josh/GEDI-ORDER',
+                               'LAXUFB07597.local': '/Volumes/data/robodata/zach/pd_deep_learning/GEDI'}[
                 os_name]
         else:
             self.parent_dir = parent_dir
@@ -40,7 +41,8 @@ class Param:
             self.tfrec_dir = {
                 'hobbes': '/mnt/data/gedi/transfer/tfrecs',
                 'fb-gpu-compute01': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/GEDI_DATA/',
-                'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/GEDI_DATA/'
+                'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/GEDI_DATA/',
+                'LAXUFB07597.local': '/Volumes/data/robodata/zach/pd_deep_learning/GEDI'
             }[os_name]
         else:
             self.tfrec_dir = tfrec_dir
@@ -48,7 +50,8 @@ class Param:
         if res_dir is None:
             self.res_dir = {'hobbes': '/mnt/finkbeinerlab/robodata/GEDI_CLUSTER',
                             'fb-gpu-compute01': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER',
-                            'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER'}[
+                            'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER',
+                            'LAXUFB07597.local': '/Volumes/data/robodata/GEDI_CLUSTER'}[
                 os_name]
         else:
             self.res_dir = res_dir
@@ -95,9 +98,9 @@ class Param:
         self.catdog_val = os.path.join('/mnt/data/CatsAndDogs/catdog_val.tfrecord')
         self.catdog_test = os.path.join('/mnt/data/CatsAndDogs/catdog_test.tfrecord')
         #################SET TRAIN AND RETRAIN TFRECORDS#####################
-        self.data_retrain = os.path.join(self.tfrecord_dir, 'vor_LINCS092016A_train.tfrecord')
-        self.data_reval = os.path.join(self.tfrecord_dir, 'vor_LINCS092016A_val.tfrecord')
-        self.data_retest = os.path.join(self.tfrecord_dir, 'vor_LINCS092016A_test.tfrecord')
+        self.data_retrain = os.path.join(self.tfrecord_dir, '121117iFBnBPmA_train.tfrecord')
+        self.data_reval = os.path.join(self.tfrecord_dir, '121117iFBnBPmA_val.tfrecord')
+        self.data_retest = os.path.join(self.tfrecord_dir, '121117iFBnBPmA_test.tfrecord')
 
         # self.data_retrain = os.path.join(self.tfrecord_dir, 'vor_GEDIbiosensor_train.tfrecord')
         # self.data_reval = os.path.join(self.tfrecord_dir, 'vor_GEDIbiosensor_val.tfrecord')
@@ -108,8 +111,8 @@ class Param:
         # self.data_retest = self.orig_test_rec
 
         self.data_train = self.data_retrain
-        self.data_val = self.data_retrain
-        self.data_test = self.data_retrain
+        self.data_val = self.data_reval
+        self.data_test = self.data_retest
 
         # self.data_train = self.lincs_train
         # self.data_val = self.lincs_val

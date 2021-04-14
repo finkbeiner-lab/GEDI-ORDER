@@ -44,7 +44,7 @@ import matplotlib.pyplot as plt
 
 class Record:
 
-    def __init__(self, images_dir_live, images_dir_dead, tfrecord_dir, split, balance_method, scramble):
+    def __init__(self, images_dir_live, images_dir_dead, tfrecord_dir, split, balance_method, scramble, wells):
         """
 
         Args:
@@ -94,15 +94,41 @@ class Record:
             self.labels = self._labels[self.scrambled_idx]
             print('WARNING: LABELS SCRAMBLED AND INACCURATE FOR DEBUGGING')
 
-        length = len(self.impaths)
+        self.trainpaths = []
+        self.valpaths = []
+        self.testpaths = []
+        self._split_data(wells)
 
-        self.trainpaths = self.impaths[:int(length * split[0])]
-        self.valpaths = self.impaths[int(length * split[0]):int(length * (split[0] + split[1]))]
-        self.testpaths = self.impaths[int(length * (split[0] + split[1])):]
+    def _split_data(self, wells=None):
+        if wells is None:
+            length = len(self.impaths)
+            self.trainpaths = self.impaths[:int(length * split[0])]
+            self.valpaths = self.impaths[int(length * split[0]):int(length * (split[0] + split[1]))]
+            self.testpaths = self.impaths[int(length * (split[0] + split[1])):]
 
-        self.trainlbls = self.labels[:int(length * split[0])]
-        self.vallbls = self.labels[int(length * split[0]):int(length * (split[0] + split[1]))]
-        self.testlbls = self.labels[int(length * (split[0] + split[1])):]
+            self.trainlbls = self.labels[:int(length * split[0])]
+            self.vallbls = self.labels[int(length * split[0]):int(length * (split[0] + split[1]))]
+            self.testlbls = self.labels[int(length * (split[0] + split[1])):]
+        else:
+            otherpaths = []
+            otherlbls = []
+            self.vallbls = []
+            for imp, lbl in zip(self.impaths, self.labels):
+                if os.path.basename(imp).split('_')[4] in wells:
+                    self.valpaths.append(imp)
+                    self.vallbls.append(lbl)
+                else:
+                    otherpaths.append(imp)
+                    otherlbls.append(lbl)
+
+            self.trainpaths = np.array(otherpaths[:len(otherpaths) // 2])
+            self.valpaths = np.array(self.valpaths)
+            self.testpaths = np.array(otherpaths[len(otherpaths) // 2:])
+
+            self.trainlbls = np.array(otherlbls[:len(otherlbls) // 2])
+            self.vallbls = np.array(self.vallbls)
+            self.testlbls = np.array(otherlbls[len(otherlbls) // 2]:)
+
 
     def load_image(self, im_path):
         img = imageio.imread(im_path)
@@ -186,15 +212,16 @@ if __name__ == '__main__':
     p = param.Param()
     # pos_dir = '/mnt/finkbeinerlab/robodata/Josh/dogs_vs_cats/train/cat'
     # neg_dir = '/mnt/finkbeinerlab/robodata/Josh/dogs_vs_cats/train/dog'
-    pos_dir = '/mnt/finkbeinerlab/robodata/JeremyTEMP/GalaxyTEMP/LINCS072017RGEDI-A/Livetraining2'
-    neg_dir = '/mnt/finkbeinerlab/robodata/JeremyTEMP/GalaxyTEMP/LINCS072017RGEDI-A/Deadtraining2'
+    pos_dir = '/Volumes/data/robodata/zach/pd_deep_learning/GEDI/datasets/121117iFBnBPmA/Control'
+    neg_dir = '/Volumes/data/robodata/zach/pd_deep_learning/GEDI/datasets/121117iFBnBPmA/PD'
     split = [.7, .15, .15]
     balance_method = 'cutoff'
+    wells = ['B11', 'B12']
 
-    Rec = Record(pos_dir, neg_dir, p.tfrecord_dir, split, balance_method=balance_method, scramble=False)
-    savetrain = os.path.join(p.tfrecord_dir, 'LINCS072017RGEDI-A_train.tfrecord')
-    saveval = os.path.join(p.tfrecord_dir, 'LINCS072017RGEDI-A_val.tfrecord')
-    savetest = os.path.join(p.tfrecord_dir, 'LINCS072017RGEDI-A_test.tfrecord')
+    Rec = Record(pos_dir, neg_dir, p.tfrecord_dir, split, balance_method=balance_method, scramble=False, wells=wells)
+    savetrain = os.path.join(p.tfrecord_dir, '121117iFBnBPmA_v2_train.tfrecord')
+    saveval = os.path.join(p.tfrecord_dir, '121117iFBnBPmA_v2_val.tfrecord')
+    savetest = os.path.join(p.tfrecord_dir, '121117iFBnBPmA_v2_test.tfrecord')
     Rec.tiff2record(savetrain, Rec.trainpaths, Rec.trainlbls)
     Rec.tiff2record(saveval, Rec.valpaths, Rec.vallbls)
     Rec.tiff2record(savetest, Rec.testpaths, Rec.testlbls)
