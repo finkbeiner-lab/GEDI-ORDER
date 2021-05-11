@@ -17,8 +17,8 @@ def deploy_main(p, model_id, SAVE_MONTAGE, SAVECSV, CURATION):
     # p = param.Param()
     # SAVE_MONTAGE = False
     tfrecord = p.data_deploy
-    # SAVECSV = True
-    # CURATION = True
+    SAVECSV = True
+    CURATION = False
     # Load model by setting model_id
     # model_id = 'vgg16_2020_04_21_10_08_00'  # new data
     # model_id = 'vgg16_2020_06_25_10_57_54'  # retrained on base_dropuout_bn 06/25/2020
@@ -30,9 +30,19 @@ def deploy_main(p, model_id, SAVE_MONTAGE, SAVECSV, CURATION):
 
     # if testing on CURATION
     # import_path = os.path.join(p.models_dir, "{}.h5".format(model_id))
+    import_path = os.path.join(p.ckpt_dir, "{}.hdf5".format(model_id))
+
+    model_name = model_id.split('_')[0]
+    if model_name == 'vgg19':
+        input_name = 'vgg19_input'
+    if model_name == 'resnet50':
+        input_name = 'resnet50_input'
+    if model_name == 'vgg16':
+        input_name = 'input_1'
+
     # import_path = os.path.join(p.retrain_models_dir, "{}.h5".format(model_id))
     # import_path = os.path.join(p.ckpt_dir, "{}.hdf5".format(model_id))
-    import_path = p.base_gedi_dropout
+    # import_path = p.base_gedi_dropout
     # import_path = p.base_gedi_dropout_bn
 
     if CURATION:
@@ -56,7 +66,7 @@ def deploy_main(p, model_id, SAVE_MONTAGE, SAVECSV, CURATION):
     del Chk
     DatTest = pipe.Dataspring(tfrecord, True)
     test_ds = DatTest.datagen_base(istraining=False)
-    test_gen = DatTest.generator()
+    test_gen = DatTest.generator(input_name)
 
     DatView = pipe.Dataspring(tfrecord)
     view_ds = DatView.datagen_base(istraining=False)
@@ -77,7 +87,7 @@ def deploy_main(p, model_id, SAVE_MONTAGE, SAVECSV, CURATION):
         x = pred_layer(x)
         model = tf.keras.models.Model(inputs=base_model.input, outputs=x)
         model.save(p.base_gedi_dropout_bn)
-    elif 1:
+    elif 0:
         # todo: remove bn layers and run
         base_model = tf.keras.models.load_model(import_path, compile=False)
         block5_pool = base_model.get_layer('block5_pool')
@@ -192,7 +202,7 @@ def deploy_main(p, model_id, SAVE_MONTAGE, SAVECSV, CURATION):
         res_df.to_csv(save_res)
         print('Result csv saved to {}'.format(save_res))
     if not CURATION:
-        print('tp', np.shape(tp))
+        print('tp', len(tp))
         print('tn', len(tn))
         print('fp', len(fp))
         print('fn', len(fn))
@@ -219,7 +229,8 @@ if __name__ == '__main__':
     parser.add_argument('--parent', action="store",
                         default='/mnt/data/GEDI-ORDER',
                         dest='parent')
-    parser.add_argument('--tfrecdir', action="store", default='/mnt/data/gedi/transfer/tfrecs', dest="tfrecdir")
+    parser.add_argument('--tfrecdir', action="store", default='/mnt/finkbeinerlab/robodata/GEDI_CLUSTER/GEDI_DATA',
+                        dest="tfrecdir")
     parser.add_argument('--resdir', action="store", default='/mnt/finkbeinerlab/robodata/GEDI_CLUSTER', dest="resdir")
     parser.add_argument('--SAVE_MONTAGE', action="store", default=0, dest="SAVE_MONTAGE")
     parser.add_argument('--SAVECSV', action="store", default='/mnt/finkbeinerlab/robodata/GEDI_CLUSTER', dest="SAVECSV")
@@ -233,4 +244,5 @@ if __name__ == '__main__':
     import_path = p.base_gedi_dropout
     # import_path = p.base_gedi_dropout_bn
 
-    deploy_main(p, model_id=None, SAVE_MONTAGE=args.SAVE_MONTAGE, SAVECSV=args.SAVECSV, CURATION=args.CURATION)
+    deploy_main(p, model_id='vgg19_2021_05_05_15_30_13', SAVE_MONTAGE=args.SAVE_MONTAGE, SAVECSV=args.SAVECSV,
+                CURATION=args.CURATION)

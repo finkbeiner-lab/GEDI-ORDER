@@ -86,7 +86,6 @@ class CNN:
 
         return raw_model
 
-
     def _custom_model(self, imsize):
         """
         Model with a few conv layers, no transfer learning
@@ -214,7 +213,9 @@ class CNN:
         return raw_model
 
     def vgg19(self, imsize):
-        base_model = tf.keras.applications.VGG19(include_top=False, weights='imagenet',
+        input = layers.Input(shape=(imsize[0], imsize[1], imsize[2]), name='input_1')  # NAME MATCHES DICT KEY
+
+        base_model = tf.keras.applications.VGG19(include_top=False, weights='imagenet', input_tensor=input,
                                                  input_shape=(imsize[0], imsize[1], imsize[2]))
         # base_model.trainable = False
         flat = layers.Flatten()
@@ -250,6 +251,7 @@ class CNN:
         Input shape must be greater than (75,75,3), (299,299,3) is default.
         :return:
         """
+
         base_model = tf.keras.applications.inception_v3.InceptionV3(include_top=False, weights='imagenet',
                                                                     input_shape=(imsize[0], imsize[1], imsize[2]))
         for layr in base_model.layers[:100]:
@@ -279,8 +281,14 @@ class CNN:
         return raw_model
 
     def resnet50(self, imsize):
+        input = layers.Input(shape=(imsize[0], imsize[1], 3), name='resnet50_input')  # NAME MATCHES DICT KEY
+
+        x = tf.keras.applications.mobilenet.preprocess_input(input)
         base_model = tf.keras.applications.ResNet50(include_top=False, weights='imagenet',
                                                     input_shape=(imsize[0], imsize[1], imsize[2]))
+        # CHECK model preprocessing
+        # train final or tast 2 layers, freeze others
+        # todo: balance orig tfrec test set
         base_model.trainable = False
         fc1 = layers.Dense(128, activation='relu', name='dense_1')
         fc2 = layers.Dense(256, activation='relu', name='dense_2')

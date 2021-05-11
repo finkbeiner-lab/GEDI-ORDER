@@ -15,7 +15,7 @@ import numpy as np
 
 class Param:
     def __init__(self, parent_dir=None, tfrec_dir=None, res_dir=None):
-        self.which_model = 'vgg16'  # vgg16
+        self.which_model = 'vgg19'  # resnet50, vgg16, vgg19, inceptionv3
         self.EPOCHS = 100
         self.learning_rate = 3e-4  # 3e-4
         self.BATCH_SIZE = 16
@@ -24,21 +24,22 @@ class Param:
         # self.training_max_value = np.float32(1.0001860857009888)
         self.training_max_value = 1.0001861
         self.training_min_value = 0
-        self.class_weights = {0: 1., 1: 1.}  # rough ratio  # 2.75 vs 1 for original training dataset
+        self.class_weights = {0: 2.75, 1: 1.}  # rough ratio  # 2.75 vs 1 for original training dataset
 
         now = datetime.datetime.now()
         self.timestamp = '%d%02d%02d-%02d%02d%02d' % (now.year, now.month, now.day, now.hour, now.minute, now.second)
         os_name = platform.node()
         if parent_dir is None:
             self.parent_dir = {'hobbes': '/mnt/data/GEDI-ORDER',
-                               'fb-gpu-compute01': '/finkbeiner/imaging/smb-robodata/Josh/GEDI-ORDER',
-                               'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/Josh/GEDI-ORDER'}[
+                               'fb-gpu-compute01': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER',
+                               'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER'}[
                 os_name]
         else:
             self.parent_dir = parent_dir
         if tfrec_dir is None:
             self.tfrec_dir = {
-                'hobbes': '/mnt/data/gedi/transfer/tfrecs',
+                # 'hobbes': '/mnt/data/gedi/transfer/tfrecs',
+                'hobbes': '/mnt/finkbeinerlab/robodata/GEDI_CLUSTER/GEDI_DATA',  # moved orig training recs to nas
                 'fb-gpu-compute01': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/GEDI_DATA/',
                 'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/GEDI_DATA/'
             }[os_name]
@@ -72,13 +73,16 @@ class Param:
         self.retrain_ckpt_dir = os.path.join(self.parent_dir, 'RETRAIN', 'saved_checkpoints')
 
         # self.data_deploy =os.path.join(self.tfrec_dir, 'all_data_val.tfrecords')
+        self.train_len = 187772
+        self.val_len = 20863
+        self.test_len = 16758
 
         self.orig_train_rec = os.path.join(self.tfrec_dir,
                                            'all_data_train.tfrecords')  # 187772 images {'dead': 50073, 'live': 137699}  2.749
         self.orig_val_rec = os.path.join(self.tfrec_dir,
                                          'all_data_val.tfrecords')  # 20863 images {'dead': 5625, 'live': 15238}  2.708
         self.orig_test_rec = os.path.join(self.tfrec_dir,
-                                          'all_data_test.tfrecords')  # 16758 images {'dead': 1372, 'live':15386} 11.2
+                                          'all_data_test_balanced.tfrecords')  # 16758 images {'dead': 1372, 'live':15386} 11.2
         self.lincs_train = os.path.join(self.tfrecord_dir, 'LINCS072017RGEDI-A_train.tfrecord')
         self.lincs_val = os.path.join(self.tfrecord_dir, 'LINCS072017RGEDI-A_val.tfrecord')
         self.lincs_test = os.path.join(self.tfrecord_dir, 'LINCS072017RGEDI-A_test.tfrecord')
@@ -107,9 +111,9 @@ class Param:
         # self.data_reval = self.orig_val_rec
         # self.data_retest = self.orig_test_rec
 
-        self.data_train = self.data_retrain
-        self.data_val = self.data_retrain
-        self.data_test = self.data_retrain
+        self.data_train = self.orig_train_rec
+        self.data_val = self.orig_val_rec
+        self.data_test = self.orig_test_rec
 
         # self.data_train = self.lincs_train
         # self.data_val = self.lincs_val
@@ -117,8 +121,8 @@ class Param:
 
         # self.data_deploy=self.data_val
         self.save_csv_deploy = ''
-        self.data_deploy = os.path.join(self.tfrecord_dir, 'BSMachineLearning_TestCuration_5.tfrecord')
-        # self.data_deploy = self.data_retrain
+        # self.data_deploy = os.path.join(self.tfrecord_dir, 'BSMachineLearning_TestCuration_5.tfrecord')
+        self.data_deploy = self.orig_train_rec
 
         # self.max_gedi = 16117. # max value of training set
         self.output_size = 2

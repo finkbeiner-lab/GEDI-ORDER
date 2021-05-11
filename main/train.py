@@ -34,16 +34,47 @@ run_info = {'model': p.which_model,
             'output_size': p.output_size,
             'im_shape': p.target_size,
             'random_crop': p.randomcrop}
+
+net = CNN()
+if p.which_model == 'vgg16':
+    model = net.vgg16(imsize=p.target_size)
+    input_name = 'input_1'
+    assert p.target_size[-1] == 3
+elif p.which_model == 'vgg19':
+    model = net.vgg19(imsize=p.target_size)
+    input_name = 'vgg19_input'
+    assert p.target_size[-1] == 3
+
+elif p.which_model == 'mobilenet':
+    model = net.mobilenet(imsize=p.target_size)
+elif p.which_model == 'inceptionv3':
+    model = net.inceptionv3(imsize=p.target_size)
+    input_name = 'inception_v3_input'
+    assert p.target_size[-1] == 3
+
+elif p.which_model == 'resnet50':
+    model = net.resnet50(imsize=p.target_size)
+    input_name = 'resnet50_input'
+    assert p.target_size[-1] == 3
+
+
+else:
+    model = net.standard_model(imsize=p.target_size)
 # Get length of tfrecords
-Chk = pipe.Dataspring(p.data_train)
-train_length = Chk.count_data().numpy()
-del Chk
-Chk = pipe.Dataspring(p.data_val)
-val_length = Chk.count_data().numpy()
-del Chk
-Chk = pipe.Dataspring(p.data_test)
-test_length = Chk.count_data().numpy()
-del Chk
+if p.train_len is None:
+    Chk = pipe.Dataspring(p.data_train)
+    train_length = Chk.count_data().numpy()
+    del Chk
+    Chk = pipe.Dataspring(p.data_val)
+    val_length = Chk.count_data().numpy()
+    del Chk
+    Chk = pipe.Dataspring(p.data_test)
+    test_length = Chk.count_data().numpy()
+    del Chk
+else:
+    train_length = p.train_len
+    val_length = p.val_len
+    test_length = p.test_len
 DatTrain = pipe.Dataspring(p.data_train)
 DatVal = pipe.Dataspring(p.data_val)
 DatTest = pipe.Dataspring(p.data_test)
@@ -58,9 +89,9 @@ print('validation length', val_length)
 print('test length', test_length)
 for _key, _val in run_info.items():
     print(f'{_key} : {_val}')
-train_gen = DatTrain.generator()
-val_gen = DatVal.generator()
-test_gen = DatTest.generator()
+train_gen = DatTrain.generator(input_name)
+val_gen = DatVal.generator(input_name)
+test_gen = DatTest.generator(input_name)
 
 # for image_batch, label_batch in val_ds.take(1):
 #     print('min img', np.min(image_batch))
@@ -73,18 +104,6 @@ test_gen = DatTest.generator()
 # plt.show()
 
 
-net = CNN()
-if p.which_model == 'vgg16':
-    model = net.vgg16(imsize=p.target_size)
-elif p.which_model == 'vgg19':
-    model = net.vgg19(imsize=p.target_size)
-elif p.which_model == 'mobilenet':
-    model = net.mobilenet(imsize=p.target_size)
-elif p.which_model == 'inceptionv3':
-    model = net.inceptionv3(imsize=p.target_size)
-else:
-    model = net.standard_model(imsize=p.target_size)
-
 # callbacks, save checkpoints and tensorboard logs
 cp_callback = tf.keras.callbacks.ModelCheckpoint(save_checkpoint_path, monitor='val_accuracy', verbose=1,
                                                  save_best_only=True, mode='max')
@@ -96,7 +115,8 @@ tb_callback = tf.keras.callbacks.TensorBoard(
 callbacks = [cp_callback]
 history = model.fit(train_gen, steps_per_epoch=train_length // (p.BATCH_SIZE), epochs=p.EPOCHS,
                     class_weight=p.class_weights, validation_data=val_gen,
-                    validation_steps=val_length // p.BATCH_SIZE, callbacks=callbacks, workers=4, use_multiprocessing=True)
+                    validation_steps=val_length // p.BATCH_SIZE, callbacks=callbacks, workers=4,
+                    use_multiprocessing=True)
 # history = model.fit(train_gen, steps_per_epoch=train_length // (p.BATCH_SIZE), epochs=p.EPOCHS,
 #                     validation_data=val_gen,
 #                     validation_steps=val_length // p.BATCH_SIZE, callbacks=callbacks)

@@ -71,10 +71,10 @@ class Dataspring(Parser):
             if self.verbose:
                 print('Using mobilenet')
             ds = ds.map(self.format_example, num_parallel_calls=self.p.num_parallel_calls)
-        elif self.p.which_model == 'inceptionv3':
+        elif (self.p.which_model == 'inceptionv3') or (self.p.which_model=='resnet50'):
             if self.verbose:
-                print('Using inceptionv3')
-            ds = ds.map(self.inception_scale, num_parallel_calls=self.p.num_parallel_calls)
+                print('Using inceptionv3 or resnet50')
+            ds = ds.map(self.make_three_channel, num_parallel_calls=self.p.num_parallel_calls)
         elif self.p.which_model == 'raw':
             if self.verbose:
                 print('Using standard model')
@@ -99,7 +99,7 @@ class Dataspring(Parser):
         imgs, lbls, files = next(self.it)
         return imgs, lbls, files
 
-    def generator(self):
+    def generator(self, input_name='input_1'):
         """
         Generator returning parsed features as dictionary. Dict is used for keras model.fit
         Returns:
@@ -109,7 +109,7 @@ class Dataspring(Parser):
         """
         while True:
             imgs, lbls, files = next(self.it)
-            X = {'input_1': imgs, 'files': files}
+            X = {input_name: imgs, 'files': files}
             yield X, lbls
 
     def retrain_orig_generator(self):
@@ -126,7 +126,7 @@ class Dataspring(Parser):
 if __name__ == '__main__':
     p = param.Param()
     print(p.which_model)
-    tfrecord = p.data_retrain
+    tfrecord = p.data_test
     # Chk = Dataspring(tfrecord)
     # test_length = Chk.count_data().numpy()
     # print(test_length)
@@ -151,19 +151,23 @@ if __name__ == '__main__':
     # for i in range(1):
     #     imgs, lbls, files = Dat.datagen()
     #     for img, lbl in zip(imgs, lbls):
+    #         print('min', np.min(img))
+    #         print('max', np.max(img))
+    #         img -= np.min(img)
+    #         img /= np.max(img)
     #         plt.figure()
     #         lbl = lbl.numpy()
-    #         # im = (img + 1) * 127.5
     #         im = np.array(img)
-    #         im = np.reshape(im, (224,224,3))
+    #         # im *=255.0
+    #         # im = np.reshape(im, (224,224))
     #         print(np.min(im))
     #         print(np.max(im))
-    #         im = np.uint8(im)
+    #         # im = np.uint8(im)
     #         # im = np.uint8(np.reshape(im, (224, 224)))
     #         plt.imshow(im)
     #         plt.title(lbl)
     #     plt.show()
-    # #
+    # # #
 
     ###### VGG16 #######
     for i in range(3):

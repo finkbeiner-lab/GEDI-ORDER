@@ -118,6 +118,30 @@ class Parser:
         newlbls = tf.cast(newlbls, dtype=tf.float32)
         return imgs, newlbls, files
 
+    def make_three_channel(self, imgs, lbls, files):
+        """Make three channel and set max to 255"""
+        assert_op = tf.Assert(tf.less_equal(tf.reduce_max(imgs), 1.0), [imgs])
+        with tf.control_dependencies([assert_op]):
+            imgs = imgs * 255.
+        if int(imgs.get_shape()[-1]) == 1:
+            red, green, blue = imgs, imgs, imgs
+            rgb = tf.concat(axis=3, values=[
+                red,
+                green,
+                blue
+            ], name='rgb')
+            return rgb, lbls, files
+        else:
+            return imgs, lbls, files
+
+    def resnet_scale(self, imgs, lbls, files):
+        """Scaling for resnet model"""
+        assert_op = tf.Assert(tf.less_equal(tf.reduce_max(imgs), 1.0), [imgs])
+        with tf.control_dependencies([assert_op]):
+            images = tf.subtract(imgs, 1.0)
+            images = tf.multiply(images, 2.0)
+        return images, lbls, files
+
     def inception_scale(self, imgs, lbls, files):
         """Scaling for inception model"""
         assert_op = tf.Assert(tf.less_equal(tf.reduce_max(imgs), 1.0), [imgs])
