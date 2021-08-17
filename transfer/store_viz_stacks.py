@@ -172,7 +172,7 @@ p = param.Param()
 # timestamp = 'vgg16_2020_04_20_15_05_47' #2drop, 2bn
 # timestamp = 'vgg16_2020_04_21_10_08_00' #1drop, 2bn
 # import_path = os.path.join(p.models_dir, "{}.h5".format(timestamp))
-import_path = os.path.join(p.base_gedi_dropout_bn)
+import_path = os.path.join(p.base_gedi_dropout)
 guidedbool = True
 
 g = Grads(import_path, guidedbool=guidedbool)
@@ -180,7 +180,7 @@ gops = GradOps(vgg_normalize=True)
 
 # main_fold = prefix + '/robodata/GalaxyTEMP/BSMachineLearning_TestCuration'
 # main_fold = prefix +'/robodata/JeremyTEMP/GalaxyTEMP/GXYTMPShijieHEK/ObjectCrops'
-main_fold = prefix + '/robodata/Gennadi/batches16bit/10'
+main_fold = prefix + '/robodata/Thinking_Microscope/Outersoma20-10/AblatedImages'
 # source_fold_prefix = os.path.join(main_fold, 'batches')
 source_fold_prefix = os.path.join(main_fold)
 # dead_fold = os.path.join(main_fold, 'master', 'DEAD')
@@ -198,7 +198,7 @@ dead_fold = os.path.join(main_fold, 'master', 'DEAD')
 live_fold = os.path.join(main_fold, 'master', 'LIVE')
 # dest_path_prefix = prefix + '/robodata/Josh/Gradcam/results/batches_grads_2020-5-18'
 # dest_path_prefix = prefix + '/robodata/Josh/Gradcam/results/GXYTMPShijieHEK'
-dest_path_prefix = prefix + '/robodata/Josh/Gradcam/results/batches16bit'
+dest_path_prefix = prefix + '/robodata/Thinking_Microscope/Outersoma20-10/gradcam'
 conf_mat_paths = [['dead_true', 'dead_false'], ['live_false', 'live_true']]
 
 batch_size = 10
@@ -209,15 +209,17 @@ LABELLED = False
 
 # # Example usage
 # process_fold(g, source_fold, dead_fold, live_fold, dest_path, conf_mat_paths, batch_size=batch_size, parser=parser, layer_name=layer_name)
-subdirs = glob.glob(os.path.join(main_fold, '**'))
-wells = [w.split('/')[-1] for w in subdirs]
+subdirs = glob.glob(os.path.join(main_fold, '**', '**'))
+# wells = [w.split('/')[-1] for w in subdirs]
 # wells = [w for w in wells if w not in ['E5', 'B2', 'H10', 'B8', 'F7', 'H9', 'H3', 'C1', 'B10', 'E11', 'G4', 'F12', 'G12', 'D11', 'G9', 'G3', 'C10']]
 # wells = ['HumanIncorrectDeadNoInnerSoma', 'HumanIncorrectLiveNoInnerSoma', 'HumanCorrectLiveInnerSoma']
 # for well in map(str, range(3, 20 + 1)):
-for well in ['10']:
-    print('Running {}'.format(well))
-    cur_source_fold = os.path.join(source_fold_prefix, well)
-    cur_dest_path = os.path.join(dest_path_prefix, well)
+for cur_source_fold in subdirs:
+    print(f'running {cur_source_fold}')
+    # cur_source_fold = os.path.join(source_fold_prefix, well)
+    tag = cur_source_fold.split('/')[-1]
+    well = cur_source_fold.split('/')[-2]
+    cur_dest_path = os.path.join(dest_path_prefix, well, tag)
 
     process_fold(g, cur_source_fold, dead_fold, live_fold, cur_dest_path, conf_mat_paths, batch_size=batch_size,
                  parser=parser, layer_name=layer_name, has_labels=LABELLED)
