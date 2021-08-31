@@ -28,6 +28,13 @@ res_dict = {'filepath': [], 'prediction': [], 'label': []}
 import_path = os.path.join(p.models_dir, "{}.h5".format(model_id))
 import_path = os.path.join(p.ckpt_dir, "{}.hdf5".format(model_id))
 import_path = p.base_gedi_dropout
+
+model_name = model_id.split('_')[0]
+if model_name == 'vgg19':
+    input_name = 'vgg19_input'
+if model_name == 'vgg16':
+    input_name = 'input_1'
+
 curation_folder = '/mnt/finkbeinerlab/robodata/GalaxyTEMP/BSMachineLearning_TestCuration/batches/curation_results/v_oza/'
 # Get results from original cnn in csv format
 orig_cnn_folder = '/mnt/finkbeinerlab/robodata/GalaxyTEMP/BSMachineLearning_TestCuration/batches/curation_results/'
@@ -48,7 +55,7 @@ test_length = Chk.count_data().numpy()
 del Chk
 DatTest = pipe.Dataspring(tfrecord)
 test_ds = DatTest.datagen_base(istraining=False)
-test_gen = DatTest.generator()
+test_gen = DatTest.generator(input_name)
 
 DatView = pipe.Dataspring(tfrecord)
 view_ds = DatView.datagen_base(istraining=False)

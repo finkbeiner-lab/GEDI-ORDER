@@ -15,8 +15,8 @@ import numpy as np
 
 class Param:
     def __init__(self):
-        self.which_model = 'vgg16'  # vgg16
-        self.EPOCHS = 1
+        self.which_model = 'vgg19'  #vgg16 #vgg19
+        self.EPOCHS = 50 #1 #100
         self.learning_rate = 3e-4
         self.BATCH_SIZE = 16
         self.orig_max_value = 16117.0  # max value of dataset from original model
@@ -24,25 +24,25 @@ class Param:
         # self.training_max_value = np.float32(1.0001860857009888)
         self.training_max_value = 1.0001861
         self.training_min_value = 0
+        self.class_weights = {0: 1., 1: 1.}  # rough ratio  # 2.75 vs 1
 
         now = datetime.datetime.now()
         self.timestamp = '%d%02d%02d-%02d%02d%02d' % (now.year, now.month, now.day, now.hour, now.minute, now.second)
         os_name = platform.node()
 
         self.parent_dir = {'hobbes': '/mnt/data/GEDI-ORDER',
-                           'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/Josh/GEDI-ORDER'}[
+                           'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/Stephanie/Nuclei-ML/GEDI-ORDER/GEDI'}[
             os_name]
+
         self.tfrec_dir = {
             'hobbes': '/mnt/data/gedi/transfer/tfrecs',
-            'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/GEDI_DATA/'
-        }[os_name]
+            'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/Stephanie/Nuclei-ML/GEDI-ORDER/GEDI'}[os_name]
 
-        self.base_gedi = {'hobbes': '/mnt/finkbeinerlab/robodata/GEDI_CLUSTER/tf_to_k_v2.h5',
-                          'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/tf_to_k_v2.h5'}[
-            os_name]
-        self.base_gedi_dropout = {'hobbes': '/mnt/finkbeinerlab/robodata/GEDI_CLUSTER/base_gedi_dropout.h5',
-                                  'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/base_gedi_dropout.h5'}[
-            os_name]
+        self.res_dir = {'hobbes': '/mnt/finkbeinerlab/robodata/GEDI_CLUSTER',
+                        'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/Stephanie/Nuclei-ML/GEDI-ORDER/GEDI_CLUSTER'}[os_name]
+
+        self.base_gedi = os.path.join(self.res_dir, 'tf_to_k_v2.h5')
+        self.base_gedi_dropout = os.path.join(self.res_dir, 'base_gedi_dropout.h5')
 
         self.run_info_dir = os.path.join(self.parent_dir, 'model_info')
         self.confusion_dir = os.path.join(self.parent_dir, 'confusion_images')
@@ -75,32 +75,30 @@ class Param:
         self.jk_val_eq = os.path.join(self.tfrec_dir, 'jk_val_eq.tfrecord')
         self.jk_test_eq = os.path.join(self.tfrec_dir, 'jk_test_eq.tfrecord')
 
-        self.catdog_train = os.path.join('/mnt/data/CatsAndDogs/catdog_train.tfrecord')
-        self.catdog_val = os.path.join('/mnt/data/CatsAndDogs/catdog_val.tfrecord')
-        self.catdog_test = os.path.join('/mnt/data/CatsAndDogs/catdog_test.tfrecord')
+        # self.catdog_train = os.path.join('/mnt/data/CatsAndDogs/catdog_train.tfrecord')
+        # self.catdog_val = os.path.join('/mnt/data/CatsAndDogs/catdog_val.tfrecord')
+        # self.catdog_test = os.path.join('/mnt/data/CatsAndDogs/catdog_test.tfrecord')
 
         # self.data_retrain = os.path.join(self.tfrecord_dir, 'vor_LINCS092016A_train.tfrecord')
         # self.data_reval = os.path.join(self.tfrecord_dir, 'vor_LINCS092016A_val.tfrecord')
         # self.data_retest = os.path.join(self.tfrecord_dir, 'vor_LINCS092016A_test.tfrecord')
 
-        self.data_retrain = os.path.join(self.tfrecord_dir, 'vor_GEDIbiosensor_train.tfrecord')
-        self.data_reval = os.path.join(self.tfrecord_dir, 'vor_GEDIbiosensor_val.tfrecord')
-        self.data_retest = os.path.join(self.tfrecord_dir, 'vor_GEDIbiosensor_test.tfrecord')
+        self.data_retrain = os.path.join(self.tfrecord_dir, 'Nuclei_train.tfrecord')
+        self.data_reval = os.path.join(self.tfrecord_dir, 'Nuclei_val.tfrecord')
+        self.data_retest = os.path.join(self.tfrecord_dir, 'Nuclei_test.tfrecord')
 
-        self.data_train = self.catdog_train
-        self.data_val = self.catdog_val
-        self.data_test = self.catdog_val
+        self.data_train = self.data_retrain
+        self.data_val = self.data_reval
+        self.data_test = self.data_retest
 
         # self.data_deploy=self.data_val
         self.save_csv_deploy = ''
         self.data_deploy = os.path.join(self.tfrecord_dir, 'BSMachineLearning_TestCuration_5.tfrecord')
 
-        self.class_weights = {0: 1., 1: 1.}  # rough ratio  # 2.75 vs 1
-
         # self.max_gedi = 16117. # max value of training set
         self.output_size = 2
         self.target_size = (224, 224, 3)
-        self.orig_size = (230, 230, 3)  # (230, 230, 3) for catdog tfrecord
+        self.orig_size = (300, 300, 1)  # (230, 230, 3) for catdog tfrecord
         self.orig_width = 300
         self.orig_height = 300
         self.orig_channels = 1
@@ -120,7 +118,7 @@ class Param:
         self.shuffle_buffer_size = 1000
 
         # Data generator
-        self.augmentbool = False
+        self.augmentbool = True
         self.random_brightness = 0.1
         self.min_contrast = 0.8
         self.max_contrast = 1.2

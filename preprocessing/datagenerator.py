@@ -62,8 +62,8 @@ class Dataspring(Parser):
             ds = ds.map(self.augment, num_parallel_calls=self.p.num_parallel_calls)
             # Normalize again
             ds = ds.map(self.cut_off_vals, num_parallel_calls=self.p.num_parallel_calls)
-        ds = ds.map(self.rescale_im_and_clip_renorm, num_parallel_calls=self.p.num_parallel_calls)
-
+        #ds = ds.map(self.rescale_im_and_clip_renorm, num_parallel_calls=self.p.num_parallel_calls)
+        ds = ds.map(self.set_max_to_one_by_image, num_parallel_calls=self.p.num_parallel_calls)
 
         if (self.p.which_model == 'vgg16') or (self.p.which_model == 'vgg19'):
             print('Using {}'.format(self.p.which_model))
@@ -97,7 +97,7 @@ class Dataspring(Parser):
         imgs, lbls, files = next(self.it)
         return imgs, lbls, files
 
-    def generator(self):
+    def generator(self, input_name='input_1'):
         """
         Generator returning parsed features as dictionary. Dict is used for keras model.fit
         Returns:
@@ -107,7 +107,7 @@ class Dataspring(Parser):
         """
         while True:
             imgs, lbls, files = next(self.it)
-            X = {'input_1': imgs, 'files': files}
+            X = {input_name: imgs, 'files': files}
             yield X, lbls
 
     def retrain_orig_generator(self):

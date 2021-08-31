@@ -42,50 +42,41 @@ import matplotlib.pyplot as plt
 
 class Record:
 
-    def __init__(self, images_dir_A, images_dir_B, tfrecord_dir, split, scramble):
+    def __init__(self, images_dir_live, images_dir_dead, tfrecord_dir, split, scramble):
         """
 
         Args:
-            images_dir_A: Image direction with single label (i.e. 0)
-            images_dir_B: Image directory with different label (i.e. 1)
+            images_dir_live: Image direction with single label (i.e. 0)
+            images_dir_dead: Image directory with different label (i.e. 1)
             tfrecord_dir: Save directory for tfrecs
             split: List to split data into training, validation, testing
             scramble: Boolean to scramble labels, the random labels on the images can help tell if the model is learning patters or memorizing samples
         """
 
         self.p = param.Param()
-        self.images_dir_A = images_dir_A
-        self.images_dir_B = images_dir_B
+        self.images_dir_live = images_dir_live
+        self.images_dir_dead = images_dir_dead
         # Add dummy folder for batch two, different tree.
-        self.impaths_A = glob.glob(os.path.join(self.images_dir_A,'*.jpg'))
-        self.impaths_B = glob.glob(os.path.join(self.images_dir_B, '*.jpg'))
+        self.impaths_live = glob.glob(os.path.join(self.images_dir_live,'**/*.tif'))
+        self.impaths_dead = glob.glob(os.path.join(self.images_dir_dead, '**/*.tif'))
+        # if len(self.impaths_dead) < len(self.impaths_live):
+        #     self.impaths_dead, self.impaths_live = \
+        #         self.balance_dataset(method=balance_method, smaller_lst=self.impaths_dead, larger_lst=self.impaths_live)
 
         self.tfrecord_dir = tfrecord_dir
-        # ../images_dir_A/positive
-        # ../images_dir_A/negative
-        positive_negative_A = images_dir_A.split('/')[-1]
-        if positive_negative_A == 'cat':
-            label_A = 1
-        elif positive_negative_A == 'dog':
-            label_A = 0
-        else:
-            raise ValueError('Last folder A in image directory must be either \'positive\' or \'negative\'.')
+        positive_negative_A = images_dir_live.split('/')[-1]
+        positive_negative_B = images_dir_dead.split('/')[-1]
 
-        positive_negative_B = images_dir_B.split('/')[-1]
-        if positive_negative_B == 'cat':
-            label_B = 1
-        elif positive_negative_B == 'dog':
-            label_B = 0
-        else:
-            raise ValueError('Last folder B in image directory must be either \'positive\' or \'negative\'.')
+        label_live = 1
+        label_dead = 0
 
-        self.labels_A = np.int16(np.ones(len(self.impaths_A)) * label_A)
-        self.labels_B = np.int16(np.ones(len(self.impaths_B)) * label_B)
+        self.labels_live = np.int16(np.ones(len(self.impaths_live)) * label_live)
+        self.labels_dead = np.int16(np.ones(len(self.impaths_dead)) * label_dead)
 
-        self._impaths = np.array(self.impaths_A + self.impaths_B)
-        self._labels = np.append(self.labels_A, self.labels_B)
+        self._impaths = np.array(self.impaths_live + self.impaths_dead)
+        self._labels = np.append(self.labels_live, self.labels_dead)
         assert len(self._impaths) == len(self._labels), 'Length of images and labels do not match.'
-        assert len(self.impaths_A) + len(self.impaths_B) == len(
+        assert len(self.impaths_live) + len(self.impaths_dead) == len(
             self._impaths), 'Summed lengths of image paths do not match'
         self.shuffled_idx = np.arange(len(self._impaths))
         self.scrambled_idx = self.shuffled_idx.copy()
@@ -104,6 +95,7 @@ class Record:
 
         length = len(self.impaths)
 
+        #split files
         self.trainpaths = self.impaths[:int(length * split[0])]
         self.valpaths = self.impaths[int(length * split[0]):int(length * (split[0] + split[1]))]
         self.testpaths = self.impaths[int(length * (split[0] + split[1])):]
@@ -115,7 +107,7 @@ class Record:
     def load_image(self, im_path):
         img = imageio.imread(im_path)
         # assume it's the correct size, otherwise resize here
-        img = cv2.resize(img, (230, 230), interpolation=cv2.INTER_AREA)
+        # img = cv2.resize(img, (230, 230), interpolation=cv2.INTER_AREA)
 
         img = img.astype(np.float32)
         return img
@@ -150,7 +142,6 @@ class Record:
 
                 img = self.load_image(filename)
 
-
                 label = labels[i]
                 filename = str(filename)
                 filename = str.encode(filename)
@@ -172,14 +163,19 @@ class Record:
 
 if __name__ == '__main__':
     p = param.Param()
-    pos_dir = '/mnt/finkbeinerlab/robodata/Josh/dogs_vs_cats/train/cat'
-    neg_dir = '/mnt/finkbeinerlab/robodata/Josh/dogs_vs_cats/train/dog'
+
+    # 1:control,pos_dir
+    # 0:disease,neg_dir
+
+    pos_dir = '/finkbeiner/imaging/smb-robodata/Stephanie/Nuclei-ML/GXYTMP/JAKCP-COR9-ZF-ICC-PDL/ObjectCropsFiltered/Control'
+    neg_dir = '/finkbeiner/imaging/smb-robodata/Stephanie/Nuclei-ML/GXYTMP/JAKCP-COR9-ZF-ICC-PDL/ObjectCropsFiltered/HD'
+
     split = [.7, .15, .15]
 
     Rec = Record(pos_dir, neg_dir, p.tfrecord_dir, split, scramble=False)
-    savetrain = os.path.join(p.tfrecord_dir, 'catdog_train.tfrecord')
-    saveval = os.path.join(p.tfrecord_dir, 'catdog_val.tfrecord')
-    savetest = os.path.join(p.tfrecord_dir, 'catdog_test.tfrecord')
+    savetrain = os.path.join(p.tfrecord_dir, 'Nuclei_train.tfrecord')
+    saveval = os.path.join(p.tfrecord_dir, 'Nuclei_val.tfrecord')
+    savetest = os.path.join(p.tfrecord_dir, 'Nuclei_test.tfrecord')
     Rec.tiff2record(savetrain, Rec.trainpaths, Rec.trainlbls)
     Rec.tiff2record(saveval, Rec.valpaths, Rec.vallbls)
     Rec.tiff2record(savetest, Rec.testpaths, Rec.testlbls)

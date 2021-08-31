@@ -5,7 +5,7 @@ Model class.
 import tensorflow as tf
 from tensorflow.keras import layers
 from tensorflow.keras.models import Model
-import tensorflow_addons as tfa
+#import tensorflow_addons as tfa
 import param_gedi as param
 import numpy as np
 
@@ -93,8 +93,8 @@ class CNN:
         bn1 = layers.BatchNormalization(momentum=0.9, name='bn_1')
         bn2 = layers.BatchNormalization(momentum=0.9, name='bn_2')
         bn3 = layers.BatchNormalization(name='bn_3')
-        instance1 = tfa.layers.InstanceNormalization(name='instance_1')
-        instance2 = tfa.layers.InstanceNormalization(name='instance_2')
+        #instance1 = tfa.layers.InstanceNormalization(name='instance_1')
+        #instance2 = tfa.layers.InstanceNormalization(name='instance_2')
         # updated_model = tf.keras.models.Sequential()
         # for layer in base_model.layers:
         #     updated_model.add(layer)
@@ -139,7 +139,8 @@ class CNN:
         return raw_model
 
     def vgg19(self, imsize):
-        base_model = tf.keras.applications.VGG19(include_top=False, weights='imagenet',
+        input = layers.Input(shape=(imsize[0], imsize[1], imsize[2]), name='input_1')
+        base_model = tf.keras.applications.VGG19(include_top=False, weights='imagenet',input_tensor=input,
                                                  input_shape=(imsize[0], imsize[1], imsize[2]))
         # base_model.trainable = False
         flat = layers.Flatten()

@@ -11,6 +11,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import os
+import neptune.new as neptune
+from neptune.new.integrations.tensorflow_keras import NeptuneCallback
 
 print('Running...')
 # Setup filepaths and csv to log info about training model
@@ -36,6 +38,23 @@ run_info = {'model': p.which_model,
             'random_crop': p.randomcrop}
 print(run_info)
 
+
+net = CNN()
+if p.which_model == 'vgg16':
+    model = net.vgg16(imsize=p.target_size)
+    input_name = 'input_1'
+elif p.which_model == 'vgg19':
+    model = net.vgg19(imsize=p.target_size)
+    input_name = 'vgg19_input'
+elif p.which_model == 'mobilenet':
+    model = net.mobilenet(imsize=p.target_size)
+elif p.which_model == 'inceptionv3':
+    model = net.inceptionv3(imsize=p.target_size)
+    input_name = 'inception_v3_input'
+else:
+    model = net.standard_model(imsize=p.target_size)
+
+
 # Get length of tfrecords
 Chk = pipe.Dataspring(p.data_train)
 train_length = Chk.count_data().numpy()
@@ -49,39 +68,19 @@ del Chk
 DatTrain = pipe.Dataspring(p.data_train)
 DatVal = pipe.Dataspring(p.data_val)
 DatTest = pipe.Dataspring(p.data_test)
+DatTest2 = pipe.Dataspring(p.data_test)
 
 train_ds = DatTrain.datagen_base(istraining=True)
 val_ds = DatVal.datagen_base(istraining=True)
-test_ds = DatTest.datagen_base(istraining=True)
+test_ds = DatTest.datagen_base(istraining=False)
+test_ds2 = DatTest2.datagen_base(istraining=False)
 print('training length', train_length)
 print('validation length', val_length)
 print('test length', test_length)
-train_gen = DatTrain.generator()
-val_gen = DatVal.generator()
-test_gen = DatTest.generator()
+train_gen = DatTrain.generator(input_name)
+val_gen = DatVal.generator(input_name)
+test_gen = DatTest.generator(input_name)
 
-# for image_batch, label_batch in val_ds.take(1):
-#     print('min img', np.min(image_batch))
-#     for img, lbl in zip(image_batch, label_batch):
-#         plt.figure()
-#         im = (img + 1) /2
-#         plt.imshow(im)
-#         plt.title(lbl.numpy())
-#
-# plt.show()
-
-
-net = CNN()
-if p.which_model == 'vgg16':
-    model = net.vgg16(imsize=p.target_size)
-elif p.which_model == 'vgg19':
-    model = net.vgg19(imsize=p.target_size)
-elif p.which_model == 'mobilenet':
-    model = net.mobilenet(imsize=p.target_size)
-elif p.which_model == 'inceptionv3':
-    model = net.inceptionv3(imsize=p.target_size)
-else:
-    model = net.standard_model(imsize=p.target_size)
 
 # callbacks, save checkpoints and tensorboard logs
 cp_callback = tf.keras.callbacks.ModelCheckpoint(save_checkpoint_path, monitor='val_accuracy', verbose=1,
@@ -91,10 +90,17 @@ tb_callback = tf.keras.callbacks.TensorBoard(
     log_dir=os.path.join(p.tb_log_dir, p.which_model),
     update_freq='epoch')
 
-callbacks = [cp_callback]
+run = neptune.init(project='stephanie.lam/GEDI-ORDER-DNA',
+                   api_token='eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vYXBwLm5lcHR1bmUuYWkiLCJhcGlfdXJsIjoiaHR0cHM6Ly9hcHAubmVwdHVuZS5haSIsImFwaV9rZXkiOiJkMjY2YmJkYi01N2RlLTQxNTItYWVhMS01NTljMTg4OGU3MjAifQ==') # your credentials
+run['run_info'] = run_info
+neptune_callback = NeptuneCallback(run=run, base_namespace='metrics')
+
+callbacks = [cp_callback, tb_callback, neptune_callback]
 history = model.fit(train_gen, steps_per_epoch=train_length // (p.BATCH_SIZE), epochs=p.EPOCHS,
                     class_weight=p.class_weights, validation_data=val_gen,
-                    validation_steps=val_length // p.BATCH_SIZE, callbacks=callbacks)
+                    validation_steps=val_length // p.BATCH_SIZE, callbacks=callbacks, workers=4,
+                    use_multiprocessing=True)
+
 # history = model.fit(train_gen, steps_per_epoch=train_length // (p.BATCH_SIZE), epochs=p.EPOCHS,
 #                     validation_data=val_gen,
 #                     validation_steps=val_length // p.BATCH_SIZE, callbacks=callbacks)
@@ -117,11 +123,11 @@ print('Evaluating model...')
 # model.trainable = False
 
 # Predict on test dataset
-res = model.predict(test_gen, steps=test_length // p.BATCH_SIZE)
+res = model.predict(test_gen, steps=test_length // p.BATCH_SIZE, workers=4, use_multiprocessing=True)
 test_accuracy_lst = []
 # Get accuracy, compare predictions with labels
 for i in range(int(test_length // p.BATCH_SIZE)):
-    X, lbls = DatTest.generator()
+    imgs, lbls, files = DatTest2.datagen()
 
     nplbls = lbls.numpy()
     if p.output_size == 2:
@@ -136,6 +142,13 @@ for i in range(int(test_length // p.BATCH_SIZE)):
 
 test_accuracy = np.mean(test_accuracy_lst)
 print('test accuracy', test_accuracy)
+
+run["train/accuracy"].log(train_acc[-1])
+run["train/loss"].log(train_loss[-1])
+run['test/accuracy'].log(test_accuracy)
+run['val/accuracy'].log(val_acc[-1])
+run['val/loss'].log(val_loss[-1])
+
 run_info['train_accuracy'] = train_acc[-1]
 run_info['val_accuracy'] = val_acc[-1]
 run_info['test_accuracy'] = test_accuracy
