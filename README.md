@@ -51,3 +51,7 @@ If you're using CUDA with a gpu, tensorflow-gpu 2.0 pairs with CUDA 10.0.
 ### Run the Code 
 _We are currently working to make GEDI-CNN more user-friendly. Stay tuned._
 
+### Citing
+To cite please use [![DOI](https://zenodo.org/badge/253638158.svg)](https://zenodo.org/badge/latestdoi/253638158)
+
+
