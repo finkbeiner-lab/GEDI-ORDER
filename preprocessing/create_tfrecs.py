@@ -44,7 +44,7 @@ import matplotlib.pyplot as plt
 
 class Record:
 
-    def __init__(self, images_dir_live, images_dir_dead, tfrecord_dir, split, balance_method, scramble):
+    def __init__(self, images_dir_live, images_dir_dead, tfrecord_dir, split, balance_method, filetype='.tif'):
         """
 
         Args:
@@ -52,16 +52,16 @@ class Record:
             images_dir_dead: Image directory with different label (i.e. 1)
             tfrecord_dir: Save directory for tfrecs
             split: List to split data into training, validation, testing
-            balance_method: Method to balance binary classes
-            scramble: Boolean to scramble labels, the random labels on the images can help tell if the model is learning patters or memorizing samples
+            balance_method: Method to balance binary classes, 'cutoff' - remove data, 'multiply' - duplicate smaller data class to match larger class, None - leave unbalanced
+            filetype = '.tif', '.jpg', '.png'
         """
 
         self.p = param.Param()
         self.images_dir_live = images_dir_live
         self.images_dir_dead = images_dir_dead
         # Add dummy folder for batch two, different tree.
-        self.impaths_live = glob.glob(os.path.join(self.images_dir_live, '*.tif'))
-        self.impaths_dead = glob.glob(os.path.join(self.images_dir_dead, '*.tif'))
+        self.impaths_live = glob.glob(os.path.join(self.images_dir_live, f'*{filetype}'))
+        self.impaths_dead = glob.glob(os.path.join(self.images_dir_dead, f'*{filetype}'))
         if len(self.impaths_dead) < len(self.impaths_live):
             self.impaths_dead, self.impaths_live = \
                 self.balance_dataset(method=balance_method, smaller_lst=self.impaths_dead, larger_lst=self.impaths_live)
@@ -82,17 +82,9 @@ class Record:
         self.scrambled_idx = self.shuffled_idx.copy()
         np.random.seed(0)
         np.random.shuffle(self.shuffled_idx)
-        print(self.shuffled_idx)
-
         self.impaths = self._impaths[self.shuffled_idx]
-        if not scramble:
-            self.labels = self._labels[self.shuffled_idx]
-        else:
-            np.random.seed(1)
+        self.labels = self._labels[self.shuffled_idx]
 
-            np.random.shuffle(self.scrambled_idx)
-            self.labels = self._labels[self.scrambled_idx]
-            print('WARNING: LABELS SCRAMBLED AND INACCURATE FOR DEBUGGING')
 
         length = len(self.impaths)
 
@@ -157,7 +149,7 @@ class Record:
             for i in range(len(filepaths)):
                 # one less in range for matching pairs
                 if not i % 100:
-                    print('Train data:', i)  # Python 3 has default end = '\n' which flushes the buffer
+                    print('Processed data:', i)  # Python 3 has default end = '\n' which flushes the buffer
                 #                sys.stdout.flush()
                 filename = str(filepaths[i])
 
@@ -191,7 +183,7 @@ if __name__ == '__main__':
     split = [.7, .15, .15]
     balance_method = 'cutoff'
 
-    Rec = Record(pos_dir, neg_dir, p.tfrecord_dir, split, balance_method=balance_method, scramble=False)
+    Rec = Record(pos_dir, neg_dir, p.tfrecord_dir, split, balance_method=balance_method)
     savetrain = os.path.join(p.tfrecord_dir, 'LINCS072017RGEDI-A_train.tfrecord')
     saveval = os.path.join(p.tfrecord_dir, 'LINCS072017RGEDI-A_val.tfrecord')
     savetest = os.path.join(p.tfrecord_dir, 'LINCS072017RGEDI-A_test.tfrecord')

@@ -221,7 +221,10 @@ class Parser:
 
         # tensorf object has no attribute ndim error
         # img = tf.keras.preprocessing.image.random_shear(img, 1, row_axis=1, col_axis=2, channel_axis=3)
-
+        tf.print('max img', tf.reduce_max(img))
+        tf.print('min img', tf.reduce_min(img))
+        tf.print('brightness', self.p.random_brightness)
+        tf.print('contrast', self.p.max_contrast)
         img = tf.image.random_brightness(img,
                                          max_delta=self.p.random_brightness)  # Image normalized to 1, delta is amount of brightness to add/subtract
         img = tf.image.random_contrast(img, self.p.min_contrast, self.p.max_contrast)  # (x- mean) * contrast factor + mean

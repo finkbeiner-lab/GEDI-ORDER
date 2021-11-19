@@ -16,11 +16,11 @@ import numpy as np
 class Param:
     def __init__(self, parent_dir=None, tfrec_dir=None, res_dir=None):
         self.which_model = 'vgg16'  # vgg16
-        self.EPOCHS = 100
+        self.EPOCHS = 1
         self.learning_rate = 3e-4  # 3e-4
         self.BATCH_SIZE = 16
-        self.orig_max_value = 16117.0  # max value of dataset from original model
-        self.orig_min_value = 0  # min value of dataset from original model
+        self.orig_max_value = 16117.0  # max value of dataset from original gedi cnn model
+        self.orig_min_value = 0  # min value of dataset from original gedi cnn model
         # self.training_max_value = np.float32(1.0001860857009888)
         self.training_max_value = 1.0001861
         self.training_min_value = 0
@@ -30,7 +30,7 @@ class Param:
         self.timestamp = '%d%02d%02d-%02d%02d%02d' % (now.year, now.month, now.day, now.hour, now.minute, now.second)
         os_name = platform.node()
         if parent_dir is None:
-            self.parent_dir = {'hobbes': '/mnt/data/GEDI-ORDER',
+            self.parent_dir = {'hobbes': '/run/media/jlamstein/data/GEDI-ORDER',
                                'fb-gpu-compute01': '/finkbeiner/imaging/smb-robodata/Josh/GEDI-ORDER',
                                'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/Josh/GEDI-ORDER'}[
                 os_name]
@@ -38,7 +38,7 @@ class Param:
             self.parent_dir = parent_dir
         if tfrec_dir is None:
             self.tfrec_dir = {
-                'hobbes': '/mnt/data/gedi/transfer/tfrecs',
+                'hobbes': '/run/media/jlamstein/data/gedi/transfer/tfrecs',
                 'fb-gpu-compute01': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/GEDI_DATA/',
                 'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/GEDI_DATA/'
             }[os_name]
@@ -91,9 +91,9 @@ class Param:
         self.jk_val_eq = os.path.join(self.tfrec_dir, 'jk_val_eq.tfrecord')
         self.jk_test_eq = os.path.join(self.tfrec_dir, 'jk_test_eq.tfrecord')
 
-        self.catdog_train = os.path.join('/mnt/data/CatsAndDogs/catdog_train.tfrecord')
-        self.catdog_val = os.path.join('/mnt/data/CatsAndDogs/catdog_val.tfrecord')
-        self.catdog_test = os.path.join('/mnt/data/CatsAndDogs/catdog_test.tfrecord')
+        self.catdog_train = os.path.join('/run/media/jlamstein/CatsAndDogs/catdog_train.tfrecord')
+        self.catdog_val = os.path.join('/run/media/jlamstein/CatsAndDogs/catdog_val.tfrecord')
+        self.catdog_test = os.path.join('/run/media/jlamstein/CatsAndDogs/catdog_test.tfrecord')
         #################SET TRAIN AND RETRAIN TFRECORDS#####################
         self.data_retrain = os.path.join(self.tfrecord_dir, 'vor_LINCS092016A_train.tfrecord')
         self.data_reval = os.path.join(self.tfrecord_dir, 'vor_LINCS092016A_val.tfrecord')
@@ -110,6 +110,7 @@ class Param:
         self.data_train = self.data_retrain
         self.data_val = self.data_retrain
         self.data_test = self.data_retrain
+
 
         # self.data_train = self.lincs_train
         # self.data_val = self.lincs_val
@@ -144,9 +145,9 @@ class Param:
 
         # Data generator
         self.augmentbool = True
-        self.random_brightness = 0.1
-        self.min_contrast = 0.8
-        self.max_contrast = 1.2
+        self.random_brightness = 0.3
+        self.min_contrast = 0.7
+        self.max_contrast = 1.3
 
         self.hyperparams = {
             'timestamp': self.timestamp,
