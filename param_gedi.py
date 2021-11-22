@@ -15,10 +15,12 @@ import numpy as np
 
 class Param:
     def __init__(self, parent_dir=None, tfrec_dir=None, res_dir=None):
-        self.which_model = 'vgg16'  # vgg16
-        self.EPOCHS = 1
-        self.learning_rate = 3e-4  # 3e-4
-        self.BATCH_SIZE = 16
+        self.which_model = 'vgg19'  # vgg16
+        self.EPOCHS = 20
+        self.learning_rate = 1e-5  # 3e-4
+        self.BATCH_SIZE = 32
+        self.optimizer = 'adam'  # sgd, adamw
+        self.momentum = 0.9
         self.orig_max_value = 16117.0  # max value of dataset from original gedi cnn model
         self.orig_min_value = 0  # min value of dataset from original gedi cnn model
         # self.training_max_value = np.float32(1.0001860857009888)

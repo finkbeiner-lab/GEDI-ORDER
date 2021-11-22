@@ -29,11 +29,15 @@ class Train:
     def run(self, pos_dir, neg_dir, balance_method='cutoff'):
         if self.preprocess_tfrecs:
             self.generate_tfrecs(pos_dir, neg_dir, balance_method)
+        else:
+            assert os.path.exists(os.path.join(self.parent_dir, 'train.tfrecord')), 'set preprocess_tfrecs to true'
         self.train()
 
     def run_retrain(self, pos_dir, neg_dir, balance_method='cutoff'):
         if self.preprocess_tfrecs:
             self.generate_tfrecs(pos_dir, neg_dir, balance_method)
+        else:
+            assert os.path.exists(os.path.join(self.parent_dir, 'retrain.tfrecord')), 'set preprocess_tfrecs to true'
         self.retrain()
 
     def generate_tfrecs(self, pos_dir, neg_dir, balance_method='cutoff'):
@@ -48,7 +52,7 @@ class Train:
 
         """
         split = [.7, .15, .15]
-        tfrec_dir = os.getcwd()
+        tfrec_dir = self.parent_dir
         Rec = Record(pos_dir, neg_dir, tfrec_dir, split, balance_method=balance_method)
         savetrain = 'train.tfrecord'
         saveval = 'val.tfrecord'
@@ -62,9 +66,9 @@ class Train:
 
         print('Running...')
         # Setup filepaths and csv to log info about training model
-        p = param.Param(self.parent_dir)
+        p = param.Param(parent_dir=self.parent_dir)
         make_directories(p)
-        tfrec_dir = os.getcwd()
+        tfrec_dir = self.parent_dir
         data_train = os.path.join(tfrec_dir, 'train.tfrecord')
         data_val = os.path.join(tfrec_dir, 'val.tfrecord')
         data_test = os.path.join(tfrec_dir, 'test.tfrecord')
@@ -148,8 +152,7 @@ class Train:
         callbacks = [cp_callback]
         history = model.fit(train_gen, steps_per_epoch=train_length // (p.BATCH_SIZE), epochs=p.EPOCHS,
                             class_weight=p.class_weights, validation_data=val_gen,
-                            validation_steps=val_length // p.BATCH_SIZE, callbacks=callbacks, workers=4,
-                            use_multiprocessing=True)
+                            validation_steps=val_length // p.BATCH_SIZE, callbacks=callbacks)
         # history = model.fit(train_gen, steps_per_epoch=train_length // (p.BATCH_SIZE), epochs=p.EPOCHS,
         #                     validation_data=val_gen,
         #                     validation_steps=val_length // p.BATCH_SIZE, callbacks=callbacks)
@@ -168,7 +171,7 @@ class Train:
         print('Evaluating model...')
 
         # Predict on test dataset
-        res = model.predict(test_gen, steps=test_length // p.BATCH_SIZE, workers=4, use_multiprocessing=True)
+        res = model.predict(test_gen, steps=test_length // p.BATCH_SIZE)
         test_accuracy_lst = []
         # Get accuracy, compare predictions with labels
         for i in range(int(test_length // p.BATCH_SIZE)):
@@ -203,12 +206,12 @@ class Train:
 
         print('Running...')
         # Setup filepaths and csv to log info about training model
-        p = param.Param()
+        p = param.Param(parent_dir=self.parent_dir)
         make_directories(p)
         if base_model is None:  # load base model to initialize weights
             base_model = p.base_gedi_dropout_bn
 
-        tfrec_dir = os.getcwd()
+        tfrec_dir = self.parent_dir
         data_retrain = os.path.join(tfrec_dir, 'retrain.tfrecord')
         data_reval = os.path.join(tfrec_dir, 'reval.tfrecord')
         data_retest = os.path.join(tfrec_dir, 'retest.tfrecord')
@@ -388,14 +391,17 @@ if __name__ == '__main__':
                         default='/run/media/jlamstein/data/GEDI-ORDER',
                         help='data parent directory',
                         dest='datadir')
-    parser.add_argument('--pos_dir', action="store", default='/mnt/finkbeinernas/robodata/JeremyTEMP/GalaxyTEMP/LINCS072017RGEDI-A/Livetraining2',
+    parser.add_argument('--pos_dir', action="store",
+                        default='/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Livecrops_3',
                         help='directory with positive images', dest="pos_dir")
-    parser.add_argument('--neg_dir', action="store", default='/mnt/finkbeinernas/robodata/JeremyTEMP/GalaxyTEMP/LINCS072017RGEDI-A/Deadtraining2',
+    parser.add_argument('--neg_dir', action="store",
+                        default='/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Deadcrops_3',
                         help='directory with negative images', dest="neg_dir")
     parser.add_argument('--balance_method', action="store", default='cutoff',
                         help='method to handle unbalanced data: cutoff, multiply or none', dest="balance_method")
     parser.add_argument('--preprocess_tfrecs', type=bool, action="store", default=False,
-                        help='generate tfrecords, necessary for new datasets, if already generate set to false', dest="preprocess_tfrecs")
+                        help='generate tfrecords, necessary for new datasets, if already generate set to false',
+                        dest="preprocess_tfrecs")
     args = parser.parse_args()
     print('ARGS:\n', args)
 

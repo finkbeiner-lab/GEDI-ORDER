@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 from ops import processing_ops as pops
 from ops.processing_ops import Parser
+import os
 
 import param_gedi as param
 
@@ -60,8 +61,10 @@ class Dataspring(Parser):
         if self.p.augmentbool and istraining:
             ds = ds.map(self.augment, num_parallel_calls=self.p.num_parallel_calls)
             # Normalize again
-            ds = ds.map(self.cut_off_vals, num_parallel_calls=self.p.num_parallel_calls)
-        ds = ds.map(self.rescale_im_and_clip_renorm, num_parallel_calls=self.p.num_parallel_calls)
+            # ds = ds.map(self.cut_off_vals, num_parallel_calls=self.p.num_parallel_calls)
+            ds = ds.map(self.set_max_to_one_by_batch, num_parallel_calls=self.p.num_parallel_calls)
+
+        # ds = ds.map(self.rescale_im_and_clip_renorm, num_parallel_calls=self.p.num_parallel_calls)
 
         if (self.p.which_model == 'vgg16') or (self.p.which_model == 'vgg19'):
             if self.verbose:
@@ -126,14 +129,9 @@ class Dataspring(Parser):
 if __name__ == '__main__':
     p = param.Param()
     print(p.which_model)
-    tfrecord = os.path.join(os.getcwd(), 'train.tfrecord')
-    # tfrecord = p.data_retrain
-    # Chk = Dataspring(tfrecord)
-    # test_length = Chk.count_data().numpy()
-    # print(test_length)
-    # del Chk
+    tfrecord = os.path.join('/run/media/jlamstein/data/GEDI-ORDER', 'train.tfrecord')
     Dat = Dataspring(tfrecord)
-    Dat.datagen_base(istraining=False)
+    Dat.datagen_base(istraining=True)
     label_lst = []
     # for i in range(1):
     #     imgs, lbls, files = Dat.datagen()

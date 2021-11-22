@@ -221,24 +221,27 @@ class Parser:
 
         # tensorf object has no attribute ndim error
         # img = tf.keras.preprocessing.image.random_shear(img, 1, row_axis=1, col_axis=2, channel_axis=3)
-        tf.print('max img', tf.reduce_max(img))
-        tf.print('min img', tf.reduce_min(img))
-        tf.print('brightness', self.p.random_brightness)
-        tf.print('contrast', self.p.max_contrast)
+        # tf.print('max img', tf.reduce_max(img))
+        # tf.print('min img', tf.reduce_min(img))
         img = tf.image.random_brightness(img,
                                          max_delta=self.p.random_brightness)  # Image normalized to 1, delta is amount of brightness to add/subtract
         img = tf.image.random_contrast(img, self.p.min_contrast, self.p.max_contrast)  # (x- mean) * contrast factor + mean
-
+        # tf.print('aug img', tf.reduce_max(img))
+        # tf.print('aug img', tf.reduce_min(img))
         return img, lbls, files
 
     def remove_negatives_in_img(self, img):
         """If there are negatives in image, subtract by min to get make all values nonnegative"""
-        _mins = tf.reduce_min(img, axis=0, keepdims=True)
-        _mins = tf.reduce_min(_mins, axis=1, keepdims=True)
-        _mins = tf.reduce_min(_mins, axis=2, keepdims=True)
-        _zeros = tf.zeros_like(_mins)
-        subtr = tf.where(tf.less(_mins, _zeros), _mins, _zeros)
+        _min = tf.reduce_min(img)
+        # _mins = tf.reduce_min(img, axis=0, keepdims=True)
+        # _mins = tf.reduce_min(_mins, axis=1, keepdims=True)
+        # _mins = tf.reduce_min(_mins, axis=2, keepdims=True)
+        # _zeros = tf.zeros_like(_mins)
+        # subtr = tf.where(tf.less(_mins, _zeros), _mins, _zeros)
+        # img = img - subtr
+        subtr = tf.where(tf.less(_min, 0.), _min, 0.)
         img = img - subtr
+
         return img
 
     def divide_by_max_in_img(self, img):

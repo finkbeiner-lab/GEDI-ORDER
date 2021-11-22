@@ -14,14 +14,25 @@ import argparse
 from preprocessing.create_tfrecs_deploy import Record
 import pyfiglet
 
+__author__ = 'Josh Lamstein'
+__copyright__ = 'Gladstone 2021'
+
 
 class Deploy:
-    def __init__(self):
+    def __init__(self, parent_dir, preprocess_tfrecs):
         self.default_lbl = 0
+        self.parent_dir = parent_dir
+
+        self.preprocess_tfrecs = preprocess_tfrecs
 
     def run(self, p, im_dir, model_path=None):
-        self.generate_tfrecs(im_dir)
-        self.deploy_main(p, model_path, deploy_gedi_cnn=True if model_path is None else False)
+        deploypath = os.path.join(self.parent_dir, 'deploy.tfrecord')
+        if self.preprocess_tfrecs:
+            self.generate_tfrecs(im_dir)
+        else:
+            assert os.path.exists(deploypath), 'set preprocess_tfrecs to true'
+
+        self.deploy_main(p, deploypath, model_path, deploy_gedi_cnn=True if model_path is None else False)
 
     def generate_tfrecs(self, im_dir):
         """
@@ -31,13 +42,12 @@ class Deploy:
         """
         tfrec_dir = os.getcwd()
         Rec = Record(im_dir, tfrec_dir, lbl=self.default_lbl)
-        savedeploy = 'deploy.tfrecord'
+        savedeploy = os.path.join(self.parent_dir, 'deploy.tfrecord')
         Rec.tiff2record(savedeploy, Rec.impaths, Rec.lbls)
         print(f'Saved tfrecords to {tfrec_dir}')
 
-    def deploy_main(self, p, model_path, deploy_gedi_cnn):
+    def deploy_main(self, p, deploy_tfrec, model_path, deploy_gedi_cnn):
         # p = param.Param()
-        tfrecord = p.data_deploy
         res_dict = {'filepath': [], 'prediction': [], 'label': []}
 
         # if testing on CURATION
@@ -46,18 +56,18 @@ class Deploy:
         else:
             import_path = model_path
 
-        save_res = os.path.join(p.res_csv_deploy, tfrecord.split('/')[-1].split('.')[0] + '.csv')  # save results
+        save_res = os.path.join(p.res_csv_deploy, deploy_tfrec.split('/')[-1].split('.')[0] + '.csv')  # save results
         # Plops = plotops.Plotty(model_id)
 
         # Count samples in tfrecord
-        Chk = pipe.Dataspring(tfrecord, False)
+        Chk = pipe.Dataspring(deploy_tfrec, False)
         test_length = Chk.count_data().numpy()
         del Chk
-        DatTest = pipe.Dataspring(tfrecord, True)
+        DatTest = pipe.Dataspring(deploy_tfrec, True)
         test_ds = DatTest.datagen_base(istraining=False)
         test_gen = DatTest.generator()
 
-        DatView = pipe.Dataspring(tfrecord)
+        DatView = pipe.Dataspring(deploy_tfrec)
         view_ds = DatView.datagen_base(istraining=False)
 
         # Load model
@@ -127,7 +137,7 @@ class Deploy:
         print('Result csv saved to {}'.format(save_res))
 
         test_accuracy = np.mean(test_accuracy_lst)
-        print(f'Percentage of samples that equal {self.default_lbl}', test_accuracy)
+        print(f'Percentage of samples that equal {self.default_lbl}:', test_accuracy)
 
 
 if __name__ == '__main__':
@@ -135,20 +145,24 @@ if __name__ == '__main__':
     print(result)
     parser = argparse.ArgumentParser(description='Deploy GEDICNN model')
     parser.add_argument('--parent', action="store",
-                        default='/mnt/data/GEDI-ORDER',
+                        default='/run/media/jlamstein/data/GEDI-ORDER',
                         dest='parent')
-    parser.add_argument('--im_dir', action="store", default='/mnt/finkbeinerlab/robodata/GEDI_CLUSTER',
+    parser.add_argument('--im_dir', action="store",
+                        default='/mnt/finkbeinernas/robodata/JeremyTEMP/GalaxyTEMP/LINCS072017RGEDI-A/Livetraining2',
                         help='directory of images to run', dest="im_dir")
     parser.add_argument('--model_path', action="store",
-                        default='/mnt/finkbeinerlab/robodata/GEDI_CLUSTER/base_gedi_dropout2.h5',
+                        default='/mnt/finkbeinernas/robodata/GEDI_CLUSTER/base_gedi_dropout2.h5',
                         help='path to h5 or hdf5 model', dest="model_path")
-    parser.add_argument('--resdir', action="store", default='/mnt/finkbeinerlab/robodata/GEDI_CLUSTER',
+    parser.add_argument('--resdir', action="store", default='/mnt/finkbeinernas/robodata/GEDI_CLUSTER',
                         help='results directory', dest="resdir")
+    parser.add_argument('--preprocess_tfrecs', type=bool, action="store", default=True,
+                        help='generate tfrecords, necessary for new datasets, if already generate set to false',
+                        dest="preprocess_tfrecs")
 
     args = parser.parse_args()
     print('ARGS:\n', args)
     p = param.Param(parent_dir=args.parent, res_dir=args.resdir)
 
     import_path = p.base_gedi_dropout
-    Dep = Deploy()
+    Dep = Deploy(args.parent, args.preprocess_tfrecs)
     Dep.run(p, args.im_dir, args.model_path)

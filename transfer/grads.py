@@ -6,7 +6,7 @@ import tensorflow as tf
 from tensorflow import RegisterGradient
 import tensorflow.keras.backend as K
 from tensorflow.keras.models import load_model
-from memory_profiler import profile
+# from memory_profiler import profile
 import sys
 from pympler import asizeof
 
