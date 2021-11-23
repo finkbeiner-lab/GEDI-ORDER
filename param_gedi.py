@@ -16,7 +16,7 @@ import numpy as np
 class Param:
     def __init__(self, parent_dir=None, tfrec_dir=None, res_dir=None):
         self.which_model = 'vgg19'  # vgg16
-        self.EPOCHS = 20
+        self.EPOCHS = 100
         self.learning_rate = 1e-5  # 3e-4
         self.BATCH_SIZE = 32
         self.optimizer = 'adam'  # sgd, adamw

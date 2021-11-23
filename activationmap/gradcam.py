@@ -1,3 +1,7 @@
+"""Activation map with preprocessing option
+Set main_fold to None to use tfrecord, set deploy_tfrec to None to run images in gradcam.
+"""
+
 import os
 import platform
 
@@ -6,21 +10,20 @@ import numpy as np
 from subprocess import check_output
 import pandas as pd
 
-from transfer.grads import Grads
-from transfer.grad_ops import GradOps
+from activationmap.grads import Grads
+from activationmap.grad_ops import GradOps
 import glob
 import param_gedi as param
 # from memory_profiler import profile
 import sys
-from pympler import asizeof
 import argparse
 import pyfiglet
-#
-# os_type = platform.system()
-# if os_type == 'Linux':
-#     prefix = '/mnt/finkbeinerlab'
-# if os_type == 'Darwin':
-#     prefix = '/Volumes/data'
+from pympler import asizeof
+import tensorflow as tf
+from preprocessing.datagenerator import Dataspring
+
+__author__ = 'Josh Lamstein'
+__copyright__ == 'Gladstone 2021'
 
 
 def mem(obj, name):
@@ -28,7 +31,7 @@ def mem(obj, name):
     print(name, m)
 
 
-def batches_from_fold(source_fold, dead_fold, live_fold, batch_size, parser=lambda x: x):
+def batches_from_fold(source_fold, dead_fold, live_fold, batch_size, parser=lambda x: x, ):
     # check_files = check_output(['find {}'.format(os.path.join(source_fold, '*.tif'))], shell=True).decode().split()
     check_files = glob.glob(os.path.join(source_fold, '*.tif'))
 
@@ -36,16 +39,21 @@ def batches_from_fold(source_fold, dead_fold, live_fold, batch_size, parser=lamb
     lbls = []
     for file in check_files:
         fn = file.split('/')[-1]
+        subdir = file.split('/')[-2]
         cur_lbl = [0] * 2
-        if os.path.exists(os.path.join(dead_fold, fn)):
+
+        chk_dead = os.path.join(dead_fold, fn)
+        chk_live = os.path.join(live_fold, fn)
+        if os.path.exists(chk_dead):
             cur_lbl[0] += 1
-        if os.path.exists(os.path.join(live_fold, fn)):
+        if os.path.exists(chk_live):
             cur_lbl[1] += 1
 
         if cur_lbl[0] != cur_lbl[1]:
             files.append(file)
             lbls.append(cur_lbl)
         else:
+            print('cur lbl', cur_lbl)
             print('Couldn\'t find label for image at {}'.format(file))
 
     for i in range(0, len(files), batch_size):
@@ -57,6 +65,18 @@ def batches_from_fold(source_fold, dead_fold, live_fold, batch_size, parser=lamb
         print('batch from fold 2')
 
         yield tuple(map(np.array, (_imgs, _lbls, _names)))
+
+
+def batches_from_ds(tfrecord):
+    Dat = Dataspring(tfrecord)
+    ds = Dat.datagen_base(istraining=False, count=1)
+    for imgs, lbls, files in ds:
+        imgs = imgs.numpy()
+        lbls = lbls.numpy()
+        files = files.numpy()
+        fs = [f.decode() for f in files]
+        names = np.array(['.'.join(file.split('/')[-1].split('.')[:-1]) for file in fs])
+        yield (imgs, lbls, names)
 
 
 # @profile
@@ -107,7 +127,7 @@ def save_batch(g, imgs, lbls, base_path, conf_mat_paths, fnames=None, makepaths=
 
     """
 
-    ggcam_gen = g.gen_ggcam_stacks(imgs, lbls, layer_name, ret_preds=True)
+    ggcam_gen = g.gen_ggcam_stacks(imgs, lbls, layer_name, ret_preds=True)  # grads.py
     writes = []
     res_dict = {'filename': [], 'label': [], 'prediction': []}
     for i, lbl in enumerate(lbls):
@@ -128,15 +148,23 @@ def save_batch(g, imgs, lbls, base_path, conf_mat_paths, fnames=None, makepaths=
                 res_dict['prediction'].append(np.argmax(preds))
         except:
             print('Could not write image at index {}'.format(i))
+    # mem(ggcam_gen, 'ggcam')
+    # mem(g_stack, 'g_strack')
+    # mem(writes, 'writes')
+    # mem(res_dict, 'res_dict')
+    # mem(imgs, 'imgs2')
     return res_dict
 
 
 # @profile
 def process_fold(g, source_fold, dead_fold, live_fold, dest_path, conf_mat_paths, batch_size=10, parser=lambda x: x,
-                 layer_name='block5_conv3', has_labels=True):
+                 layer_name='block5_conv3', has_labels=True, tfrecord=None):
     pred_df = pd.DataFrame({'filename': [], 'label': [], 'prediction': []})
     if has_labels:
-        batch_gen = batches_from_fold(source_fold, dead_fold, live_fold, batch_size=batch_size, parser=parser)
+        if source_fold is not None:
+            batch_gen = batches_from_fold(source_fold, dead_fold, live_fold, batch_size=batch_size, parser=parser)
+        else:
+            batch_gen = batches_from_ds(tfrecord)
     else:
         batch_gen = batches_from_fold_no_labels(source_fold, dead_fold, live_fold, batch_size=batch_size, parser=parser)
     for imgs, lbls, names in batch_gen:
@@ -149,59 +177,92 @@ def process_fold(g, source_fold, dead_fold, live_fold, dest_path, conf_mat_paths
         print('pred df')
 
         pred_df = pd.concat((pred_df, df), ignore_index=True)
+        # mem(batch_gen, 'batch_gen')
+        # mem(pred_df, 'pred_df')
+        # mem(imgs, 'imgs')
+        # mem(lbls, 'lbls')
+        # mem(d, 'd')
+        # mem(g, 'g')
 
     print('to csv')
 
     pred_df.to_csv(os.path.join(dest_path, dest_path.split('/')[-1] + '.csv'))
     return 0
 
-def run_gradcam(main_fold, dest_dir, model_path, layer_name='block5_conv3'):
-    # import_path = os.path.join(p.base_gedi_dropout_bn)
+
+def run_gradcam(main_fold, dest_fold, deploy_tfrec, model_path, layer_name='block5_conv3', imtype='tif'):
+    if main_fold is not None and deploy_tfrec is not None:
+        assert 0, 'main fold or deploy_tfrec must be Nan valued (None).'
     guidedbool = True
+    batch_size = 16
+
     g = Grads(model_path, guidedbool=guidedbool)
     gops = GradOps(vgg_normalize=True)
-    conf_mat_paths = [['dead_true', 'dead_false'], ['live_false', 'live_true']]
-    dead_fold, live_fold = None, None
-    batch_size = 16
+
+    pos_fold, neg_fold = None, None
+
+    # conf_mat_paths = [['artifact_true', 'artifact_false'], ['asyn_false', 'asyn_true']]
+    conf_mat_paths = [['zero_true', 'zero_false'], ['one_false', 'one_true']]
     parser = lambda img: gops.img_parse(img)
-    # layer_name = 'block5_conv3'
-    LABELLED = False
+    # layer_name = 'block5_conv3'  # VGG16
+    # layer_name = 'block5_conv4'  # VGG19
+    # layer_name = 'conv2d_4'  # custom_model
+    LABELLED = True
     # layer_name = 'block1_conv1'
+    if main_fold is not None:
+        subdirs = glob.glob(os.path.join(main_fold, '**'))
+        if os.path.isdir(subdirs[0]):
+            for subdir in subdirs:
+                tifs = glob.glob(os.path.join(subdir, f'*.{imtype}'))
+                if len(tifs) >= batch_size:
+                    print('Running {}'.format(subdir))
+                    name = subdir.split('/')[-1]
+                    cur_source_fold = subdir
+                    cur_dest_path = os.path.join(dest_fold, name)
+                    process_fold(g, cur_source_fold, neg_fold, pos_fold, cur_dest_path, conf_mat_paths,
+                                 batch_size=batch_size,
+                                 parser=parser, layer_name=layer_name, has_labels=LABELLED,
+                                 tfrecord=deploy_tfrec)
+                    print(f'saved to {cur_dest_path}')
+        # Directory does not have subdirectories
+        else:
+            print(f'No subdirectories found, looking for images im {main_fold}')
+            cur_source_fold = main_fold
+            # sl = subdir.split('/')[-1]
+            # livedead = subdir.split('/')[-3]
+            cur_dest_path = dest_fold
 
-    subdirs = glob.glob(os.path.join(main_fold, '**'))
-    assert os.path.isdir(subdirs[0]), 'not a subdirectory, check path'
-    for subdir in subdirs:
-        print('Running {}'.format(subdir))
-        name = subdir.split('/')[-1]
-        # cur_source_fold = os.path.join(source_fold_prefix, well)
-        cur_dest_path = os.path.join(dest_dir, name)
+            process_fold(g, cur_source_fold, neg_fold, pos_fold, cur_dest_path, conf_mat_paths, batch_size=batch_size,
+                         parser=parser, layer_name=layer_name, has_labels=LABELLED, tfrecord=deploy_tfrec)
+    else:
+        cur_source_fold = None
 
-        process_fold(g, subdir, dead_fold, live_fold, cur_dest_path, conf_mat_paths, batch_size=batch_size,
-                     parser=parser, layer_name=layer_name, has_labels=LABELLED)
+        process_fold(g, cur_source_fold, neg_fold, pos_fold, dest_fold, conf_mat_paths, batch_size=batch_size,
+                     parser=parser, layer_name=layer_name, has_labels=LABELLED,
+                     tfrecord=deploy_tfrec)
+    print(f'saved to {dest_fold}')
 
 
 if __name__ == '__main__':
-    result = pyfiglet.figlet_format("GEDI-CNN GRADCAM", font="slant")
+    result = pyfiglet.figlet_format("GEDI-CNN Gradcam", font="slant")
     print(result)
-    parser = argparse.ArgumentParser(description='Deploy GEDICNN model')
-    parser.add_argument('--parent', action="store",
-                        default='/run/media/jlamstein/data/GEDI-ORDER',
-                        dest='parent')
+    parser = argparse.ArgumentParser(description='Gradcam on GEDICNN model')
     parser.add_argument('--im_dir', action="store",
-                        default='/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/tmp_deadcrops',
+                        default=None,
                         help='directory of images to run', dest="im_dir")
     parser.add_argument('--model_path', action="store",
-                        # default='/mnt/finkbeinernas/robodata/GEDI_CLUSTER/base_gedi_dropout2.h5',
                         default='/run/media/jlamstein/data/GEDI-ORDER/saved_models/vgg19_2021_11_22_15_00_43.h5',
                         help='path to h5 or hdf5 model', dest="model_path")
-    parser.add_argument('--resdir', action="store", default='/mnt/finkbeinernas/robodata/GEDI_CLUSTER/Gradcam',
-                        help='results directory', dest="resdir")
+    parser.add_argument('--deploy_tfrec', action="store", default='/run/media/jlamstein/data/GEDI-ORDER/test.tfrecord',
+                        help='results directory', dest="deploy_tfrec")
     parser.add_argument('--layer_name', action="store", default='block5_conv3',
-                        help='visualized layer', dest="layer_name")
+                        help='visualize layer', dest="layer_name")
+    parser.add_argument('--resdir', action="store", default='/mnt/finkbeinernas/robodata/GEDI_CLUSTER/Gradcam/test',
+                        help='results directory', dest="resdir")
+    parser.add_argument('--imtype', action="store", default='tif',
+                        help='suffix for image, tif, jpg, png', dest="imtype")
 
     args = parser.parse_args()
     print('ARGS:\n', args)
-    # p = param.Param(parent_dir=args.parent, res_dir=args.resdir)
-    #
-    # import_path = p.base_gedi_dropout
-    run_gradcam(args.im_dir,args.resdir, args.model_path, args.layer_name)
+
+    run_gradcam(args.im_dir, args.resdir, args.deploy_tfrec, args.model_path, args.layer_name, args.imtype)

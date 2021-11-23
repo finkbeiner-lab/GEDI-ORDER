@@ -32,7 +32,7 @@ class Dataspring(Parser):
         cnt = dataset_cnt.reduce(0., lambda x, _: x + 1)
         return cnt
 
-    def datagen_base(self, istraining=True):
+    def datagen_base(self, istraining=True, count=None):
         """
 
         Args:
@@ -44,7 +44,7 @@ class Dataspring(Parser):
         """
         ds = tf.data.TFRecordDataset(self.tfrecord,
                                      num_parallel_reads=self.p.num_parallel_calls)  # possibly use multiple record files
-        ds = ds.repeat()
+        ds = ds.repeat(count)
         if istraining:
             ds = ds.shuffle(self.p.shuffle_buffer_size, reshuffle_each_iteration=True)  # shuffle up to buffer
         ds = ds.batch(self.p.BATCH_SIZE, drop_remainder=False)  # batch images, no skips
