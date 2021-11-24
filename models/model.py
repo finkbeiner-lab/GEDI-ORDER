@@ -5,7 +5,7 @@ Model class.
 import tensorflow as tf
 from tensorflow.keras import layers
 from tensorflow.keras.models import Model
-# import tensorflow_addons as tfa
+import tensorflow_addons as tfa
 import param_gedi as param
 import numpy as np
 
@@ -17,7 +17,7 @@ class CNN:
 
     def custom_model(self, imsize):
         act = 'relu'
-        inputs = tf.keras.Input(shape=(imsize), name='inputs')
+        inputs = tf.keras.Input(shape=imsize, name='input_1')
         x = layers.Conv2D(32, (3, 3), activation=act)(inputs)
         x = layers.BatchNormalization()(x)
         x = layers.MaxPooling2D((2, 2))(x)
@@ -27,9 +27,10 @@ class CNN:
         x = layers.Conv2D(64, (3, 3), activation=act)(x)
         x = layers.BatchNormalization()(x)
         x = layers.MaxPooling2D((2, 2))(x)
-        x = layers.AveragePooling2D()(x)
-        x = layers.Flatten()(x)
-        x = layers.Dense(self.p.output_size, activation='sigmoid')(x)
+        x = layers.GlobalAveragePooling2D()(x)
+
+        x = layers.Dense(64)(x)
+        x = layers.Dense(self.p.output_size, activation='softmax', name='output')(x)
 
         raw_model = tf.keras.Model(inputs=inputs, outputs=x)
         raw_model.summary()
@@ -55,8 +56,18 @@ class CNN:
                                                     beta_initializer="random_uniform",
                                                     gamma_initializer="random_uniform")(x)
 
-        norm = bn if switch == 'bn' else instance
-        inputs = tf.keras.Input(shape=(imsize), name='inputs')
+        def identity(x):
+            return x
+
+        if switch == 'bn':
+            norm = bn
+        elif switch == 'instance':
+            norm = instance
+        else:
+            norm = identity
+
+        # norm = bn if switch == 'bn' else instance
+        inputs = tf.keras.Input(shape=(imsize), name='input_1')
         x = layers.Conv2D(64, (3, 3), activation=act)(inputs)
         x = norm(x)
         x = layers.MaxPooling2D((2, 2))(x)
@@ -72,9 +83,9 @@ class CNN:
         x = layers.Conv2D(128, (3, 3), activation=act)(x)
         x = norm(x)
         x = layers.MaxPooling2D((2, 2))(x)
-        x = layers.AveragePooling2D()(x)
-        x = layers.Flatten()(x)
-        x = layers.Dense(self.p.output_size, activation='sigmoid')(x)
+        x = layers.GlobalAveragePooling2D()(x)
+        x = layers.Dense(128)(x)
+        x = layers.Dense(self.p.output_size, activation='softmax')(x)
 
         raw_model = tf.keras.Model(inputs=inputs, outputs=x)
         raw_model.summary()
@@ -85,7 +96,6 @@ class CNN:
                           metrics=['accuracy'])
 
         return raw_model
-
 
     def _custom_model(self, imsize):
         """
@@ -213,6 +223,8 @@ class CNN:
         return raw_model
 
     def vgg19(self, imsize):
+        initializer = 'TruncatedNormal'
+        # initializer = 'glorot_uniform'
         base_model = tf.keras.applications.VGG19(include_top=False, weights='imagenet',
                                                  input_shape=(imsize[0], imsize[1], imsize[2]))
         # base_model.trainable = False
@@ -221,8 +233,10 @@ class CNN:
         bn1 = layers.BatchNormalization(momentum=0.9, name='bn_1')
         bn2 = layers.BatchNormalization(momentum=0.9, name='bn_2')
         bn3 = layers.BatchNormalization(momentum=0.9, name='bn_3')
-        fc1 = layers.Dense(1024, activation='relu', name='dense_1')
-        fc2 = layers.Dense(1024, activation='relu', name='dense_2')
+        fc1 = layers.Dense(256, kernel_initializer=initializer, bias_initializer=initializer, activation='relu',
+                           name='dense_1')
+        fc2 = layers.Dense(256, kernel_initializer=initializer, bias_initializer=initializer, activation='relu',
+                           name='dense_2')
         fc3 = layers.Dense(self.p.output_size, name='fc3')
         drop1 = layers.Dropout(rate=0.5, name='dropout_1')
         drop2 = layers.Dropout(rate=0.5, name='dropout_2')
@@ -230,15 +244,24 @@ class CNN:
         prediction = layers.Dense(self.p.output_size, activation='softmax', name='output')
         block5_pool = base_model.get_layer('block5_pool')
         for layr in base_model.layers:
+            # ininy = tf.initializers.GlorotUniform()
+            ininy = tf.initializers.TruncatedNormal()
+
             if ('block5' in layr.name) or ('block4' in layr.name):
-            # if ('block5' in layr.name):
+                # if ('block5' in layr.name):
+                # _weights = layr.get_weights()
+                # if len(_weights) > 0:
+                #     # print('resetting weights:', layr.name)
+                #     W = np.shape(_weights[0])
+                #     b = np.shape(_weights[1])
+                #     layr.set_weights([ininy(shape=W), ininy(shape=b)])
 
                 layr.trainable = True
             else:
                 layr.trainable = False
             print(layr.trainable)
 
-        x = global_average_layer(block5_pool.output)
+        x = flatten(block5_pool.output)
         x = fc1(x)
         # x = bn1(x)
         # x = drop1(x, training=self.trainable)
@@ -252,10 +275,11 @@ class CNN:
 
         raw_model = Model(inputs=base_model.input, outputs=x)
         raw_model.summary()
-        if self.p.optimizer=='adam':
+        if self.p.optimizer == 'adam':
             optimizer = tf.keras.optimizers.Adam(learning_rate=self.p.learning_rate)
-        elif self.p.optimizer=='sgd':
-            optimizer = tf.keras.optimizers.SGD(learning_rate=self.p.learning_rate, momentum=self.p.momentum, nesterov=True)
+        elif self.p.optimizer == 'sgd':
+            optimizer = tf.keras.optimizers.SGD(learning_rate=self.p.learning_rate, momentum=self.p.momentum,
+                                                nesterov=True)
 
         raw_model.compile(optimizer=optimizer,
                           loss='binary_crossentropy',
@@ -302,8 +326,11 @@ class CNN:
         fc1 = layers.Dense(128, activation='relu', name='dense_1')
         fc2 = layers.Dense(256, activation='relu', name='dense_2')
         fc3 = layers.Dense(256, activation='relu', name='dense_3')
-        prediction = layers.Dense(self.p.output_size, name='output')
+        global_pool = layers.GlobalAveragePooling2D()
+        prediction = layers.Dense(self.p.output_size, name='prediction')
         flat = layers.Flatten()
+        conv_lyr = base_model.get_layer('conv5_block3_out')
+        base_model.summary()
         for layr in base_model.layers:
             if ('conv4' in layr.name) or ('conv5' in layr.name):
 
@@ -311,13 +338,11 @@ class CNN:
             else:
                 layr.trainable = False
             print(layr.trainable)
-        raw_model = tf.keras.Sequential([
-            base_model,
-            flat,
-            fc1,
-            fc2,
-            prediction
-        ])
+
+        x = global_pool(conv_lyr.output)
+        x = prediction(x)
+        x = layers.Softmax(name='output')(x)
+        raw_model = Model(inputs=base_model.input, outputs=x)
         raw_model.summary()
 
         raw_model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=self.p.learning_rate),

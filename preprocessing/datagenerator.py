@@ -50,8 +50,8 @@ class Dataspring(Parser):
         ds = ds.batch(self.p.BATCH_SIZE, drop_remainder=False)  # batch images, no skips
         ds = ds.map(self.tfrec_batch_parse,
                     num_parallel_calls=self.p.num_parallel_calls)  # apply parse
-        if self.p.output_size == 1:
-            ds = ds.map(self.use_binary_lbls, self.p.num_parallel_calls)
+        # if self.p.output_size == 1:
+        #     ds = ds.map(self.use_binary_lbls, self.p.num_parallel_calls)
         ds = ds.map(self.reshape_ims, num_parallel_calls=self.p.num_parallel_calls)
 
         # Normalization
@@ -78,10 +78,15 @@ class Dataspring(Parser):
             if self.verbose:
                 print('Using inceptionv3')
             ds = ds.map(self.inception_scale, num_parallel_calls=self.p.num_parallel_calls)
+        elif self.p.which_model=='resnet50':
+            ds = ds.map(self.make_vgg, num_parallel_calls=self.p.num_parallel_calls)
+
         elif self.p.which_model == 'raw':
             if self.verbose:
                 print('Using standard model')
             ds = ds.map(self.normalize_whitening, num_parallel_calls=self.p.num_parallel_calls)
+        elif 'custom' in self.p.which_model:
+            ds = ds.map(self.make_vgg, num_parallel_calls=self.p.num_parallel_calls)
         else:
             print('no model processing')
         ds = ds.prefetch(1)
@@ -129,7 +134,7 @@ class Dataspring(Parser):
 if __name__ == '__main__':
     p = param.Param()
     print(p.which_model)
-    tfrecord = os.path.join('/run/media/jlamstein/data/GEDI-ORDER', 'train.tfrecord')
+    tfrecord = os.path.join('/run/media/jlamstein/data/GEDI-ORDER', 'val.tfrecord')
     Dat = Dataspring(tfrecord)
     Dat.datagen_base(istraining=True)
     label_lst = []

@@ -138,8 +138,14 @@ class Train:
             model = net.mobilenet(imsize=p.target_size)
         elif p.which_model == 'inceptionv3':
             model = net.inceptionv3(imsize=p.target_size)
+        elif p.which_model == 'resnet50':
+            model = net.resnet50(imsize=p.target_size)
+        elif p.which_model=='custom2':
+            model = net.custom_model2(imsize=p.target_size)
+        elif p.which_model=='custom1':
+            model = net.custom_model(imsize=p.target_size)
         else:
-            model = net.standard_model(imsize=p.target_size)
+            assert 0, 'no model specified'
 
         # callbacks, save checkpoints and tensorboard logs
         cp_callback = tf.keras.callbacks.ModelCheckpoint(save_checkpoint_path, monitor='val_accuracy', verbose=1,
@@ -153,15 +159,7 @@ class Train:
         history = model.fit(train_gen, steps_per_epoch=train_length // (p.BATCH_SIZE), epochs=p.EPOCHS,
                             class_weight=p.class_weights, validation_data=val_gen,
                             validation_steps=val_length // p.BATCH_SIZE, callbacks=callbacks)
-        # history = model.fit(train_gen, steps_per_epoch=train_length // (p.BATCH_SIZE), epochs=p.EPOCHS,
-        #                     validation_data=val_gen,
-        #                     validation_steps=val_length // p.BATCH_SIZE, callbacks=callbacks)
 
-        # for _ in range(10):
-        #     train_ims, train_lbls = DatTrain.datagen()
-        #     val_ims, val_lbls = DatVal.datagen()
-        #     history = model.fit(train_ims, train_lbls, steps_per_epoch=p.BATCH_SIZE, epochs=1, validation_data=(val_ims, val_lbls),
-        #                         validation_steps=p.BATCH_SIZE, callbacks=callbacks)
         train_acc = history.history['accuracy']
         val_acc = history.history['val_accuracy']
 

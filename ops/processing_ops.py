@@ -349,6 +349,38 @@ class Parser:
 
         return bgr, lbls, files
 
+    def make_resnet(self, img, lbls, files):
+        """
+        Subtracts the vgg16 training mean by channel.
+        Args:
+            img:
+            lbls:
+            files:
+
+        Returns:
+
+        """
+        rgb = img * 255.0
+        if int(img.get_shape()[-1]) == 1:
+            red, green, blue = rgb, rgb, rgb
+        else:
+            red, green, blue = tf.split(
+                axis=3, num_or_size_splits=3, value=rgb)
+
+        assert_op = tf.Assert(tf.reduce_all(tf.equal(red.get_shape()[1:], tf.constant([224, 224, 1]))), [red])
+        with tf.control_dependencies([assert_op]):
+            assert red.get_shape().as_list()[1:] == [224, 224, 1]
+            assert green.get_shape().as_list()[1:] == [224, 224, 1]
+            assert blue.get_shape().as_list()[1:] == [224, 224, 1]
+            res = tf.concat(axis=3, values=[
+                red - self.p.VGG_MEAN[0],
+                green - self.p.VGG_MEAN[1],
+                blue - self.p.VGG_MEAN[2],
+            ], name='res')
+        assert res.get_shape().as_list()[1:] == [224, 224, 3]
+
+        return res, lbls, files
+
     def chk_make_vgg(self, img, lbls, files):
         """
         Subtracts the vgg16 training mean by channel.

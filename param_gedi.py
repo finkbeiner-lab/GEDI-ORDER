@@ -15,15 +15,20 @@ import numpy as np
 
 class Param:
     def __init__(self, parent_dir=None, tfrec_dir=None, res_dir=None):
-        self.which_model = 'vgg19'  # vgg16
+        self.which_model = 'resnet50'  # vgg16, vgg19, resnet50
         self.EPOCHS = 100
-        self.learning_rate = 1e-5  # 3e-4
+        self.learning_rate = 1e-4  # 3e-4
         self.BATCH_SIZE = 32
         self.optimizer = 'adam'  # sgd, adamw
         self.momentum = 0.9
+        # Data generator
+        self.augmentbool = True
+        self.random_brightness = 0.3
+        self.min_contrast = 0.7
+        self.max_contrast = 1.3
         self.orig_max_value = 16117.0  # max value of dataset from original gedi cnn model
         self.orig_min_value = 0  # min value of dataset from original gedi cnn model
-        # self.training_max_value = np.float32(1.0001860857009888)
+
         self.training_max_value = 1.0001861
         self.training_min_value = 0
         self.class_weights = {0: 1., 1: 1.}  # rough ratio  # 2.75 vs 1 for original training dataset
@@ -145,11 +150,7 @@ class Param:
         # self.new_lr = 3e-4
         self.shuffle_buffer_size = 200
 
-        # Data generator
-        self.augmentbool = True
-        self.random_brightness = 0.3
-        self.min_contrast = 0.7
-        self.max_contrast = 1.3
+
 
         self.hyperparams = {
             'timestamp': self.timestamp,
