@@ -89,7 +89,11 @@ class CNN:
 
         raw_model = tf.keras.Model(inputs=inputs, outputs=x)
         raw_model.summary()
-        optimizer = tf.keras.optimizers.Adam(learning_rate=self.p.learning_rate)
+        if self.p.optimizer == 'adam':
+            optimizer = tf.keras.optimizers.Adam(learning_rate=self.p.learning_rate)
+        elif self.p.optimizer == 'sgd':
+            optimizer = tf.keras.optimizers.SGD(learning_rate=self.p.learning_rate, momentum=self.p.momentum,
+                                                nesterov=True)
         # optimizer = tfa.optimizers.AdamW(learning_rate=self.p.learning_rate, weight_decay=self.p.wd)
         raw_model.compile(optimizer=optimizer,
                           loss='binary_crossentropy',
@@ -286,39 +290,6 @@ class CNN:
                           metrics=['accuracy'])
         return raw_model
 
-    def inceptionv3(self, imsize=(299, 299, 3)):
-        """
-        Input shape must be greater than (75,75,3), (299,299,3) is default.
-        :return:
-        """
-        base_model = tf.keras.applications.inception_v3.InceptionV3(include_top=False, weights='imagenet',
-                                                                    input_shape=(imsize[0], imsize[1], imsize[2]))
-        for layr in base_model.layers[:100]:
-            layr.trainable = False
-        for layr in base_model.layers[100:]:
-            layr.trainable = True
-        base_model.summary()
-        flat = layers.Flatten()
-        global_average_layer = tf.keras.layers.GlobalAveragePooling2D()
-
-        fc1 = layers.Dense(16, activation='relu', name='dense_1')
-        fc2 = layers.Dense(16, activation='relu', name='dense_2')
-        fc3 = layers.Dense(128, activation='softmax', name='dense_3')
-        prediction = layers.Dense(self.p.output_size, activation='softmax', name='output')
-        raw_model = tf.keras.Sequential([
-            base_model,
-            global_average_layer,
-            fc1,
-            fc2,
-            prediction
-        ])
-        raw_model.summary()
-
-        raw_model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=self.p.learning_rate),
-                          loss='binary_crossentropy',
-                          metrics=['accuracy'])
-        return raw_model
-
     def resnet50(self, imsize):
         base_model = tf.keras.applications.ResNet50(include_top=False, weights='imagenet',
                                                     input_shape=(imsize[0], imsize[1], imsize[2]))
@@ -345,31 +316,15 @@ class CNN:
         raw_model = Model(inputs=base_model.input, outputs=x)
         raw_model.summary()
 
-        raw_model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=self.p.learning_rate),
+        if self.p.optimizer == 'adam':
+            optimizer = tf.keras.optimizers.Adam(learning_rate=self.p.learning_rate)
+        elif self.p.optimizer == 'sgd':
+            optimizer = tf.keras.optimizers.SGD(learning_rate=self.p.learning_rate, momentum=self.p.momentum,
+                                                nesterov=True)
+
+        raw_model.compile(optimizer=optimizer,
                           loss='binary_crossentropy',
                           metrics=['accuracy'])
-        return raw_model
-
-    def mobilenet(self, imsize):
-        base_model = tf.keras.applications.MobileNetV2(input_shape=(imsize[0], imsize[1], imsize[2]),
-                                                       include_top=False,
-                                                       weights='imagenet')
-        base_model.trainable = False
-
-        global_average_layer = tf.keras.layers.GlobalAveragePooling2D()
-
-        prediction_layer = layers.Dense(self.p.output_size)
-
-        raw_model = tf.keras.Sequential([
-            base_model,
-            global_average_layer,
-            prediction_layer
-        ])
-
-        raw_model.compile(optimizer=tf.keras.optimizers.RMSprop(lr=self.p.learning_rate),
-                          loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
-                          metrics=['accuracy'])
-        raw_model.summary()
         return raw_model
 
 

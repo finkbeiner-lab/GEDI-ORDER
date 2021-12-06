@@ -22,9 +22,18 @@ __copyright__ = 'Gladstone Institutes 2020'
 
 
 class Train:
-    def __init__(self, parent_dir, preprocess_tfrecs):
+    def __init__(self, parent_dir, preprocess_tfrecs, use_neptune):
         self.parent_dir = parent_dir
+        self.p = param.Param(parent_dir=self.parent_dir)
+
         self.preprocess_tfrecs = preprocess_tfrecs
+        self.use_neptune = use_neptune
+        if self.use_neptune:
+            import neptune.new as neptune
+            df = pd.read_csv('/home/jlamstein/Documents/neptune.csv')
+            self.nep = neptune.init(df['user'].iloc[0], df['token'].iloc[0])
+        else:
+            self.nep = None
 
     def run(self, pos_dir, neg_dir, balance_method='cutoff'):
         if self.preprocess_tfrecs:
@@ -66,31 +75,37 @@ class Train:
 
         print('Running...')
         # Setup filepaths and csv to log info about training model
-        p = param.Param(parent_dir=self.parent_dir)
-        make_directories(p)
+        make_directories(self.p)
         tfrec_dir = self.parent_dir
         data_train = os.path.join(tfrec_dir, 'train.tfrecord')
         data_val = os.path.join(tfrec_dir, 'val.tfrecord')
         data_test = os.path.join(tfrec_dir, 'test.tfrecord')
 
         timestamp = update_timestring()
-        export_path = os.path.join(p.models_dir, '{}_{}.h5'.format(p.which_model, timestamp))
-        export_info_path = os.path.join(p.run_info_dir, '{}_{}.csv'.format(p.which_model, timestamp))
-        save_checkpoint_path = os.path.join(p.ckpt_dir, '{}_{}.hdf5'.format(p.which_model, timestamp))
-        run_info = {'model': p.which_model,
+        export_path = os.path.join(self.p.models_dir, '{}_{}.h5'.format(self.p.which_model, timestamp))
+        export_info_path = os.path.join(self.p.run_info_dir, '{}_{}.csv'.format(self.p.which_model, timestamp))
+        save_checkpoint_path = os.path.join(self.p.ckpt_dir, '{}_{}.hdf5'.format(self.p.which_model, timestamp))
+        self.p.hyperparams['timestamp'] = timestamp
+        self.p.hyperparams['model_timestamp']=self.p.which_model+'_'+timestamp
+        self.p.hyperparams['retraining'] = ''
+        if self.use_neptune:
+            self.nep["parameters"] = self.p.hyperparams
+
+        # todo replace with self.p.hyperparams
+        run_info = {'model': self.p.which_model,
                     'retraining': '',
                     'timestamp': timestamp,
-                    'model_timestamp': p.which_model + '_' + timestamp,
+                    'model_timestamp': self.p.which_model + '_' + timestamp,
                     'train_path': data_train,
                     'val_path': data_val,
                     'test_path': data_test,
-                    'learning_rate': p.learning_rate,
-                    'augmentation': p.augmentbool,
-                    'epochs': p.EPOCHS,
-                    'batch_size': p.BATCH_SIZE,
-                    'output_size': p.output_size,
-                    'im_shape': p.target_size,
-                    'random_crop': p.randomcrop}
+                    'learning_rate': self.p.learning_rate,
+                    'augmentation': self.p.augmentbool,
+                    'epochs': self.p.EPOCHS,
+                    'batch_size': self.p.BATCH_SIZE,
+                    'output_size': self.p.output_size,
+                    'im_shape': self.p.target_size,
+                    'random_crop': self.p.randomcrop}
         # Get length of tfrecords
         Chk = pipe.Dataspring(data_train)
         train_length = Chk.count_data().numpy()
@@ -130,20 +145,16 @@ class Train:
         # plt.show()
 
         net = CNN()
-        if p.which_model == 'vgg16':
-            model = net.vgg16(imsize=p.target_size)
-        elif p.which_model == 'vgg19':
-            model = net.vgg19(imsize=p.target_size)
-        elif p.which_model == 'mobilenet':
-            model = net.mobilenet(imsize=p.target_size)
-        elif p.which_model == 'inceptionv3':
-            model = net.inceptionv3(imsize=p.target_size)
-        elif p.which_model == 'resnet50':
-            model = net.resnet50(imsize=p.target_size)
-        elif p.which_model=='custom2':
-            model = net.custom_model2(imsize=p.target_size)
-        elif p.which_model=='custom1':
-            model = net.custom_model(imsize=p.target_size)
+        if self.p.which_model == 'vgg16':
+            model = net.vgg16(imsize=self.p.target_size)
+        elif self.p.which_model == 'vgg19':
+            model = net.vgg19(imsize=self.p.target_size)
+        elif self.p.which_model == 'resnet50':
+            model = net.resnet50(imsize=self.p.target_size)
+        elif self.p.which_model == 'custom2':
+            model = net.custom_model2(imsize=self.p.target_size)
+        elif self.p.which_model == 'custom1':
+            model = net.custom_model(imsize=self.p.target_size)
         else:
             assert 0, 'no model specified'
 
@@ -152,13 +163,17 @@ class Train:
                                                          save_best_only=True, mode='max')
 
         tb_callback = tf.keras.callbacks.TensorBoard(
-            log_dir=os.path.join(p.tb_log_dir, p.which_model),
+            log_dir=os.path.join(self.p.tb_log_dir, self.p.which_model),
             update_freq='epoch')
 
         callbacks = [cp_callback]
-        history = model.fit(train_gen, steps_per_epoch=train_length // (p.BATCH_SIZE), epochs=p.EPOCHS,
-                            class_weight=p.class_weights, validation_data=val_gen,
-                            validation_steps=val_length // p.BATCH_SIZE, callbacks=callbacks)
+        if self.use_neptune:
+            from neptune.new.integrations.tensorflow_keras import NeptuneCallback
+            neptune_cbk = NeptuneCallback(run=self.nep, base_namespace='metrics')
+            callbacks.append(neptune_cbk)
+        history = model.fit(train_gen, steps_per_epoch=train_length // (self.p.BATCH_SIZE), epochs=self.p.EPOCHS,
+                            class_weight=self.p.class_weights, validation_data=val_gen,
+                            validation_steps=val_length // self.p.BATCH_SIZE, callbacks=callbacks)
 
         train_acc = history.history['accuracy']
         val_acc = history.history['val_accuracy']
@@ -169,17 +184,17 @@ class Train:
         print('Evaluating model...')
 
         # Predict on test dataset
-        res = model.predict(test_gen, steps=test_length // p.BATCH_SIZE)
+        res = model.predict(test_gen, steps=test_length // self.p.BATCH_SIZE)
         test_accuracy_lst = []
         # Get accuracy, compare predictions with labels
-        for i in range(int(test_length // p.BATCH_SIZE)):
+        for i in range(int(test_length // self.p.BATCH_SIZE)):
             imgs, lbls, files = DatTest2.datagen()
-            # res = model.predict((imgs, lbls), steps=test_length // p.BATCH_SIZE, workers=4, use_multiprocessing=True)
+            # res = model.predict((imgs, lbls), steps=test_length // self.pBATCH_SIZE, workers=4, use_multiprocessing=True)
             nplbls = lbls.numpy()
-            if p.output_size == 2:
-                test_results = np.argmax(res[i * p.BATCH_SIZE: (i + 1) * p.BATCH_SIZE], axis=1)
+            if self.p.output_size == 2:
+                test_results = np.argmax(res[i * self.p.BATCH_SIZE: (i + 1) * self.p.BATCH_SIZE], axis=1)
                 labels = np.argmax(nplbls, axis=1)
-            elif p.output_size == 1:
+            elif self.p.output_size == 1:
                 test_results = np.where(res > 0, 1, 0)
                 labels = nplbls
             test_acc = np.array(test_results) == np.array(labels)
@@ -199,6 +214,8 @@ class Train:
 
         print('Saving model to {}'.format(export_path))
         model.save(export_path)
+        self.nep.stop()
+
 
     def retrain(self, base_model=None):
 
@@ -207,7 +224,7 @@ class Train:
         p = param.Param(parent_dir=self.parent_dir)
         make_directories(p)
         if base_model is None:  # load base model to initialize weights
-            base_model = p.base_gedi_dropout_bn
+            base_model = self.p.base_gedi_dropout_bn
 
         tfrec_dir = self.parent_dir
         data_retrain = os.path.join(tfrec_dir, 'retrain.tfrecord')
@@ -217,20 +234,20 @@ class Train:
         export_path = os.path.join(p.retrain_models_dir, '{}_{}.h5'.format(p.which_model, timestamp))
         export_info_path = os.path.join(p.retrain_run_info_dir, '{}_{}.csv'.format(p.which_model, timestamp))
         save_checkpoint_path = os.path.join(p.retrain_ckpt_dir, '{}_{}.hdf5'.format(p.which_model, timestamp))
-        run_info = {'model': p.which_model,
-                    'retraining': p.base_gedi_dropout_bn,
+        run_info = {'model': self.p.which_model,
+                    'retraining': self.p.base_gedi_dropout_bn,
                     'timestamp': timestamp,
-                    'model_timestamp': p.which_model + '_' + timestamp,
+                    'model_timestamp': self.p.which_model + '_' + timestamp,
                     'train_path': data_retrain,
                     'val_path': data_reval,
                     'test_path': data_retest,
-                    'learning_rate': p.learning_rate,
-                    'augmentation': p.augmentbool,
-                    'epochs': p.EPOCHS,
-                    'batch_size': p.BATCH_SIZE,
-                    'output_size': p.output_size,
-                    'im_shape': p.target_size,
-                    'random_crop': p.randomcrop}
+                    'learning_rate': self.p.learning_rate,
+                    'augmentation': self.p.augmentbool,
+                    'epochs': self.p.EPOCHS,
+                    'batch_size': self.p.BATCH_SIZE,
+                    'output_size': self.p.output_size,
+                    'im_shape': self.p.target_size,
+                    'random_crop': self.p.randomcrop}
         # Get length of tfrecords
         Chk = pipe.Dataspring(data_retrain)
         train_length = Chk.count_data().numpy()
@@ -326,15 +343,19 @@ class Train:
         # callbacks, save checkpoints and tensorboard logs
         cp_callback = tf.keras.callbacks.ModelCheckpoint(save_checkpoint_path, monitor='val_accuracy', verbose=1,
                                                          save_best_only=True, mode='max')
+        callbacks = [cp_callback]
 
         tb_callback = tf.keras.callbacks.TensorBoard(
             log_dir='/home/jlamstein/PycharmProjects/ASYN/log/{}'.format(p.which_model),
             update_freq='epoch')
+        if self.use_neptune:
+            from neptune.new.integrations.tensorflow_keras import NeptuneCallback
+            neptune_cbk = NeptuneCallback(run=self.nep, base_namespace='metrics')
+            callbacks.append(neptune_cbk)
 
-        callbacks = [cp_callback]
         history = model.fit(train_gen, steps_per_epoch=train_length // (p.BATCH_SIZE), epochs=p.EPOCHS,
                             class_weight=p.class_weights, validation_data=val_gen,
-                            validation_steps=val_length // p.BATCH_SIZE, callbacks=callbacks)
+                            validation_steps=val_length // self.p.BATCH_SIZE, callbacks=callbacks)
 
         train_acc = history.history['accuracy']
         val_acc = history.history['val_accuracy']
@@ -349,16 +370,16 @@ class Train:
         model.trainable = False
 
         # Predict on test dataset
-        res = model.predict(test_gen, steps=test_length // p.BATCH_SIZE)
+        res = model.predict(test_gen, steps=test_length // self.p.BATCH_SIZE)
         test_accuracy_lst = []
         # Get accuracy, compare predictions with labels
-        for i in range(int(test_length // p.BATCH_SIZE)):
+        for i in range(int(test_length // self.p.BATCH_SIZE)):
             imgs, lbls, files = DatTest2.datagen()
             nplbls = lbls.numpy()
-            if p.output_size == 2:  # output size is two. One hot encoded binary classifier
-                test_results = np.argmax(res[i * p.BATCH_SIZE: (i + 1) * p.BATCH_SIZE], axis=1)
+            if self.p.output_size == 2:  # output size is two. One hot encoded binary classifier
+                test_results = np.argmax(res[i * self.p.BATCH_SIZE: (i + 1) * self.p.BATCH_SIZE], axis=1)
                 labels = np.argmax(nplbls, axis=1)
-            elif p.output_size == 1:  # only for output size one, so far not used
+            elif self.p.output_size == 1:  # only for output size one, so far not used
                 test_results = np.where(res > 0, 1, 0)
                 labels = nplbls
             test_acc = np.array(test_results) == np.array(labels)
@@ -400,8 +421,11 @@ if __name__ == '__main__':
     parser.add_argument('--preprocess_tfrecs', type=bool, action="store", default=False,
                         help='generate tfrecords, necessary for new datasets, if already generate set to false',
                         dest="preprocess_tfrecs")
+    parser.add_argument('-use_neptune', type=bool, action="store", default=True,
+                        help='Save run info to neptune ai',
+                        dest="use_neptune")
     args = parser.parse_args()
     print('ARGS:\n', args)
 
-    Tr = Train(args.datadir, args.preprocess_tfrecs)
+    Tr = Train(args.datadir, args.preprocess_tfrecs, args.use_neptune)
     Tr.run(args.pos_dir, args.neg_dir, args.balance_method)

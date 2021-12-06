@@ -15,11 +15,11 @@ import numpy as np
 
 class Param:
     def __init__(self, parent_dir=None, tfrec_dir=None, res_dir=None):
-        self.which_model = 'resnet50'  # vgg16, vgg19, resnet50
+        self.which_model = 'vgg19'  # vgg16, vgg19, resnet50
         self.EPOCHS = 100
-        self.learning_rate = 1e-4  # 3e-4
+        self.learning_rate = 1e-6  # 3e-4
         self.BATCH_SIZE = 32
-        self.optimizer = 'adam'  # sgd, adamw
+        self.optimizer = 'adam'  # sgd, adam
         self.momentum = 0.9
         # Data generator
         self.augmentbool = True
@@ -62,7 +62,6 @@ class Param:
         self.base_gedi = os.path.join(self.res_dir, 'tf_to_k_v2.h5')
         self.base_gedi_dropout = os.path.join(self.res_dir, 'base_gedi_dropout2.h5')
         self.base_gedi_dropout_bn = os.path.join(self.res_dir, 'base_gedi_dropout_bn.h5')
-
 
         self.run_info_dir = os.path.join(self.parent_dir, 'model_info')
         self.confusion_dir = os.path.join(self.parent_dir, 'confusion_images')
@@ -118,7 +117,6 @@ class Param:
         self.data_val = self.data_retrain
         self.data_test = self.data_retrain
 
-
         # self.data_train = self.lincs_train
         # self.data_val = self.lincs_val
         # self.data_test = self.lincs_test
@@ -150,13 +148,20 @@ class Param:
         # self.new_lr = 3e-4
         self.shuffle_buffer_size = 200
 
-
-
         self.hyperparams = {
-            'timestamp': self.timestamp,
+            'model': self.which_model,
+            'learning_rate': self.learning_rate,
+            'optimizer': self.optimizer,
+            'momentum': self.momentum,
+            'augmentation': self.augmentbool,
+            'random_brightness': self.random_brightness,
+            'min_contrast': self.min_contrast,
+            'max_contrast': self.max_contrast,
             'train_dir': self.data_train,
             'val_dir': self.data_val,
             'test_dir': self.data_test,
+            'orig_size': self.orig_size,
+            'target_size': self.target_size,
             'class_weights_0': self.class_weights[0],
             'class_weights_1': self.class_weights[1],
             'batch_size': self.BATCH_SIZE,

@@ -226,6 +226,14 @@ class Parser:
         img = tf.image.random_brightness(img,
                                          max_delta=self.p.random_brightness)  # Image normalized to 1, delta is amount of brightness to add/subtract
         img = tf.image.random_contrast(img, self.p.min_contrast, self.p.max_contrast)  # (x- mean) * contrast factor + mean
+        noise = tf.random.uniform(
+            tf.shape(img), minval=0.0, maxval=1.0, dtype=tf.dtypes.float32, seed=None, name='noise'
+        )
+        noise = tf.where(noise < .1, noise/2, 0., name='noise_cond')
+        img += noise
+
+
+
         # tf.print('aug img', tf.reduce_max(img))
         # tf.print('aug img', tf.reduce_min(img))
         return img, lbls, files
