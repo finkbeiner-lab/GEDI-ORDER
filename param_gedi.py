@@ -15,7 +15,7 @@ import numpy as np
 
 class Param:
     def __init__(self, parent_dir=None, tfrec_dir=None, res_dir=None):
-        self.which_model = 'vgg19'  # vgg16, vgg19, resnet50
+        self.which_model = 'resnet50'  # vgg16, vgg19, resnet50
         self.EPOCHS = 100
         self.learning_rate = 1e-6  # 3e-4
         self.BATCH_SIZE = 32
