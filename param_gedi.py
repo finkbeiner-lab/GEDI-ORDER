@@ -16,10 +16,10 @@ import numpy as np
 class Param:
     def __init__(self, parent_dir=None, tfrec_dir=None, res_dir=None):
         self.which_model = 'vgg19'  # vgg16, vgg19, resnet50
-        self.EPOCHS = 100
+        self.EPOCHS = 1
         self.learning_rate = 1e-6  # 3e-4
         self.BATCH_SIZE = 32
-        self.optimizer = 'adam'  # sgd, adam
+        self.optimizer = 'sgd'  # sgd, adam
         self.momentum = 0.9
         # Data generator
         self.augmentbool = True

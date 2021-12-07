@@ -32,9 +32,10 @@ import matplotlib.pyplot as plt
 from utils.utils import get_timepoint
 import random
 
+
 class Record:
 
-    def __init__(self, images_lst_live, images_lst_dead, tfrecord_dir, split, scramble=False):
+    def __init__(self, images_lst_live, images_lst_dead, tfrecord_dir, split, balance_method):
         """
 
         Args:
@@ -42,18 +43,22 @@ class Record:
             images_lst_dead: Image list with dead labels (0)
             tfrecord_dir: Save directory for tfrecs
             split: List to split data into training, validation, testing
-            scramble: Boolean to scramble labels, the random labels on the images can help tell if the model is learning patters or memorizing samples
+            balance_method: Method to balance binary classes, 'cutoff' - remove data, 'multiply' - duplicate smaller data class to match larger class, None - leave unbalanced
         """
         assert isinstance(images_lst_dead, list), 'images_lst_dead must be list'
         self.p = param.Param()
-
 
         self.tfrecord_dir = tfrecord_dir
         label_live = 1
         label_dead = 0
         self.impaths_live = images_lst_live
         self.impaths_dead = images_lst_dead
-
+        if len(self.impaths_dead) < len(self.impaths_live):
+            self.impaths_dead, self.impaths_live = \
+                self.balance_dataset(method=balance_method, smaller_lst=self.impaths_dead, larger_lst=self.impaths_live)
+        else:
+            self.impaths_live, self.impaths_dead = \
+                self.balance_dataset(method=balance_method, smaller_lst=self.impaths_live, larger_lst=self.impaths_dead)
 
         self.labels_live = np.int16(np.ones(len(self.impaths_live)) * label_live)
         self.labels_dead = np.int16(np.ones(len(self.impaths_dead)) * label_dead)
@@ -70,14 +75,7 @@ class Record:
         # print(self.shuffled_idx)
 
         self.impaths = self._impaths[self.shuffled_idx]
-        if not scramble:
-            self.labels = self._labels[self.shuffled_idx]
-        else:
-            # scrambles labels to check if model is learning correctly
-            np.random.seed(1)
-
-            np.random.shuffle(self.scrambled_idx)
-            self.labels = self._labels[self.scrambled_idx]
+        self.labels = self._labels[self.shuffled_idx]
 
         length = len(self.impaths)
 
@@ -107,6 +105,26 @@ class Record:
     def _bytes_feature(self, value):
         return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
 
+    def balance_dataset(self, method, smaller_lst, larger_lst):
+        if len(smaller_lst) != len(larger_lst):
+
+            if method == 'multiply':
+                small_new = []
+                i = 0
+                while len(small_new) < len(larger_lst):
+                    small_new.append(smaller_lst[i % len(smaller_lst)])
+                    i += 1
+                assert len(small_new) == len(larger_lst), 'lengths do not match in multiply'
+                return small_new, larger_lst
+            elif method == 'cutoff':
+                big_new = random.sample(larger_lst, len(smaller_lst))
+                assert len(smaller_lst) == len(big_new), 'lengths do not match in cutoff'
+                return smaller_lst, big_new
+            else:
+                print('Unbalanced dataset: smaller: {}, larger: {}'.format(len(smaller_lst), len(larger_lst)))
+
+        return smaller_lst, larger_lst
+
     def tiff2record(self, tf_data_name, filepaths, labels):
         """
         Generates tfrecord in a loop.
@@ -126,7 +144,6 @@ class Record:
                 filename = str(filepaths[i])
 
                 img = self.load_image(filename)
-
 
                 label = labels[i]
                 filename = str(filename)
@@ -161,8 +178,7 @@ if __name__ == '__main__':
         poss = random.sample(poss, len(negs))
         assert len(poss) == len(negs), 'expect negative and positive list to be same length'
 
-
-    Rec = Record(poss, negs, p.tfrecord_dir, split, scramble=False)
+    Rec = Record(poss, negs, p.tfrecord_dir, split)
     savetrain = os.path.join(p.tfrecord_dir, 'LINCS072017RGEDI-A_train.tfrecord')
     saveval = os.path.join(p.tfrecord_dir, 'LINCS072017RGEDI-A_val.tfrecord')
     savetest = os.path.join(p.tfrecord_dir, 'LINCS072017RGEDI-A_test.tfrecord')

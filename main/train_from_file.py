@@ -14,8 +14,10 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import os
 import argparse
-from preprocessing.create_tfrecs import Record
+from preprocessing.create_tfrecs_from_lst import Record
 import pyfiglet
+from glob import glob
+import random
 
 __author__ = 'Josh Lamstein'
 __copyright__ = 'Gladstone Institutes 2020'
@@ -35,9 +37,10 @@ class Train:
         else:
             self.nep = None
 
-    def run(self, pos_dir, neg_dir, balance_method='cutoff'):
+    def run(self, pos_dirs, neg_dirs, balance_method='cutoff'):
+        assert isinstance(pos_dirs, list), 'pos_dirs must be list'
         if self.preprocess_tfrecs:
-            self.generate_tfrecs(pos_dir, neg_dir, balance_method)
+            self.generate_tfrecs(pos_dirs, neg_dirs, balance_method)
         else:
             assert os.path.exists(os.path.join(self.parent_dir, 'train.tfrecord')), 'set preprocess_tfrecs to true'
         self.train()
@@ -49,7 +52,18 @@ class Train:
             assert os.path.exists(os.path.join(self.parent_dir, 'retrain.tfrecord')), 'set preprocess_tfrecs to true'
         self.retrain()
 
-    def generate_tfrecs(self, pos_dir, neg_dir, balance_method='cutoff'):
+    def gather_imgs(self, pos_dirs, neg_dirs, filetype='tif'):
+        pos_ims = []
+        neg_ims = []
+        for pos in pos_dirs:
+            pos_ims += glob(os.path.join(pos, f'*.{filetype}'))
+        for neg in neg_dirs:
+            neg_ims += glob(os.path.join(neg, f'*.{filetype}'))
+        random.Random(11).shuffle(pos_ims)
+        random.Random(11).shuffle(neg_ims)
+        return pos_ims, neg_ims
+
+    def generate_tfrecs(self, pos_dirs, neg_dirs, balance_method='multiply'):
         """
         Builds tfrecords from images sorted in directories by label
         Args:
@@ -62,7 +76,8 @@ class Train:
         """
         split = [.7, .15, .15]
         tfrec_dir = self.parent_dir
-        Rec = Record(pos_dir, neg_dir, tfrec_dir, split, balance_method=balance_method)
+        pos_ims, neg_ims = self.gather_imgs(pos_dirs, neg_dirs, filetype='tif')
+        Rec = Record(pos_ims, neg_ims, tfrec_dir, split, balance_method)
         savetrain = 'train.tfrecord'
         saveval = 'val.tfrecord'
         savetest = 'test.tfrecord'
@@ -86,7 +101,7 @@ class Train:
         export_info_path = os.path.join(self.p.run_info_dir, '{}_{}.csv'.format(self.p.which_model, timestamp))
         save_checkpoint_path = os.path.join(self.p.ckpt_dir, '{}_{}.hdf5'.format(self.p.which_model, timestamp))
         self.p.hyperparams['timestamp'] = timestamp
-        self.p.hyperparams['model_timestamp']=self.p.which_model+'_'+timestamp
+        self.p.hyperparams['model_timestamp'] = self.p.which_model + '_' + timestamp
         self.p.hyperparams['retraining'] = ''
         if self.use_neptune:
             self.nep["parameters"] = self.p.hyperparams
@@ -215,7 +230,6 @@ class Train:
         print('Saving model to {}'.format(export_path))
         model.save(export_path)
         self.nep.stop()
-
 
     def retrain(self, base_model=None):
 
@@ -406,19 +420,29 @@ if __name__ == '__main__':
     result = pyfiglet.figlet_format("GEDI-CNN", font="slant")
     print(result)
     parser = argparse.ArgumentParser(description='Train binary classifer GEDI-CNN model')
+    positives = ['/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Livecrops_3',
+                 '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Livecrops_2',
+                 '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Livecrops_1',
+                 '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-1703/Livecrops_1',
+                 '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-1703/Livecrops_2_3']
+    negatives = ['/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Deadcrops_3',
+                 '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Deadcrops_2',
+                 '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Deadcrops_1',
+                 '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-1703/Deadcrops_1',
+                 '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-1703/Deadcrops_2_3']
     parser.add_argument('--datadir', action="store",
                         default='/run/media/jlamstein/data/GEDI-ORDER',
                         help='data parent directory',
                         dest='datadir')
-    parser.add_argument('--pos_dir', action="store",
-                        default='/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Livecrops_3',
+    parser.add_argument('--pos_dir', nargs='+',
+                        default=positives,
                         help='directory with positive images', dest="pos_dir")
-    parser.add_argument('--neg_dir', action="store",
-                        default='/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Deadcrops_3',
+    parser.add_argument('--neg_dir', nargs='+',
+                        default=negatives,
                         help='directory with negative images', dest="neg_dir")
     parser.add_argument('--balance_method', action="store", default='cutoff',
                         help='method to handle unbalanced data: cutoff, multiply or none', dest="balance_method")
-    parser.add_argument('--preprocess_tfrecs', type=bool, action="store", default=False,
+    parser.add_argument('--preprocess_tfrecs', type=bool, action="store", default=True,
                         help='generate tfrecords, necessary for new datasets, if already generate set to false',
                         dest="preprocess_tfrecs")
     parser.add_argument('-use_neptune', type=bool, action="store", default=True,
