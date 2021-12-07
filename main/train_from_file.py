@@ -445,7 +445,7 @@ if __name__ == '__main__':
     parser.add_argument('--preprocess_tfrecs', type=bool, action="store", default=False,
                         help='generate tfrecords, necessary for new datasets, if already generate set to false',
                         dest="preprocess_tfrecs")
-    parser.add_argument('-use_neptune', type=bool, action="store", default=True,
+    parser.add_argument('--use_neptune', type=bool, action="store", default=True,
                         help='Save run info to neptune ai',
                         dest="use_neptune")
     args = parser.parse_args()
