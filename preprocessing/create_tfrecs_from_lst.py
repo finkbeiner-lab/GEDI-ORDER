@@ -139,7 +139,7 @@ class Record:
             for i in range(len(filepaths)):
                 # one less in range for matching pairs
                 if not i % 100:
-                    print('Train data:', i)  # Python 3 has default end = '\n' which flushes the buffer
+                    print('Processed data:', i)  # Python 3 has default end = '\n' which flushes the buffer
                 #                sys.stdout.flush()
                 filename = str(filepaths[i])
 

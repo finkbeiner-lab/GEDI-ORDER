@@ -6,6 +6,7 @@ import param_gedi as param
 
 class Parser:
     """Parse tfrecord"""
+
     def __init__(self):
         self.p = param.Param()
 
@@ -58,7 +59,6 @@ class Parser:
             'label': tf.io.FixedLenFeature([], tf.int64),
             'ratio': tf.io.FixedLenFeature([], tf.float32)
         }
-
 
         parsed = tf.io.parse_example(row, features)
         files = parsed['filename']
@@ -206,7 +206,6 @@ class Parser:
         """
         assert_op = tf.Assert(tf.less_equal(tf.reduce_max(img), 1.0), [img])
         with tf.control_dependencies([assert_op]):
-
             img = tf.image.random_flip_up_down(img)
             img = tf.image.random_flip_left_right(img)
 
@@ -225,14 +224,13 @@ class Parser:
         # tf.print('min img', tf.reduce_min(img))
         img = tf.image.random_brightness(img,
                                          max_delta=self.p.random_brightness)  # Image normalized to 1, delta is amount of brightness to add/subtract
-        img = tf.image.random_contrast(img, self.p.min_contrast, self.p.max_contrast)  # (x- mean) * contrast factor + mean
+        img = tf.image.random_contrast(img, self.p.min_contrast,
+                                       self.p.max_contrast)  # (x- mean) * contrast factor + mean
         noise = tf.random.uniform(
             tf.shape(img), minval=0.0, maxval=1.0, dtype=tf.dtypes.float32, seed=None, name='noise'
         )
-        noise = tf.where(noise < .1, noise/2, 0., name='noise_cond')
+        noise = tf.where(noise < .2, noise / 2, 0., name='noise_cond')
         img += noise
-
-
 
         # tf.print('aug img', tf.reduce_max(img))
         # tf.print('aug img', tf.reduce_min(img))
@@ -300,10 +298,10 @@ class Parser:
         return imgs, lbls, files
 
     def rescale_im_and_clip_renorm(self, imgs, lbls, files):
-        imgs = tf.map_fn(lambda x: (x - self.p.training_min_value) / (self.p.training_max_value - self.p.training_min_value), imgs)
+        imgs = tf.map_fn(
+            lambda x: (x - self.p.training_min_value) / (self.p.training_max_value - self.p.training_min_value), imgs)
         imgs = tf.clip_by_value(imgs, clip_value_min=0., clip_value_max=1.)
         return imgs, lbls, files
-
 
     def normalize_resnet(self, img, lbls, files):
         """Set up resnet"""
@@ -316,14 +314,13 @@ class Parser:
 
         assert_op = tf.Assert(tf.reduce_all(tf.equal(red.get_shape()[1:], tf.constant([224, 224, 1]))), [red])
         with tf.control_dependencies([assert_op]):
-            new_img = tf.concat(axis=3, values =[
+            new_img = tf.concat(axis=3, values=[
                 red, green, blue
             ], name='rgb')
 
             # normed = tf.image.per_image_standardization(new_img)
 
         return new_img, lbls, files
-
 
     def make_vgg(self, img, lbls, files):
         """
@@ -420,8 +417,40 @@ class Parser:
 
         return bgr, lbls, files
 
+    @staticmethod
+    def tf_equalize_histogram(image):
+        """
+        https://stackoverflow.com/questions/42835247/how-to-implement-histogram-equalization-for-images-in-tensorflow
+        Args:
+            image:
 
-if __name__=='__main__':
+        Returns:
+
+        """
+        values_range = tf.constant([0., 65535.], dtype=tf.float32)
+        histogram = tf.histogram_fixed_width(tf.cast(image, tf.float32), values_range, 65536)
+        cdf = tf.cumsum(histogram)
+        cdf_min = cdf[tf.reduce_min(tf.where(tf.greater(cdf, 0)))]
+
+        img_shape = tf.shape(image)
+        # print('im shape', image.get_shape())
+        pix_cnt = img_shape[0] * img_shape[1]
+        px_map = tf.round(tf.cast(cdf - cdf_min, tf.float32) * 65536. / tf.cast(pix_cnt - 1, tf.float32))
+        px_map = tf.cast(px_map, tf.uint16)
+        # print('px map shape', px_map.get_shape())
+
+        eq_hist = tf.expand_dims(tf.gather_nd(px_map, tf.cast(image, tf.int32)), 2)
+        # print('eq hist shape', eq_hist.get_shape())
+        eq_hist = tf.cast(eq_hist, tf.float32)
+        return eq_hist
+
+    def normalize_histeq(self, imgs, lbls, files):
+        imgs = tf.map_fn(lambda x: self.remove_negatives_in_img(x), imgs)
+        imgs = tf.map_fn(lambda x: self.tf_equalize_histogram(x), imgs)
+        return imgs, lbls, files
+
+
+if __name__ == '__main__':
     p = param.Param()
     Parse = Parser()
     # get_tfrecord_length(p.train_rec, get_max=True)

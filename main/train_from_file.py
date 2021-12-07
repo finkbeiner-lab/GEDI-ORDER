@@ -32,7 +32,7 @@ class Train:
         self.use_neptune = use_neptune
         if self.use_neptune:
             import neptune.new as neptune
-            df = pd.read_csv('/home/jlamstein/Documents/neptune.csv')
+            df = pd.read_csv(os.path.join(self.p.parent_dir, 'neptune.csv')
             self.nep = neptune.init(df['user'].iloc[0], df['token'].iloc[0])
         else:
             self.nep = None
@@ -431,7 +431,7 @@ if __name__ == '__main__':
                  '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-1703/Deadcrops_1',
                  '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-1703/Deadcrops_2_3']
     parser.add_argument('--datadir', action="store",
-                        default='/run/media/jlamstein/data/GEDI-ORDER',
+                        default='/mnt/finkbeinernas/robodata/Josh/GEDI-ORDER',
                         help='data parent directory',
                         dest='datadir')
     parser.add_argument('--pos_dir', nargs='+',
@@ -442,7 +442,7 @@ if __name__ == '__main__':
                         help='directory with negative images', dest="neg_dir")
     parser.add_argument('--balance_method', action="store", default='cutoff',
                         help='method to handle unbalanced data: cutoff, multiply or none', dest="balance_method")
-    parser.add_argument('--preprocess_tfrecs', type=bool, action="store", default=True,
+    parser.add_argument('--preprocess_tfrecs', type=bool, action="store", default=False,
                         help='generate tfrecords, necessary for new datasets, if already generate set to false',
                         dest="preprocess_tfrecs")
     parser.add_argument('-use_neptune', type=bool, action="store", default=True,

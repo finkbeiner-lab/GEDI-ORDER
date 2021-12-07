@@ -16,7 +16,7 @@ import numpy as np
 class Param:
     def __init__(self, parent_dir=None, tfrec_dir=None, res_dir=None):
         self.which_model = 'vgg19'  # vgg16, vgg19, resnet50
-        self.EPOCHS = 1
+        self.EPOCHS = 100
         self.learning_rate = 1e-6  # 3e-4
         self.BATCH_SIZE = 32
         self.optimizer = 'sgd'  # sgd, adam
@@ -37,7 +37,7 @@ class Param:
         self.timestamp = '%d%02d%02d-%02d%02d%02d' % (now.year, now.month, now.day, now.hour, now.minute, now.second)
         os_name = platform.node()
         if parent_dir is None:
-            self.parent_dir = {'hobbes': '/run/media/jlamstein/data/GEDI-ORDER',
+            self.parent_dir = {'hobbes': '/mnt/finkbeinernas/robodata/Josh/GEDI-ORDER',
                                'fb-gpu-compute01': '/finkbeiner/imaging/smb-robodata/Josh/GEDI-ORDER',
                                'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/Josh/GEDI-ORDER'}[
                 os_name]

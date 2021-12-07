@@ -55,14 +55,15 @@ class Dataspring(Parser):
         ds = ds.map(self.reshape_ims, num_parallel_calls=self.p.num_parallel_calls)
 
         # Normalization
-        ds = ds.map(self.set_max_to_one_by_batch, num_parallel_calls=self.p.num_parallel_calls)
+        # ds = ds.map(self.normalize_histeq, num_parallel_calls=self.p.num_parallel_calls)
+        ds = ds.map(self.set_max_to_one_by_image, num_parallel_calls=self.p.num_parallel_calls)
         # ds = ds.map(self.rescale_im_and_clip_16bit, num_parallel_calls=self.p.num_parallel_calls)
 
         if self.p.augmentbool and istraining:
             ds = ds.map(self.augment, num_parallel_calls=self.p.num_parallel_calls)
             # Normalize again
             # ds = ds.map(self.cut_off_vals, num_parallel_calls=self.p.num_parallel_calls)
-            ds = ds.map(self.set_max_to_one_by_batch, num_parallel_calls=self.p.num_parallel_calls)
+            ds = ds.map(self.set_max_to_one_by_image, num_parallel_calls=self.p.num_parallel_calls)
 
         # ds = ds.map(self.rescale_im_and_clip_renorm, num_parallel_calls=self.p.num_parallel_calls)
 
@@ -152,44 +153,43 @@ if __name__ == '__main__':
     #         print(img[-1,:,0]*255.0)
 
     #
-    # for i in range(1):
-    #     imgs, lbls, files = Dat.datagen()
-    #     for img, lbl in zip(imgs, lbls):
-    #         plt.figure()
-    #         lbl = lbl.numpy()
-    #         # im = (img + 1) * 127.5
-    #         im = np.array(img)
-    #         im = np.reshape(im, (224,224,3))
-    #         print(np.min(im))
-    #         print(np.max(im))
-    #         im = np.uint8(im)
-    #         # im = np.uint8(np.reshape(im, (224, 224)))
-    #         plt.imshow(im)
-    #         plt.title(lbl)
-    #     plt.show()
-    # #
-
-    ###### VGG16 #######
-    for i in range(3):
-        imgs, lbls, files = Dat.datagen()
-        for img, lbl, file in zip(imgs, lbls, files):
-            plt.figure()
-            lbl = lbl.numpy()
-            img = img.numpy()
-            img[:, :, 0] += p.VGG_MEAN[0]
-            img[:, :, 1] += p.VGG_MEAN[1]
-            img[:, :, 2] += p.VGG_MEAN[2]
-            print(img)
-            print('f', file)
-            print(np.max(img))
-            print(np.min(img))
-            rgb = np.copy(img)
-            rgb[:, :, 0] = img[:, :, 2]
-            rgb[:, :, 2] = img[:, :, 0]
-            rgb = np.float32(rgb)
-            rgb *= 1
-            rgb[rgb > 255] = 255
-            im = np.uint8(rgb)
-            plt.imshow(im)
-            plt.title(lbl)
-        plt.show()
+    if p.which_model is None:
+        for i in range(1):
+            imgs, lbls, files = Dat.datagen()
+            for img, lbl in zip(imgs, lbls):
+                plt.figure()
+                lbl = lbl.numpy()
+                # im = (img + 1) * 127.5
+                im = np.array(img)
+                im = np.reshape(im, (224,224))
+                print('min',np.min(im))
+                print('max', np.max(im))
+                im = np.uint8(255 * im / np.max(im))
+                plt.imshow(im)
+                plt.title(lbl)
+            plt.show()
+    else:
+        ###### VGG16 #######
+        for i in range(3):
+            imgs, lbls, files = Dat.datagen()
+            for img, lbl, file in zip(imgs, lbls, files):
+                plt.figure()
+                lbl = lbl.numpy()
+                img = img.numpy()
+                img[:, :, 0] += p.VGG_MEAN[0]
+                img[:, :, 1] += p.VGG_MEAN[1]
+                img[:, :, 2] += p.VGG_MEAN[2]
+                print(img)
+                print('f', file)
+                print(np.max(img))
+                print(np.min(img))
+                rgb = np.copy(img)
+                rgb[:, :, 0] = img[:, :, 2]
+                rgb[:, :, 2] = img[:, :, 0]
+                rgb = np.float32(rgb)
+                rgb *= 1
+                rgb[rgb > 255] = 255
+                im = np.uint8(rgb)
+                plt.imshow(im)
+                plt.title(lbl)
+            plt.show()
