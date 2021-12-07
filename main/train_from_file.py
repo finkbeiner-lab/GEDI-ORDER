@@ -32,7 +32,7 @@ class Train:
         self.use_neptune = use_neptune
         if self.use_neptune:
             import neptune.new as neptune
-            df = pd.read_csv(os.path.join(self.p.parent_dir, 'neptune.csv')
+            df = pd.read_csv(os.path.join(self.p.parent_dir, 'neptune.csv'))
             self.nep = neptune.init(df['user'].iloc[0], df['token'].iloc[0])
         else:
             self.nep = None
