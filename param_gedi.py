@@ -15,9 +15,9 @@ import numpy as np
 
 class Param:
     def __init__(self, parent_dir=None, tfrec_dir=None, res_dir=None):
-        self.which_model = 'resnet50'  # vgg16, vgg19, resnet50
-        self.EPOCHS = 100
-        self.learning_rate = 1e-6  # 3e-4
+        self.which_model = 'vgg19'  # vgg16, vgg19, resnet50
+        self.EPOCHS = 200
+        self.learning_rate = 1e-7  # 3e-4
         self.BATCH_SIZE = 32
         self.optimizer = 'sgd'  # sgd, adam
         self.momentum = 0.9
@@ -38,6 +38,7 @@ class Param:
         os_name = platform.node()
         if parent_dir is None:
             self.parent_dir = {'hobbes': '/mnt/finkbeinernas/robodata/Josh/GEDI-ORDER',
+                               'calvin': '/mnt/finkbeinernas/robodata/Josh/GEDI-ORDER',
                                'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/Josh/GEDI-ORDER',
                                'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/Josh/GEDI-ORDER'}[
                 os_name]
@@ -46,6 +47,7 @@ class Param:
         if tfrec_dir is None:
             self.tfrec_dir = {
                 'hobbes': '/run/media/jlamstein/data/gedi/transfer/tfrecs',
+                'calvin': '/run/media/jlamstein/data/gedi/transfer/tfrecs',
                 'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/GEDI_DATA/',
                 'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/GEDI_DATA/'
             }[os_name]
@@ -54,6 +56,7 @@ class Param:
 
         if res_dir is None:
             self.res_dir = {'hobbes': '/mnt/finkbeinerlab/robodata/GEDI_CLUSTER',
+                            'calvin': '/mnt/finkbeinerlab/robodata/GEDI_CLUSTER',
                             'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER',
                             'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER'}[
                 os_name]
