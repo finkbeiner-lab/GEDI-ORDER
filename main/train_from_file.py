@@ -241,9 +241,9 @@ class Train:
             base_model = self.p.base_gedi_dropout_bn
 
         tfrec_dir = self.parent_dir
-        data_retrain = os.path.join(tfrec_dir, 'retrain.tfrecord')
-        data_reval = os.path.join(tfrec_dir, 'reval.tfrecord')
-        data_retest = os.path.join(tfrec_dir, 'retest.tfrecord')
+        data_retrain = os.path.join(tfrec_dir, 'train.tfrecord')
+        data_reval = os.path.join(tfrec_dir, 'val.tfrecord')
+        data_retest = os.path.join(tfrec_dir, 'test.tfrecord')
         timestamp = update_timestring()
         export_path = os.path.join(p.retrain_models_dir, '{}_{}.h5'.format(p.which_model, timestamp))
         export_info_path = os.path.join(p.retrain_run_info_dir, '{}_{}.csv'.format(p.which_model, timestamp))
@@ -442,10 +442,10 @@ if __name__ == '__main__':
                         help='directory with negative images', dest="neg_dir")
     parser.add_argument('--balance_method', action="store", default='cutoff',
                         help='method to handle unbalanced data: cutoff, multiply or none', dest="balance_method")
-    parser.add_argument('--preprocess_tfrecs', type=bool, action="store", default=False,
+    parser.add_argument('--preprocess_tfrecs', type=int, action="store", default=False,
                         help='generate tfrecords, necessary for new datasets, if already generate set to false',
                         dest="preprocess_tfrecs")
-    parser.add_argument('--use_neptune', type=bool, action="store", default=True,
+    parser.add_argument('--use_neptune', type=int, action="store", default=True,
                         help='Save run info to neptune ai',
                         dest="use_neptune")
     args = parser.parse_args()
