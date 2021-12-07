@@ -38,7 +38,7 @@ class Param:
         os_name = platform.node()
         if parent_dir is None:
             self.parent_dir = {'hobbes': '/mnt/finkbeinernas/robodata/Josh/GEDI-ORDER',
-                               'fb-gpu-compute01': '/finkbeiner/imaging/smb-robodata/Josh/GEDI-ORDER',
+                               'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/Josh/GEDI-ORDER',
                                'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/Josh/GEDI-ORDER'}[
                 os_name]
         else:
@@ -46,7 +46,7 @@ class Param:
         if tfrec_dir is None:
             self.tfrec_dir = {
                 'hobbes': '/run/media/jlamstein/data/gedi/transfer/tfrecs',
-                'fb-gpu-compute01': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/GEDI_DATA/',
+                'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/GEDI_DATA/',
                 'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/GEDI_DATA/'
             }[os_name]
         else:
@@ -54,7 +54,7 @@ class Param:
 
         if res_dir is None:
             self.res_dir = {'hobbes': '/mnt/finkbeinerlab/robodata/GEDI_CLUSTER',
-                            'fb-gpu-compute01': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER',
+                            'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER',
                             'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER'}[
                 os_name]
         else:
