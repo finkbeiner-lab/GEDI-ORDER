@@ -95,6 +95,7 @@ class Train:
         data_train = os.path.join(tfrec_dir, 'train.tfrecord')
         data_val = os.path.join(tfrec_dir, 'val.tfrecord')
         data_test = os.path.join(tfrec_dir, 'test.tfrecord')
+        assert os.path.exists(data_train), 'check tfrecord path and that tfrecord exists'
 
         timestamp = update_timestring()
         export_path = os.path.join(self.p.models_dir, '{}_{}.h5'.format(self.p.which_model, timestamp))
