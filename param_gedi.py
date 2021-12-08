@@ -16,10 +16,10 @@ import numpy as np
 class Param:
     def __init__(self, parent_dir=None, tfrec_dir=None, res_dir=None):
         self.which_model = 'vgg19'  # vgg16, vgg19, resnet50
-        self.EPOCHS = 200
-        self.learning_rate = 1e-7  # 3e-4
+        self.EPOCHS = 10
+        self.learning_rate = 1e-4  # 3e-4
         self.BATCH_SIZE = 32
-        self.optimizer = 'sgd'  # sgd, adam
+        self.optimizer = 'adam'  # sgd, adam
         self.momentum = 0.9
         # Data generator
         self.augmentbool = True
@@ -55,7 +55,7 @@ class Param:
             self.tfrec_dir = tfrec_dir
 
         if res_dir is None:
-            self.res_dir = {'hobbes': '/mnt/finkbeinerlab/robodata/GEDI_CLUSTER',
+            self.res_dir = {'hobbes': '/mnt/finkbeinernas/robodata/GEDI_CLUSTER',
                             'calvin': '/mnt/finkbeinerlab/robodata/GEDI_CLUSTER',
                             'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER',
                             'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER'}[

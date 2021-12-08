@@ -2,6 +2,7 @@ import numpy as np
 import tensorflow as tf
 import random
 import param_gedi as param
+import tensorflow_addons as tfa
 
 
 class Parser:
@@ -229,9 +230,9 @@ class Parser:
         noise = tf.random.uniform(
             tf.shape(img), minval=0.0, maxval=1.0, dtype=tf.dtypes.float32, seed=None, name='noise'
         )
-        noise = tf.where(noise < .2, noise / 2, 0., name='noise_cond')
-        img += noise
-
+        # noise = tf.where(noise < .2, noise / 2, 0., name='noise_cond')
+        # img += noise
+        img = tfa.image.gaussian_filter2d(img, filter_shape=(5, 5))
         # tf.print('aug img', tf.reduce_max(img))
         # tf.print('aug img', tf.reduce_min(img))
         return img, lbls, files

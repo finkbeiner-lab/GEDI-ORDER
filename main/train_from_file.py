@@ -137,7 +137,7 @@ class Train:
         DatTest2 = pipe.Dataspring(data_test)
 
         train_ds = DatTrain.datagen_base(istraining=True)
-        val_ds = DatVal.datagen_base(istraining=True)
+        val_ds = DatVal.datagen_base(istraining=False)
         test_ds = DatTest.datagen_base(istraining=False)
         test_ds2 = DatTest2.datagen_base(istraining=False)
         print('training length', train_length)
@@ -231,14 +231,14 @@ class Train:
         model.save(export_path)
         self.nep.stop()
 
-    def retrain(self, base_model=None):
+    def retrain(self, base_model_file=None):
 
         print('Running...')
         # Setup filepaths and csv to log info about training model
         p = param.Param(parent_dir=self.parent_dir)
         make_directories(p)
-        if base_model is None:  # load base model to initialize weights
-            base_model = self.p.base_gedi_dropout_bn
+        if base_model_file is None:  # load base model to initialize weights
+            base_model_file = self.p.base_gedi_dropout_bn
 
         tfrec_dir = self.parent_dir
         data_retrain = os.path.join(tfrec_dir, 'train.tfrecord')
@@ -248,8 +248,13 @@ class Train:
         export_path = os.path.join(p.retrain_models_dir, '{}_{}.h5'.format(p.which_model, timestamp))
         export_info_path = os.path.join(p.retrain_run_info_dir, '{}_{}.csv'.format(p.which_model, timestamp))
         save_checkpoint_path = os.path.join(p.retrain_ckpt_dir, '{}_{}.hdf5'.format(p.which_model, timestamp))
+        self.p.hyperparams['timestamp'] = timestamp
+        self.p.hyperparams['model_timestamp'] = self.p.which_model + '_' + timestamp
+        self.p.hyperparams['retraining'] = base_model_file
+        if self.use_neptune:
+            self.nep["parameters"] = self.p.hyperparams
         run_info = {'model': self.p.which_model,
-                    'retraining': self.p.base_gedi_dropout_bn,
+                    'retraining': base_model_file,
                     'timestamp': timestamp,
                     'model_timestamp': self.p.which_model + '_' + timestamp,
                     'train_path': data_retrain,
@@ -278,7 +283,7 @@ class Train:
         DatTest2 = pipe.Dataspring(data_retest)
 
         train_ds = DatTrain.datagen_base(istraining=True)
-        val_ds = DatVal.datagen_base(istraining=True)
+        val_ds = DatVal.datagen_base(istraining=False)
         test_ds = DatTest.datagen_base(istraining=False)
         test_ds2 = DatTest2.datagen_base(istraining=False)
         print('training length', train_length)
@@ -295,7 +300,7 @@ class Train:
         test_gen2 = DatTest2.generator()
 
         print('Loading model...')
-        base_model = tf.keras.models.load_model(base_model, compile=False)
+        base_model = tf.keras.models.load_model(base_model_file, compile=False)
         # visualize kernels to check model weights
         # if rapid chagne and plateu check data, biases chenged with grad descent
         # check base model included in graph and weigths are  changing
@@ -414,6 +419,7 @@ class Train:
 
         print('Saving model to {}'.format(export_path))
         model.save(export_path)
+        self.nep.stop()
 
 
 if __name__ == '__main__':
@@ -448,8 +454,15 @@ if __name__ == '__main__':
     parser.add_argument('--use_neptune', type=int, action="store", default=True,
                         help='Save run info to neptune ai',
                         dest="use_neptune")
+    parser.add_argument('--retrain', type=int, action="store", default=False,
+                        help='Save run info to neptune ai',
+                        dest="retrain")
     args = parser.parse_args()
     print('ARGS:\n', args)
 
     Tr = Train(args.datadir, args.preprocess_tfrecs, args.use_neptune)
-    Tr.run(args.pos_dir, args.neg_dir, args.balance_method)
+    if args.retrain:
+        print('Retraining on gedi-cnn model...')
+        Tr.retrain()
+    else:
+        Tr.run(args.pos_dir, args.neg_dir, args.balance_method)
