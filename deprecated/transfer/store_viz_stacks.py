@@ -3,15 +3,12 @@ import platform
 
 from imageio import imread, imwrite
 import numpy as np
-from subprocess import check_output
 import pandas as pd
 
-from transfer.grads import Grads
-from transfer.grad_ops import GradOps
+from deprecated.transfer.grads import Grads
+from deprecated.transfer.grad_ops import GradOps
 import glob
 import param_gedi as param
-from memory_profiler import profile
-import sys
 from pympler import asizeof
 
 
