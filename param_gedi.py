@@ -14,24 +14,43 @@ import numpy as np
 
 
 class Param:
-    def __init__(self, parent_dir=None, tfrec_dir=None, res_dir=None):
-        self.which_model = 'vgg19'  # vgg16, vgg19, resnet50
-        self.EPOCHS = 10
-        self.learning_rate = 1e-4  # 3e-4
-        self.BATCH_SIZE = 32
-        self.optimizer = 'adam'  # sgd, adam
-        self.momentum = 0.9
-        # Data generator
-        self.augmentbool = True
-        self.random_brightness = 0.3
-        self.min_contrast = 0.7
-        self.max_contrast = 1.3
-        self.orig_max_value = 16117.0  # max value of dataset from original gedi cnn model
-        self.orig_min_value = 0  # min value of dataset from original gedi cnn model
+    def __init__(self, param_dict=None, parent_dir=None, tfrec_dir=None, res_dir=None):
+        if param_dict is None:
+            self.which_model = 'vgg19'  # vgg16, vgg19, resnet50
+            self.EPOCHS = 200
+            self.learning_rate = 1e-6  # 3e-4
+            self.BATCH_SIZE = 64
+            self.optimizer = 'sgd'  # sgd, adam
+            self.momentum = 0.9
+            # Data generator
+            self.augmentbool = True
+            self.random_brightness = 0.2
+            self.min_contrast = 1
+            self.max_contrast = 1.3
+            self.target_size = (224, 224, 3)
+            self.orig_size = (300, 300, 1)  # (230, 230, 3) for catdog tfrecord / (300,300,1) for cells
+            self.class_weights = {0: 1., 1: 1.}  # rough ratio  # 2.75 vs 1 for original training dataset
+            self.randomcrop = True
+
+        else:
+            self.which_model = param_dict['model']  # vgg16, vgg19, resnet50
+            self.EPOCHS = param_dict['epochs']
+            self.learning_rate = param_dict['learning_rate']  # 3e-4
+            self.BATCH_SIZE = param_dict['batch_size']
+            self.optimizer = param_dict['optimizer']  # sgd, adam
+            self.momentum = param_dict['momentum']
+            # Data generator
+            self.augmentbool = param_dict['augmentbool']
+            self.random_brightness = param_dict['random_brightness']
+            self.min_contrast = param_dict['min_contrast']
+            self.max_contrast = param_dict['max_contrast']
+            self.target_size = param_dict['target_size']
+            self.orig_size = param_dict['orig_size']  # (230, 230, 3) for catdog tfrecord / (300,300,1) for cells
+            self.class_weights = param_dict['class_weights']  # rough ratio  # 2.75 vs 1 for original training dataset
+            self.randomcrop = param_dict['randomcrop']
 
         self.training_max_value = 1.0001861
         self.training_min_value = 0
-        self.class_weights = {0: 1., 1: 1.}  # rough ratio  # 2.75 vs 1 for original training dataset
 
         now = datetime.datetime.now()
         self.timestamp = '%d%02d%02d-%02d%02d%02d' % (now.year, now.month, now.day, now.hour, now.minute, now.second)
@@ -131,15 +150,13 @@ class Param:
 
         # self.max_gedi = 16117. # max value of training set
         self.output_size = 2
-        self.target_size = (224, 224, 3)
-        self.orig_size = (300, 300, 1)  # (230, 230, 3) for catdog tfrecord / (300,300,1) for cells
+
         self.orig_width = 300
         self.orig_height = 300
         self.orig_channels = 1
         self.vgg_height = 224
         self.vgg_width = 224
         # self.rescale = 1. / 255
-        self.randomcrop = False
 
         # self.shuffle_size = 200
         self.num_parallel_calls = 4
@@ -170,6 +187,7 @@ class Param:
             'batch_size': self.BATCH_SIZE,
             'shuffle_size': self.shuffle_buffer_size,
             'epochs': self.EPOCHS,
+            'randomcrop': self.randomcrop
         }
 
         self.VGG_MEAN = [103.939, 116.779, 123.68]

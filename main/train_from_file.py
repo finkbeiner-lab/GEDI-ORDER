@@ -24,9 +24,9 @@ __copyright__ = 'Gladstone Institutes 2020'
 
 
 class Train:
-    def __init__(self, parent_dir, preprocess_tfrecs, use_neptune):
+    def __init__(self, parent_dir, param_dict=None, preprocess_tfrecs=False, use_neptune=True):
         self.parent_dir = parent_dir
-        self.p = param.Param(parent_dir=self.parent_dir)
+        self.p = param.Param(param_dict=param_dict, parent_dir=self.parent_dir)
 
         self.preprocess_tfrecs = preprocess_tfrecs
         self.use_neptune = use_neptune
@@ -178,7 +178,7 @@ class Train:
                                                          save_best_only=True, mode='max')
 
         cp_early = tf.keras.callbacks.EarlyStopping(
-            monitor='val_loss', min_delta=0, patience=3, verbose=0,
+            monitor='loss', min_delta=0, patience=3, verbose=0,
             mode='auto', baseline=None, restore_best_weights=False
         )
 
@@ -240,8 +240,7 @@ class Train:
 
         print('Running...')
         # Setup filepaths and csv to log info about training model
-        p = param.Param(parent_dir=self.parent_dir)
-        make_directories(p)
+        make_directories(self.p)
         if base_model_file is None:  # load base model to initialize weights
             base_model_file = self.p.base_gedi_dropout_bn
 
@@ -250,9 +249,9 @@ class Train:
         data_reval = os.path.join(tfrec_dir, 'val.tfrecord')
         data_retest = os.path.join(tfrec_dir, 'test.tfrecord')
         timestamp = update_timestring()
-        export_path = os.path.join(p.retrain_models_dir, '{}_{}.h5'.format(p.which_model, timestamp))
-        export_info_path = os.path.join(p.retrain_run_info_dir, '{}_{}.csv'.format(p.which_model, timestamp))
-        save_checkpoint_path = os.path.join(p.retrain_ckpt_dir, '{}_{}.hdf5'.format(p.which_model, timestamp))
+        export_path = os.path.join(self.p.retrain_models_dir, '{}_{}.h5'.format(self.p.which_model, timestamp))
+        export_info_path = os.path.join(self.p.retrain_run_info_dir, '{}_{}.csv'.format(self.p.which_model, timestamp))
+        save_checkpoint_path = os.path.join(self.p.retrain_ckpt_dir, '{}_{}.hdf5'.format(self.p.which_model, timestamp))
         self.p.hyperparams['timestamp'] = timestamp
         self.p.hyperparams['model_timestamp'] = self.p.which_model + '_' + timestamp
         self.p.hyperparams['retraining'] = base_model_file
@@ -359,7 +358,7 @@ class Train:
                 lyr.trainable = True
             else:
                 lyr.trainable = False
-        model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=p.learning_rate),
+        model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=self.p.learning_rate),
                       loss='binary_crossentropy',
                       metrics=['accuracy'])
         model.summary()
@@ -369,21 +368,21 @@ class Train:
                                                          save_best_only=True, mode='max')
 
         cp_early = tf.keras.callbacks.EarlyStopping(
-            monitor='val_loss', min_delta=0, patience=3, verbose=0,
+            monitor='loss', min_delta=0, patience=3, verbose=0,
             mode='auto', baseline=None, restore_best_weights=True
         )
         callbacks = [cp_callback, cp_early]
 
         tb_callback = tf.keras.callbacks.TensorBoard(
-            log_dir='/home/jlamstein/PycharmProjects/ASYN/log/{}'.format(p.which_model),
+            log_dir='/home/jlamstein/PycharmProjects/ASYN/log/{}'.format(self.p.which_model),
             update_freq='epoch')
         if self.use_neptune:
             from neptune.new.integrations.tensorflow_keras import NeptuneCallback
             neptune_cbk = NeptuneCallback(run=self.nep, base_namespace='metrics')
             callbacks.append(neptune_cbk)
 
-        history = model.fit(train_gen, steps_per_epoch=train_length // (p.BATCH_SIZE), epochs=p.EPOCHS,
-                            class_weight=p.class_weights, validation_data=val_gen,
+        history = model.fit(train_gen, steps_per_epoch=train_length // (self.p.BATCH_SIZE), epochs=self.p.EPOCHS,
+                            class_weight=self.p.class_weights, validation_data=val_gen,
                             validation_steps=val_length // self.p.BATCH_SIZE, callbacks=callbacks)
 
         train_acc = history.history['accuracy']
@@ -438,14 +437,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train binary classifer GEDI-CNN model')
     positives = ['/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Livecrops_3',
                  '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Livecrops_2',
-                 '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Livecrops_1',
-                 '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-1703/Livecrops_1',
-                 '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-1703/Livecrops_2_3']
+                 '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Livecrops_1']
     negatives = ['/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Deadcrops_3',
                  '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Deadcrops_2',
-                 '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Deadcrops_1',
-                 '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-1703/Deadcrops_1',
-                 '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-1703/Deadcrops_2_3']
+                 '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Deadcrops_1']
     parser.add_argument('--datadir', action="store",
                         default='/mnt/finkbeinernas/robodata/Josh/GEDI-ORDER',
                         help='data parent directory',
@@ -456,7 +451,7 @@ if __name__ == '__main__':
     parser.add_argument('--neg_dir', nargs='+',
                         default=negatives,
                         help='directory with negative images', dest="neg_dir")
-    parser.add_argument('--balance_method', action="store", default='cutoff',
+    parser.add_argument('--balance_method', action="store", default='multiply',
                         help='method to handle unbalanced data: cutoff, multiply or none', dest="balance_method")
     parser.add_argument('--preprocess_tfrecs', type=int, action="store", default=False,
                         help='generate tfrecords, necessary for new datasets, if already generate set to false',
@@ -470,9 +465,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
     print('ARGS:\n', args)
 
-    Tr = Train(args.datadir, args.preprocess_tfrecs, args.use_neptune)
+    Tr = Train(parent_dir=args.datadir, param_dict=None, preprocess_tfrecs=args.preprocess_tfrecs,
+               use_neptune=args.use_neptune)
     if args.retrain:
         print('Retraining on gedi-cnn model...')
         Tr.retrain()
     else:
-        Tr.run(args.pos_dir, args.neg_dir, args.balance_method)
+        Tr.run(args.pos_dir, args.neg_dir, args.balance_method)  # generates tfrecs if arg is set to true and trains
