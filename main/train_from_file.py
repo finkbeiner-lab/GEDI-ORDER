@@ -177,11 +177,16 @@ class Train:
         cp_callback = tf.keras.callbacks.ModelCheckpoint(save_checkpoint_path, monitor='val_accuracy', verbose=1,
                                                          save_best_only=True, mode='max')
 
+        cp_early = tf.keras.callbacks.EarlyStopping(
+            monitor='val_loss', min_delta=0, patience=3, verbose=0,
+            mode='auto', baseline=None, restore_best_weights=False
+        )
+
         tb_callback = tf.keras.callbacks.TensorBoard(
             log_dir=os.path.join(self.p.tb_log_dir, self.p.which_model),
             update_freq='epoch')
 
-        callbacks = [cp_callback]
+        callbacks = [cp_callback, cp_early]
         if self.use_neptune:
             from neptune.new.integrations.tensorflow_keras import NeptuneCallback
             neptune_cbk = NeptuneCallback(run=self.nep, base_namespace='metrics')
@@ -362,7 +367,12 @@ class Train:
         # callbacks, save checkpoints and tensorboard logs
         cp_callback = tf.keras.callbacks.ModelCheckpoint(save_checkpoint_path, monitor='val_accuracy', verbose=1,
                                                          save_best_only=True, mode='max')
-        callbacks = [cp_callback]
+
+        cp_early = tf.keras.callbacks.EarlyStopping(
+            monitor='val_loss', min_delta=0, patience=3, verbose=0,
+            mode='auto', baseline=None, restore_best_weights=True
+        )
+        callbacks = [cp_callback, cp_early]
 
         tb_callback = tf.keras.callbacks.TensorBoard(
             log_dir='/home/jlamstein/PycharmProjects/ASYN/log/{}'.format(p.which_model),
