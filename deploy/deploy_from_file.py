@@ -148,14 +148,14 @@ if __name__ == '__main__':
                         default='/run/media/jlamstein/data/GEDI-ORDER',
                         dest='parent')
     parser.add_argument('--im_dir', action="store",
-                        default='/mnt/finkbeinernas/robodata/JeremyTEMP/GalaxyTEMP/LINCS072017RGEDI-A/Livetraining2',
+                        default='/mnt/finkbeinernas/robodata/JeremyTEMP/GalaxyTEMP/LINCS072017RGEDI-A/Deadtraining2',
                         help='directory of images to run', dest="im_dir")
     parser.add_argument('--model_path', action="store",
                         default='/mnt/finkbeinernas/robodata/GEDI_CLUSTER/base_gedi_dropout2.h5',
                         help='path to h5 or hdf5 model', dest="model_path")
     parser.add_argument('--resdir', action="store", default='/mnt/finkbeinernas/robodata/GEDI_CLUSTER',
                         help='results directory', dest="resdir")
-    parser.add_argument('--preprocess_tfrecs', type=bool, action="store", default=True,
+    parser.add_argument('--preprocess_tfrecs', type=int, action="store", default=True,
                         help='generate tfrecords, necessary for new datasets, if already generate set to false',
                         dest="preprocess_tfrecs")
 
@@ -163,6 +163,5 @@ if __name__ == '__main__':
     print('ARGS:\n', args)
     p = param.Param(parent_dir=args.parent, res_dir=args.resdir)
 
-    import_path = p.base_gedi_dropout
     Dep = Deploy(args.parent, args.preprocess_tfrecs)
     Dep.run(p, args.im_dir, args.model_path)

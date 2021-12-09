@@ -18,9 +18,9 @@ class Param:
         if param_dict is None:
             self.which_model = 'vgg19'  # vgg16, vgg19, resnet50
             self.EPOCHS = 1
-            self.learning_rate = 1e-6  # 3e-4
+            self.learning_rate = 1e-4  # 3e-4
             self.BATCH_SIZE = 16
-            self.optimizer = 'sgd'  # sgd, adam, adamw
+            self.optimizer = 'adam'  # sgd, adam, adamw
             self.momentum = 0.9
             # Data generator
             self.augmentbool = True
@@ -70,7 +70,7 @@ class Param:
             self.parent_dir = parent_dir
         if tfrec_dir is None:
             self.tfrec_dir = {
-                'hobbes': '/run/media/jlamstein/data/gedi/transfer/tfrecs',
+                'hobbes': '/mnt/finkbeinernas/robodata/GEDI_CLUSTER/GEDI_DATA',
                 'calvin': '/run/media/jlamstein/data/gedi/transfer/tfrecs',
                 'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/GEDI_DATA/',
                 'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/GEDI_DATA/'

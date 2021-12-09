@@ -18,6 +18,7 @@ from preprocessing.create_tfrecs_from_lst import Record
 import pyfiglet
 from glob import glob
 import random
+import tensorflow_addons as tfa
 
 __author__ = 'Josh Lamstein'
 __copyright__ = 'Gladstone Institutes 2020'
@@ -219,9 +220,11 @@ class Train:
             elif self.p.output_size == 1:
                 test_results = np.where(res > 0, 1, 0)
                 labels = nplbls
-            test_acc = list(np.array(test_results) == np.array(labels))
+            test_acc = np.array(test_results) == np.array(labels)
             if isinstance(test_acc, bool):
                 test_acc = [test_acc]
+            else:
+                test_acc = list(test_acc)
             test_acc_batch_avg = np.mean(test_acc)
             test_accuracy_lst.extend(test_acc)
 
@@ -329,13 +332,14 @@ class Train:
         # represent every image by mean intensity
         # learn affine transformation, scale and intercept, on average transform human to rat
 
-        glorot = tf.initializers.GlorotUniform()
+        glorot = tf.initializers.GlorotUniform
+        trunc = tf.initializers.TruncatedNormal
 
         bn1 = tf.keras.layers.BatchNormalization(momentum=0.9, name='bn_1')
         bn2 = tf.keras.layers.BatchNormalization(momentum=0.9, name='bn_2')
-        fc1_small = tf.keras.layers.Dense(64, name='fc1', activation='relu', kernel_initializer='TruncatedNormal',
-                                          bias_initializer='TruncatedNormal')
-        fc2_small = tf.keras.layers.Dense(16, name='fc2', activation='relu', kernel_initializer='TruncatedNormal',
+        fc1_small = tf.keras.layers.Dense(256, name='fc1', activation='relu', kernel_initializer=glorot(),
+                                          bias_initializer=glorot())
+        fc2_small = tf.keras.layers.Dense(256, name='fc2', activation='relu', kernel_initializer='TruncatedNormal',
                                           bias_initializer='TruncatedNormal')
         prediction = tf.keras.layers.Dense(self.p.output_size, activation='softmax', name='output')
 
@@ -351,26 +355,34 @@ class Train:
 
         x = flatten(block5_pool.output)
         x = fc1_small(x)
-        x = drop1(x)
+        # x = drop1(x)
         x = fc2_small(x)
-        x = drop2(x)
+        # x = drop2(x)
         x = prediction(x)
         model = tf.keras.models.Model(inputs=base_model.input, outputs=x)
 
         # model = base_model
         for lyr in model.layers:
 
-            if 'block5' in lyr.name or 'fc1' in lyr.name or 'fc2' in lyr.name or 'dropout' in lyr.name:
-                _weights = lyr.get_weights()
-                if len(_weights) > 0:
-                    print('resetting weights:', lyr.name)
-                    W = np.shape(_weights[0])
-                    b = np.shape(_weights[1])
-                    lyr.set_weights([glorot(shape=W), glorot(shape=b)])
+            if 'block4' in lyr.name or 'block5' in lyr.name or 'fc1' in lyr.name or 'fc2' in lyr.name or 'dropout' in lyr.name:
+                # _weights = lyr.get_weights()
+                # if len(_weights) > 0:
+                #     print('resetting weights:', lyr.name)
+                #     W = np.shape(_weights[0])
+                #     b = np.shape(_weights[1])
+                #     lyr.set_weights([glorot(shape=W), glorot(shape=b)])
                 lyr.trainable = True
             else:
                 lyr.trainable = False
-        model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=self.p.learning_rate),
+        if self.p.optimizer == 'adam':
+            optimizer = tf.keras.optimizers.Adam(learning_rate=self.p.learning_rate)
+        elif self.p.optimizer == 'sgd':
+            optimizer = tf.keras.optimizers.SGD(learning_rate=self.p.learning_rate, momentum=self.p.momentum,
+                                                nesterov=True)
+        elif self.p.optimizer == 'adamw':
+            optimizer = tfa.optimizers.AdamW(learning_rate=self.p.learning_rate, weight_decay=self.p.weight_decay)
+
+        model.compile(optimizer=optimizer,
                       loss='binary_crossentropy',
                       metrics=['accuracy'])
         model.summary()
@@ -422,9 +434,11 @@ class Train:
             elif self.p.output_size == 1:  # only for output size one, so far not used
                 test_results = np.where(res > 0, 1, 0)
                 labels = nplbls
-            test_acc = list(np.array(test_results) == np.array(labels))
+            test_acc = np.array(test_results) == np.array(labels)
             if isinstance(test_acc, bool):
                 test_acc = [test_acc]
+            else:
+                test_acc = list(test_acc)
             test_acc_batch_avg = np.mean(test_acc)
             test_accuracy_lst.extend(test_acc)
 
@@ -473,7 +487,7 @@ if __name__ == '__main__':
     parser.add_argument('--use_neptune', type=int, action="store", default=True,
                         help='Save run info to neptune ai',
                         dest="use_neptune")
-    parser.add_argument('--retrain', type=int, action="store", default=False,
+    parser.add_argument('--retrain', type=int, action="store", default=True,
                         help='Save run info to neptune ai',
                         dest="retrain")
     args = parser.parse_args()
