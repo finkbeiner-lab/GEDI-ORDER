@@ -244,6 +244,7 @@ class Train:
         make_directories(self.p)
         if base_model_file is None:  # load base model to initialize weights
             base_model_file = self.p.base_gedi_dropout_bn
+            self.p.which_model = 'vgg16'
 
         tfrec_dir = self.parent_dir
         data_retrain = os.path.join(tfrec_dir, 'train.tfrecord')
@@ -253,6 +254,7 @@ class Train:
         export_path = os.path.join(self.p.retrain_models_dir, '{}_{}.h5'.format(self.p.which_model, timestamp))
         export_info_path = os.path.join(self.p.retrain_run_info_dir, '{}_{}.csv'.format(self.p.which_model, timestamp))
         save_checkpoint_path = os.path.join(self.p.retrain_ckpt_dir, '{}_{}.hdf5'.format(self.p.which_model, timestamp))
+        self.p.hyperparams['model'] = self.p.which_model
         self.p.hyperparams['timestamp'] = timestamp
         self.p.hyperparams['model_timestamp'] = self.p.which_model + '_' + timestamp
         self.p.hyperparams['retraining'] = base_model_file

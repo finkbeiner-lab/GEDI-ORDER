@@ -57,7 +57,7 @@ class Param:
         os_name = platform.node()
         if parent_dir is None:
             self.parent_dir = {'hobbes': '/mnt/finkbeinernas/robodata/Josh/GEDI-ORDER',
-                               'calvin': '/mnt/finkbeinernas/robodata/Josh/GEDI-ORDER',
+                               'calvin': '/mnt/finkbeinerlab/robodata/Josh/GEDI-ORDER',
                                'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/Josh/GEDI-ORDER',
                                'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/Josh/GEDI-ORDER'}[
                 os_name]
