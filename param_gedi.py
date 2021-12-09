@@ -17,10 +17,10 @@ class Param:
     def __init__(self, param_dict=None, parent_dir=None, tfrec_dir=None, res_dir=None):
         if param_dict is None:
             self.which_model = 'vgg19'  # vgg16, vgg19, resnet50
-            self.EPOCHS = 200
+            self.EPOCHS = 1
             self.learning_rate = 1e-6  # 3e-4
-            self.BATCH_SIZE = 64
-            self.optimizer = 'sgd'  # sgd, adam
+            self.BATCH_SIZE = 16
+            self.optimizer = 'sgd'  # sgd, adam, adamw
             self.momentum = 0.9
             # Data generator
             self.augmentbool = True
@@ -31,6 +31,8 @@ class Param:
             self.orig_size = (300, 300, 1)  # (230, 230, 3) for catdog tfrecord / (300,300,1) for cells
             self.class_weights = {0: 1., 1: 1.}  # rough ratio  # 2.75 vs 1 for original training dataset
             self.randomcrop = True
+            self.histogram_eq = True
+            self.weight_decay = 1e-5  # for AdamW
 
         else:
             self.which_model = param_dict['model']  # vgg16, vgg19, resnet50
@@ -48,6 +50,9 @@ class Param:
             self.orig_size = param_dict['orig_size']  # (230, 230, 3) for catdog tfrecord / (300,300,1) for cells
             self.class_weights = param_dict['class_weights']  # rough ratio  # 2.75 vs 1 for original training dataset
             self.randomcrop = param_dict['randomcrop']
+            self.histogram_eq = param_dict['histogram_eq']
+            self.weight_decay = param_dict['weight_decay']  # for AdamW
+
 
         self.training_max_value = 1.0001861
         self.training_min_value = 0
@@ -187,7 +192,8 @@ class Param:
             'batch_size': self.BATCH_SIZE,
             'shuffle_size': self.shuffle_buffer_size,
             'epochs': self.EPOCHS,
-            'randomcrop': self.randomcrop
+            'randomcrop': self.randomcrop,
+            'histogram_eq': self.histogram_eq
         }
 
         self.VGG_MEAN = [103.939, 116.779, 123.68]

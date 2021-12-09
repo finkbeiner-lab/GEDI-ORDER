@@ -55,7 +55,8 @@ class Dataspring(Parser):
         ds = ds.map(self.reshape_ims, num_parallel_calls=self.p.num_parallel_calls)
 
         # Normalization
-        # ds = ds.map(self.normalize_histeq, num_parallel_calls=self.p.num_parallel_calls)
+        if self.p.histogram_eq:
+            ds = ds.map(self.normalize_histeq, num_parallel_calls=self.p.num_parallel_calls)
         ds = ds.map(self.set_max_to_one_by_image, num_parallel_calls=self.p.num_parallel_calls)
         # ds = ds.map(self.rescale_im_and_clip_16bit, num_parallel_calls=self.p.num_parallel_calls)
 
@@ -86,7 +87,7 @@ class Dataspring(Parser):
             if self.verbose:
                 print('Using standard model')
             ds = ds.map(self.normalize_whitening, num_parallel_calls=self.p.num_parallel_calls)
-        elif 'custom' in self.p.which_model:
+        elif self.p.which_model is not None and 'custom' in self.p.which_model:
             ds = ds.map(self.make_vgg, num_parallel_calls=self.p.num_parallel_calls)
         else:
             print('no model processing')
@@ -135,9 +136,9 @@ class Dataspring(Parser):
 if __name__ == '__main__':
     p = param.Param()
     print(p.which_model)
-    tfrecord = os.path.join('/run/media/jlamstein/data/GEDI-ORDER', 'val.tfrecord')
+    tfrecord = os.path.join(p.parent_dir, 'test.tfrecord')
     Dat = Dataspring(tfrecord)
-    Dat.datagen_base(istraining=True)
+    Dat.datagen_base(istraining=False)
     label_lst = []
     # for i in range(1):
     #     imgs, lbls, files = Dat.datagen()
@@ -173,7 +174,6 @@ if __name__ == '__main__':
         for i in range(3):
             imgs, lbls, files = Dat.datagen()
             for img, lbl, file in zip(imgs, lbls, files):
-                plt.figure()
                 lbl = lbl.numpy()
                 img = img.numpy()
                 img[:, :, 0] += p.VGG_MEAN[0]
@@ -190,6 +190,7 @@ if __name__ == '__main__':
                 rgb *= 1
                 rgb[rgb > 255] = 255
                 im = np.uint8(rgb)
+                plt.figure()
                 plt.imshow(im)
                 plt.title(lbl)
             plt.show()

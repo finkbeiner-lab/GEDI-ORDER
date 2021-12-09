@@ -284,6 +284,8 @@ class CNN:
         elif self.p.optimizer == 'sgd':
             optimizer = tf.keras.optimizers.SGD(learning_rate=self.p.learning_rate, momentum=self.p.momentum,
                                                 nesterov=True)
+        elif self.p.optimizer == 'adamw':
+            optimizer = tfa.optimizers.AdamW(learning_rate=self.p.learning_rate, weight_decay=self.p.weight_decay)
 
         raw_model.compile(optimizer=optimizer,
                           loss='binary_crossentropy',
@@ -321,6 +323,9 @@ class CNN:
         elif self.p.optimizer == 'sgd':
             optimizer = tf.keras.optimizers.SGD(learning_rate=self.p.learning_rate, momentum=self.p.momentum,
                                                 nesterov=True)
+        elif self.p.optimizer == 'adamw':
+            optimizer = tfa.optimizers.AdamW(learning_rate=self.p.learning_rate, weight_decay=self.p.weight_decay)
+
 
         raw_model.compile(optimizer=optimizer,
                           loss='binary_crossentropy',

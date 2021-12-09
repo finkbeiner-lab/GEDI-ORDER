@@ -89,6 +89,7 @@ class Train:
     def train(self):
 
         print('Running...')
+        tf.keras.backend.clear_session()
         # Setup filepaths and csv to log info about training model
         make_directories(self.p)
         tfrec_dir = self.parent_dir
@@ -218,9 +219,9 @@ class Train:
             elif self.p.output_size == 1:
                 test_results = np.where(res > 0, 1, 0)
                 labels = nplbls
-            test_acc = np.array(test_results) == np.array(labels)
+            test_acc = list(np.array(test_results) == np.array(labels))
             test_acc_batch_avg = np.mean(test_acc)
-            test_accuracy_lst.append(test_acc)
+            test_accuracy_lst.extend(test_acc)
 
         test_accuracy = np.mean(test_accuracy_lst)
         print('test accuracy', test_accuracy)
@@ -229,6 +230,9 @@ class Train:
         run_info['test_accuracy'] = test_accuracy
         run_info['train_loss'] = train_loss[-1]
         run_info['val_loss'] = val_loss[-1]
+        if self.use_neptune:
+            self.p.hyperparams['test_acc'] = test_accuracy
+            self.nep['parameters'] = self.p.hyperparams
 
         run_df = pd.DataFrame([run_info])
         run_df.to_csv(export_info_path)
@@ -240,6 +244,7 @@ class Train:
     def retrain(self, base_model_file=None):
 
         print('Running...')
+        tf.keras.backend.clear_session()
         # Setup filepaths and csv to log info about training model
         make_directories(self.p)
         if base_model_file is None:  # load base model to initialize weights
@@ -413,9 +418,9 @@ class Train:
             elif self.p.output_size == 1:  # only for output size one, so far not used
                 test_results = np.where(res > 0, 1, 0)
                 labels = nplbls
-            test_acc = np.array(test_results) == np.array(labels)
+            test_acc = list(np.array(test_results) == np.array(labels))
             test_acc_batch_avg = np.mean(test_acc)
-            test_accuracy_lst.append(test_acc)
+            test_accuracy_lst.extend(test_acc)
 
         test_accuracy = np.mean(test_accuracy_lst)
         print('test accuracy', test_accuracy)
