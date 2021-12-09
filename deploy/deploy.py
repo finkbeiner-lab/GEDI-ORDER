@@ -36,9 +36,9 @@ def deploy_main(p, model_id, SAVE_MONTAGE, SAVECSV, CURATION):
     # import_path = p.base_gedi_dropout_bn
 
     if CURATION:
-        curation_folder = '/mnt/finkbeinerlab/robodata/GalaxyTEMP/BSMachineLearning_TestCuration/batches/curation_results/v_oza/'
+        curation_folder = '/mnt/finkbeinernas/robodata/GalaxyTEMP/BSMachineLearning_TestCuration/batches/curation_results/v_oza/'
         # Get results from original cnn in csv format
-        orig_cnn_folder = '/mnt/finkbeinerlab/robodata/GalaxyTEMP/BSMachineLearning_TestCuration/batches/curation_results/'
+        orig_cnn_folder = '/mnt/finkbeinernas/robodata/GalaxyTEMP/BSMachineLearning_TestCuration/batches/curation_results/'
         # df = pd.read_csv(os.path.join(curation_folder, 'Batch1_CurationData_29.3761.csv'))
         # df = pd.read_csv(os.path.join(curation_folder, 'Batch1_CurationData_VO_15.234.csv'))
         # df = pd.read_csv(os.path.join(curation_folder, 'Batch2_CurationData_VO_9.2609.csv'))
@@ -217,13 +217,13 @@ if __name__ == '__main__':
     print('Deploying GEDI model...')
     parser = argparse.ArgumentParser(description='Deploy GEDICNN model')
     parser.add_argument('--parent', action="store",
-                        default='/mnt/data/GEDI-ORDER',
+                        default='/run/media/jlamstein/data/GEDI-ORDER',
                         dest='parent')
-    parser.add_argument('--tfrecdir', action="store", default='/mnt/data/gedi/transfer/tfrecs', dest="tfrecdir")
-    parser.add_argument('--resdir', action="store", default='/mnt/finkbeinerlab/robodata/GEDI_CLUSTER', dest="resdir")
+    parser.add_argument('--tfrecdir', action="store", default='/run/media/jlamstein/data/gedi/transfer/tfrecs', dest="tfrecdir")
+    parser.add_argument('--resdir', action="store", default='/mnt/finkbeinernas/robodata/GEDI_CLUSTER', dest="resdir")
     parser.add_argument('--SAVE_MONTAGE', action="store", default=0, dest="SAVE_MONTAGE")
-    parser.add_argument('--SAVECSV', action="store", default='/mnt/finkbeinerlab/robodata/GEDI_CLUSTER', dest="SAVECSV")
-    parser.add_argument('--CURATION', action="store", default='/mnt/finkbeinerlab/robodata/GEDI_CLUSTER',
+    parser.add_argument('--SAVECSV', action="store", default='/mnt/finkbeinernas/robodata/GEDI_CLUSTER', dest="SAVECSV")
+    parser.add_argument('--CURATION', action="store", default='/mnt/finkbeinernas/robodata/GEDI_CLUSTER',
                         dest="CURATION")
 
     args = parser.parse_args()
