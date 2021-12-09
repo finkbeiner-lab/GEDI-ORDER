@@ -220,6 +220,8 @@ class Train:
                 test_results = np.where(res > 0, 1, 0)
                 labels = nplbls
             test_acc = list(np.array(test_results) == np.array(labels))
+            if isinstance(test_acc, bool):
+                test_acc = [test_acc]
             test_acc_batch_avg = np.mean(test_acc)
             test_accuracy_lst.extend(test_acc)
 
@@ -328,41 +330,43 @@ class Train:
         # learn affine transformation, scale and intercept, on average transform human to rat
 
         glorot = tf.initializers.GlorotUniform()
-        # bn1 = tf.keras.layers.BatchNormalization(momentum=0.9, name='bn_1')
-        # bn2 = tf.keras.layers.BatchNormalization(momentum=0.9, name='bn_2')
-        # fc1_small = tf.keras.layers.Dense(64, name='fc1', activation='relu', kernel_initializer='TruncatedNormal',
-        #                    bias_initializer='TruncatedNormal')
-        # fc2_small = tf.keras.layers.Dense(16, name='fc2', activation='relu', kernel_initializer='TruncatedNormal',
-        #                    bias_initializer='TruncatedNormal')
-        # prediction = tf.keras.layers.Dense(p.output_size, activation='softmax', name='output')
+
+        bn1 = tf.keras.layers.BatchNormalization(momentum=0.9, name='bn_1')
+        bn2 = tf.keras.layers.BatchNormalization(momentum=0.9, name='bn_2')
+        fc1_small = tf.keras.layers.Dense(64, name='fc1', activation='relu', kernel_initializer='TruncatedNormal',
+                                          bias_initializer='TruncatedNormal')
+        fc2_small = tf.keras.layers.Dense(16, name='fc2', activation='relu', kernel_initializer='TruncatedNormal',
+                                          bias_initializer='TruncatedNormal')
+        prediction = tf.keras.layers.Dense(self.p.output_size, activation='softmax', name='output')
+
+        drop1 = base_model.get_layer('dropout_1')
+        drop2 = base_model.get_layer('dropout_2')
+        block5_pool = base_model.get_layer('block5_pool')
+        flatten = tf.keras.layers.Flatten()
+
         #
-        # drop1 = base_model.get_layer('dropout_1')
-        # drop2 = base_model.get_layer('dropout_2')
-        # block5_pool = base_model.get_layer('block5_pool')
-        # flatten = tf.keras.layers.Flatten()
-        #
-        # #
         # fc1 = base_model.get_layer('fc1')
         # fc2 = base_model.get_layer('fc2')
         # pred_layer = base_model.get_layer('predictions')
-        #
-        # x = flatten(block5_pool.output)
-        # x = fc1_small(x)
-        # x = drop1(x)
-        # x = fc2_small(x)
-        # x = drop2(x)
-        # x = prediction(x)
-        # model = tf.keras.models.Model(inputs=base_model.input, outputs=x)
-        model = base_model
+
+        x = flatten(block5_pool.output)
+        x = fc1_small(x)
+        x = drop1(x)
+        x = fc2_small(x)
+        x = drop2(x)
+        x = prediction(x)
+        model = tf.keras.models.Model(inputs=base_model.input, outputs=x)
+
+        # model = base_model
         for lyr in model.layers:
 
             if 'block5' in lyr.name or 'fc1' in lyr.name or 'fc2' in lyr.name or 'dropout' in lyr.name:
                 _weights = lyr.get_weights()
-                # if len(_weights) > 0:
-                #     print('resetting weights:', lyr.name)
-                #     W = np.shape(_weights[0])
-                #     b = np.shape(_weights[1])
-                #     lyr.set_weights([glorot(shape=W), glorot(shape=b)])
+                if len(_weights) > 0:
+                    print('resetting weights:', lyr.name)
+                    W = np.shape(_weights[0])
+                    b = np.shape(_weights[1])
+                    lyr.set_weights([glorot(shape=W), glorot(shape=b)])
                 lyr.trainable = True
             else:
                 lyr.trainable = False
@@ -419,6 +423,8 @@ class Train:
                 test_results = np.where(res > 0, 1, 0)
                 labels = nplbls
             test_acc = list(np.array(test_results) == np.array(labels))
+            if isinstance(test_acc, bool):
+                test_acc = [test_acc]
             test_acc_batch_avg = np.mean(test_acc)
             test_accuracy_lst.extend(test_acc)
 
