@@ -33,6 +33,8 @@ class Param:
             self.randomcrop = True
             self.histogram_eq = False
             self.weight_decay = 1e-5  # for AdamW
+            self.l2_regularize = 0
+            self.regularize = None
 
         else:
             self.which_model = param_dict['model']  # vgg16, vgg19, resnet50
@@ -52,7 +54,8 @@ class Param:
             self.randomcrop = param_dict['randomcrop']
             self.histogram_eq = param_dict['histogram_eq']
             self.weight_decay = param_dict['weight_decay']  # for AdamW
-
+            self.l2_regularize = param_dict['l2_regularize']
+            self.regularize = param_dict['regularize']
 
         self.training_max_value = 1.0001861
         self.training_min_value = 0
@@ -193,7 +196,9 @@ class Param:
             'shuffle_size': self.shuffle_buffer_size,
             'epochs': self.EPOCHS,
             'randomcrop': self.randomcrop,
-            'histogram_eq': self.histogram_eq
+            'histogram_eq': self.histogram_eq,
+            'l2_regularize': self.l2_regularize,
+            'regularize':self.regularize
         }
 
         self.VGG_MEAN = [103.939, 116.779, 123.68]

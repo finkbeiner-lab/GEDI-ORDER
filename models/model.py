@@ -246,6 +246,8 @@ class CNN:
         drop2 = layers.Dropout(rate=0.5, name='dropout_2')
         drop3 = layers.Dropout(rate=0.5, name='dropout_3')
         prediction = layers.Dense(self.p.output_size, activation='softmax', name='output')
+        instance1 = tfa.layers.InstanceNormalization(name='instance_1')
+        instance2 = tfa.layers.InstanceNormalization(name='instance_2')
         block5_pool = base_model.get_layer('block5_pool')
         for layr in base_model.layers:
             # ininy = tf.initializers.GlorotUniform()
@@ -261,19 +263,28 @@ class CNN:
                 #     layr.set_weights([ininy(shape=W), ininy(shape=b)])
 
                 layr.trainable = True
+                if self.p.l2_regularize > 0:
+                    layr.activity_regularizer = tf.keras.regularizers.L2(self.p.l2_regularize)
             else:
                 layr.trainable = False
             print(layr.trainable)
+            tf.print('activity reg', layr.activity_regularizer)
+
 
         x = flatten(block5_pool.output)
         x = fc1(x)
+        if self.p.regularize=='instance':
+            x = instance1(x, training=self.trainable)
+        elif self.p.regularize=='dropout':
+            x = drop1(x, training=self.trainable)
+
         # x = bn1(x)
-        # x = drop1(x, training=self.trainable)
-        # x = instance1(x)
         x = fc2(x)
+        if self.p.regularize=='instance':
+            x = instance2(x, training=self.trainable)
+        elif self.p.regularize=='dropout':
+            x = drop1(x, training=self.trainable)
         # x = bn2(x)
-        # x = drop2(x, training=self.trainable)
-        # x = instance2(x)
         x = fc3(x)
         x = tf.keras.layers.Softmax(name='output')(x)
 
@@ -308,9 +319,13 @@ class CNN:
             if ('conv4' in layr.name) or ('conv5' in layr.name):
 
                 layr.trainable = True
+                if self.p.l2_regularize > 0:
+                    layr.activity_regularizer = tf.keras.regularizers.L2(self.p.l2_regularize)
             else:
                 layr.trainable = False
             print(layr.trainable)
+            tf.print('activity reg', layr.activity_regularizer)
+
 
         x = global_pool(conv_lyr.output)
         x = prediction(x)
