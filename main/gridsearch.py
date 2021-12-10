@@ -10,8 +10,8 @@ def gridsearch(datadir, retrain_bool):
                   'class_weights': {0: 1., 1: 1.}, 'momentum': .9, 'randomcrop': True, 'histogram_eq': True,
                   'weight_decay': 1e-5}
     models = ['vgg19', 'resnet50']
-    lrs = [1e-6, 1e-5]
-    optimizers = ['adam', 'sgd']
+    lrs = [1e-4]
+    optimizers = ['adamw', 'sgd']
 
     for model in models:
         for lr in lrs:

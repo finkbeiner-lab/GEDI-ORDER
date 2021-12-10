@@ -337,10 +337,10 @@ class Train:
 
         bn1 = tf.keras.layers.BatchNormalization(momentum=0.9, name='bn_1')
         bn2 = tf.keras.layers.BatchNormalization(momentum=0.9, name='bn_2')
-        fc1_small = tf.keras.layers.Dense(256, name='fc1', activation='relu', kernel_initializer=glorot(),
-                                          bias_initializer=glorot())
-        fc2_small = tf.keras.layers.Dense(256, name='fc2', activation='relu', kernel_initializer='TruncatedNormal',
-                                          bias_initializer='TruncatedNormal')
+        fc1_small = tf.keras.layers.Dense(256, name='fc1', activation='relu', kernel_initializer=trunc(),
+                                          bias_initializer=trunc())
+        fc2_small = tf.keras.layers.Dense(256, name='fc2', activation='relu', kernel_initializer=trunc(),
+                                          bias_initializer=trunc())
         prediction = tf.keras.layers.Dense(self.p.output_size, activation='softmax', name='output')
 
         # drop1 = base_model.get_layer('dropout_1')
@@ -364,7 +364,7 @@ class Train:
         # model = base_model
         for lyr in model.layers:
 
-            if 'block4' in lyr.name or 'block5' in lyr.name or 'fc1' in lyr.name or 'fc2' in lyr.name or 'dropout' in lyr.name:
+            if 'block3' in lyr.name or 'block4' in lyr.name or 'block5' in lyr.name or 'fc1' in lyr.name or 'fc2' in lyr.name or 'dropout' in lyr.name:
                 # _weights = lyr.get_weights()
                 # if len(_weights) > 0:
                 #     print('resetting weights:', lyr.name)

@@ -16,7 +16,6 @@ import numpy as np
 class Param:
     def __init__(self, param_dict=None, parent_dir=None, tfrec_dir=None, res_dir=None):
         if param_dict is None:
-            assert 0, 'should not call here'
             self.which_model = 'vgg19'  # vgg16, vgg19, resnet50
             self.EPOCHS = 1
             self.learning_rate = 1e-6  # 3e-4
