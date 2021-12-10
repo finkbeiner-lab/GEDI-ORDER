@@ -11,8 +11,8 @@ import numpy as np
 
 
 class CNN:
-    def __init__(self, trainable=True):
-        self.p = param.Param()
+    def __init__(self, p, trainable=True):
+        self.p = p
         self.trainable = trainable
 
     def custom_model(self, imsize):

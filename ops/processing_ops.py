@@ -8,8 +8,8 @@ import tensorflow_addons as tfa
 class Parser:
     """Parse tfrecord"""
 
-    def __init__(self):
-        self.p = param.Param()
+    def __init__(self, p):
+        self.p = p
 
     def tfrec_parse(self, row):
         """

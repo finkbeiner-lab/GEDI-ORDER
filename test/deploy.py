@@ -16,6 +16,8 @@ import argparse
 def deploy_main(p, model_id, SAVE_MONTAGE, SAVECSV, CURATION):
     # p = param.Param()
     # SAVE_MONTAGE = False
+    p.which_model = 'vgg16'
+    p.histogram_eq = False
     tfrecord = p.data_deploy
     # SAVECSV = True
     # CURATION = True
@@ -33,7 +35,8 @@ def deploy_main(p, model_id, SAVE_MONTAGE, SAVECSV, CURATION):
     # import_path = os.path.join(p.retrain_models_dir, "{}.h5".format(model_id))
     # import_path = os.path.join(p.ckpt_dir, "{}.hdf5".format(model_id))
     import_path = p.base_gedi_dropout
-    # import_path = p.base_gedi_dropout_bn
+    import_path = p.base_gedi
+    import_path = p.base_gedi_dropout_bn
 
     if CURATION:
         curation_folder = '/mnt/finkbeinernas/robodata/GalaxyTEMP/BSMachineLearning_TestCuration/batches/curation_results/v_oza/'
@@ -42,23 +45,23 @@ def deploy_main(p, model_id, SAVE_MONTAGE, SAVECSV, CURATION):
         # df = pd.read_csv(os.path.join(curation_folder, 'Batch1_CurationData_29.3761.csv'))
         # df = pd.read_csv(os.path.join(curation_folder, 'Batch1_CurationData_VO_15.234.csv'))
         # df = pd.read_csv(os.path.join(curation_folder, 'Batch2_CurationData_VO_9.2609.csv'))
-        # df = pd.read_csv(os.path.join(curation_folder, 'Batch3_CurationData_VO_11.5307.csv'))
-        df = pd.read_csv(os.path.join(curation_folder, 'Batch4_CurationData_VO_140.0766.csv'))
+        df = pd.read_csv(os.path.join(curation_folder, 'Batch3_CurationData_VO_11.5307.csv'))
+        # df = pd.read_csv(os.path.join(curation_folder, 'Batch4_CurationData_VO_140.0766.csv'))
         # df = pd.read_csv(os.path.join(curation_folder, 'Batch5_CurationData_VO_10.4167.csv'))
-        orig = pd.read_csv(os.path.join(orig_cnn_folder, 'batch4_gedicnn.csv'))
+        orig = pd.read_csv(os.path.join(orig_cnn_folder, 'batch3_gedicnn.csv'))
 
     save_res = os.path.join(p.res_csv_deploy, tfrecord.split('/')[-1].split('.')[0] + '.csv')  # save results
     # Plops = plotops.Plotty(model_id)
 
     # Count samples in tfrecord
-    Chk = pipe.Dataspring(tfrecord, False)
+    Chk = pipe.Dataspring(p, tfrecord, False)
     test_length = Chk.count_data().numpy()
     del Chk
-    DatTest = pipe.Dataspring(tfrecord, True)
+    DatTest = pipe.Dataspring(p, tfrecord, True)
     test_ds = DatTest.datagen_base(istraining=False)
     test_gen = DatTest.generator()
 
-    DatView = pipe.Dataspring(tfrecord)
+    DatView = pipe.Dataspring(p, tfrecord)
     view_ds = DatView.datagen_base(istraining=False)
 
     # Load model
@@ -219,7 +222,8 @@ if __name__ == '__main__':
     parser.add_argument('--parent', action="store",
                         default='/run/media/jlamstein/data/GEDI-ORDER',
                         dest='parent')
-    parser.add_argument('--tfrecdir', action="store", default='/run/media/jlamstein/data/gedi/transfer/tfrecs', dest="tfrecdir")
+    parser.add_argument('--tfrecdir', action="store", default='/run/media/jlamstein/data/gedi/transfer/tfrecs',
+                        dest="tfrecdir")
     parser.add_argument('--resdir', action="store", default='/mnt/finkbeinernas/robodata/GEDI_CLUSTER', dest="resdir")
     parser.add_argument('--SAVE_MONTAGE', action="store", default=0, dest="SAVE_MONTAGE")
     parser.add_argument('--SAVECSV', action="store", default='/mnt/finkbeinernas/robodata/GEDI_CLUSTER', dest="SAVECSV")

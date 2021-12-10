@@ -25,14 +25,14 @@ class Deploy:
 
         self.preprocess_tfrecs = preprocess_tfrecs
 
-    def run(self, p, im_dir, model_path=None):
+    def run(self, p, im_dir, model_path=None, use_gedi_cnn=True):
         deploypath = os.path.join(self.parent_dir, 'deploy.tfrecord')
         if self.preprocess_tfrecs:
             self.generate_tfrecs(im_dir)
         else:
             assert os.path.exists(deploypath), 'set preprocess_tfrecs to true'
 
-        self.deploy_main(p, deploypath, model_path, deploy_gedi_cnn=True if model_path is None else False)
+        self.deploy_main(p, deploypath, model_path, deploy_gedi_cnn=use_gedi_cnn)
 
     def generate_tfrecs(self, im_dir):
         """
@@ -51,46 +51,50 @@ class Deploy:
         res_dict = {'filepath': [], 'prediction': [], 'label': []}
 
         # if testing on CURATION
-        if model_path is None:
-            import_path = p.base_gedi_dropout
+        if deploy_gedi_cnn:
+            p.histogram_eq = False
+            p.which_model = 'vgg16'
+            import_path = p.base_gedi
         else:
             import_path = model_path
+        print(f'Running model: {import_path}')
 
         save_res = os.path.join(p.res_csv_deploy, deploy_tfrec.split('/')[-1].split('.')[0] + '.csv')  # save results
         # Plops = plotops.Plotty(model_id)
 
         # Count samples in tfrecord
-        Chk = pipe.Dataspring(deploy_tfrec, False)
+        Chk = pipe.Dataspring(p, deploy_tfrec, False)
         test_length = Chk.count_data().numpy()
         del Chk
-        DatTest = pipe.Dataspring(deploy_tfrec, True)
+        DatTest = pipe.Dataspring(p, deploy_tfrec, True)
         test_ds = DatTest.datagen_base(istraining=False)
         test_gen = DatTest.generator()
 
-        DatView = pipe.Dataspring(deploy_tfrec)
+        DatView = pipe.Dataspring(p, deploy_tfrec)
         view_ds = DatView.datagen_base(istraining=False)
 
         # Load model
         print('Loading model...')
-        if deploy_gedi_cnn:
-            # remove batchnorm layers and run
-            base_model = tf.keras.models.load_model(import_path, compile=False)
-            block5_pool = base_model.get_layer('block5_pool')
-
-            drop1 = base_model.get_layer('dropout_1')
-            drop2 = base_model.get_layer('dropout_2')
-            fc1 = base_model.get_layer('fc1')
-            fc2 = base_model.get_layer('fc2')
-            fc3 = base_model.get_layer('fc3')
-
-            x = drop1(fc1.output)
-            x = drop1(x)
-            x = fc2(x)
-            x = drop2(x)
-            x = fc3(x)
-            model = tf.keras.models.Model(inputs=base_model.input, outputs=x)
-        else:
-            model = tf.keras.models.load_model(import_path, compile=False)
+        # if deploy_gedi_cnn:
+        #     # remove batchnorm layers and run
+        #     base_model = tf.keras.models.load_model(import_path, compile=False)
+        #     block5_pool = base_model.get_layer('block5_pool')
+        #
+        #     drop1 = base_model.get_layer('dropout_1')
+        #     drop2 = base_model.get_layer('dropout_2')
+        #     fc1 = base_model.get_layer('fc1')
+        #     fc2 = base_model.get_layer('fc2')
+        #     fc3 = base_model.get_layer('fc3')
+        #
+        #     x = drop1(fc1.output)
+        #     x = drop1(x)
+        #     x = fc2(x)
+        #     x = drop2(x)
+        #     x = fc3(x)
+        #     model = tf.keras.models.Model(inputs=base_model.input, outputs=x)
+        # else:
+        #     model = tf.keras.models.load_model(import_path, compile=False)
+        model = tf.keras.models.load_model(import_path, compile=False)
 
         for lyr in model.layers:
             lyr.trainable = False
@@ -148,20 +152,23 @@ if __name__ == '__main__':
                         default='/run/media/jlamstein/data/GEDI-ORDER',
                         dest='parent')
     parser.add_argument('--im_dir', action="store",
-                        default='/mnt/finkbeinernas/robodata/JeremyTEMP/GalaxyTEMP/LINCS072017RGEDI-A/Deadtraining2',
+                        default='/mnt/finkbeinernas/robodata/JeremyTEMP/GalaxyTEMP/LINCS072017RGEDI-A/Livetraining2',
                         help='directory of images to run', dest="im_dir")
     parser.add_argument('--model_path', action="store",
-                        default='/mnt/finkbeinernas/robodata/GEDI_CLUSTER/base_gedi_dropout2.h5',
+                        default='/mnt/finkbeinernas/robodata/GEDI_CLUSTER/base_gedi.h5',
                         help='path to h5 or hdf5 model', dest="model_path")
     parser.add_argument('--resdir', action="store", default='/mnt/finkbeinernas/robodata/GEDI_CLUSTER',
                         help='results directory', dest="resdir")
-    parser.add_argument('--preprocess_tfrecs', type=int, action="store", default=True,
+    parser.add_argument('--preprocess_tfrecs', type=int, action="store", default=False,
                         help='generate tfrecords, necessary for new datasets, if already generate set to false',
                         dest="preprocess_tfrecs")
+    parser.add_argument('--use_gedi_cnn', type=int, action="store", default=True,
+                        help='generate tfrecords, necessary for new datasets, if already generate set to false',
+                        dest="use_gedi_cnn")
 
     args = parser.parse_args()
     print('ARGS:\n', args)
     p = param.Param(parent_dir=args.parent, res_dir=args.resdir)
 
     Dep = Deploy(args.parent, args.preprocess_tfrecs)
-    Dep.run(p, args.im_dir, args.model_path)
+    Dep.run(p, args.im_dir, args.model_path, args.use_gedi_cnn)

@@ -125,19 +125,19 @@ class Train:
                     'im_shape': self.p.target_size,
                     'random_crop': self.p.randomcrop}
         # Get length of tfrecords
-        Chk = pipe.Dataspring(data_train)
+        Chk = pipe.Dataspring(self.p, data_train)
         train_length = Chk.count_data().numpy()
         del Chk
-        Chk = pipe.Dataspring(data_val)
+        Chk = pipe.Dataspring(self.p, data_val)
         val_length = Chk.count_data().numpy()
         del Chk
-        Chk = pipe.Dataspring(data_test)
+        Chk = pipe.Dataspring(self.p, data_test)
         test_length = Chk.count_data().numpy()
         del Chk
-        DatTrain = pipe.Dataspring(data_train)
-        DatVal = pipe.Dataspring(data_val)
-        DatTest = pipe.Dataspring(data_test)
-        DatTest2 = pipe.Dataspring(data_test)
+        DatTrain = pipe.Dataspring(self.p, data_train)
+        DatVal = pipe.Dataspring(self.p, data_val)
+        DatTest = pipe.Dataspring(self.p, data_test)
+        DatTest2 = pipe.Dataspring(self.p, data_test)
 
         train_ds = DatTrain.datagen_base(istraining=True)
         val_ds = DatVal.datagen_base(istraining=False)
@@ -162,7 +162,7 @@ class Train:
         #
         # plt.show()
 
-        net = CNN()
+        net = CNN(self.p)
         if self.p.which_model == 'vgg16':
             model = net.vgg16(imsize=self.p.target_size)
         elif self.p.which_model == 'vgg19':
@@ -225,7 +225,6 @@ class Train:
                 test_acc = [test_acc]
             else:
                 test_acc = list(test_acc)
-            test_acc_batch_avg = np.mean(test_acc)
             test_accuracy_lst.extend(test_acc)
 
         test_accuracy = np.mean(test_accuracy_lst)
@@ -253,8 +252,9 @@ class Train:
         # Setup filepaths and csv to log info about training model
         make_directories(self.p)
         if base_model_file is None:  # load base model to initialize weights
-            base_model_file = self.p.base_gedi_dropout_bn
+            base_model_file = self.p.base_gedi
             self.p.which_model = 'vgg16'
+            self.p.histogram_eq = False
 
         tfrec_dir = self.parent_dir
         data_retrain = os.path.join(tfrec_dir, 'train.tfrecord')
@@ -285,19 +285,19 @@ class Train:
                     'im_shape': self.p.target_size,
                     'random_crop': self.p.randomcrop}
         # Get length of tfrecords
-        Chk = pipe.Dataspring(data_retrain)
+        Chk = pipe.Dataspring(self.p, data_retrain)
         train_length = Chk.count_data().numpy()
         del Chk
-        Chk = pipe.Dataspring(data_reval)
+        Chk = pipe.Dataspring(self.p, data_reval)
         val_length = Chk.count_data().numpy()
         del Chk
-        Chk = pipe.Dataspring(data_retest)
+        Chk = pipe.Dataspring(self.p, data_retest)
         test_length = Chk.count_data().numpy()
         del Chk
-        DatTrain = pipe.Dataspring(data_retrain)
-        DatVal = pipe.Dataspring(data_reval)
-        DatTest = pipe.Dataspring(data_retest)
-        DatTest2 = pipe.Dataspring(data_retest)
+        DatTrain = pipe.Dataspring(self.p, data_retrain)
+        DatVal = pipe.Dataspring(self.p, data_reval)
+        DatTest = pipe.Dataspring(self.p, data_retest)
+        DatTest2 = pipe.Dataspring(self.p, data_retest)
 
         train_ds = DatTrain.datagen_base(istraining=True)
         val_ds = DatVal.datagen_base(istraining=False)
@@ -439,7 +439,6 @@ class Train:
                 test_acc = [test_acc]
             else:
                 test_acc = list(test_acc)
-            test_acc_batch_avg = np.mean(test_acc)
             test_accuracy_lst.extend(test_acc)
 
         test_accuracy = np.mean(test_accuracy_lst)

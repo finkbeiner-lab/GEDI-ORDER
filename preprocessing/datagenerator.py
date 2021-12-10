@@ -16,10 +16,10 @@ import param_gedi as param
 
 
 class Dataspring(Parser):
-    def __init__(self, tfrecord, verbose=False):
-        super().__init__()
+    def __init__(self, p, tfrecord, verbose=False):
+        super().__init__(p)
         self.tfrecord = tfrecord
-        self.p = param.Param()
+        self.p = p
         self.it = None
         self.verbose = verbose
 

@@ -16,9 +16,10 @@ import numpy as np
 class Param:
     def __init__(self, param_dict=None, parent_dir=None, tfrec_dir=None, res_dir=None):
         if param_dict is None:
+            assert 0, 'should not call here'
             self.which_model = 'vgg19'  # vgg16, vgg19, resnet50
             self.EPOCHS = 1
-            self.learning_rate = 1e-4  # 3e-4
+            self.learning_rate = 1e-6  # 3e-4
             self.BATCH_SIZE = 16
             self.optimizer = 'adam'  # sgd, adam, adamw
             self.momentum = 0.9
@@ -31,7 +32,7 @@ class Param:
             self.orig_size = (300, 300, 1)  # (230, 230, 3) for catdog tfrecord / (300,300,1) for cells
             self.class_weights = {0: 1., 1: 1.}  # rough ratio  # 2.75 vs 1 for original training dataset
             self.randomcrop = True
-            self.histogram_eq = True
+            self.histogram_eq = False
             self.weight_decay = 1e-5  # for AdamW
 
         else:
@@ -150,7 +151,7 @@ class Param:
 
         # self.data_deploy=self.data_val
         self.save_csv_deploy = ''
-        self.data_deploy = os.path.join(self.tfrecord_dir, 'BSMachineLearning_TestCuration_5.tfrecord')
+        self.data_deploy = os.path.join(self.tfrecord_dir, 'BSMachineLearning_TestCuration_3.tfrecord')
         # self.data_deploy = self.data_retrain
 
         # self.max_gedi = 16117. # max value of training set
