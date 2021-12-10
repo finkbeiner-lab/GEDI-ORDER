@@ -5,22 +5,22 @@ import pyfiglet
 
 
 def gridsearch(datadir, retrain_bool):
-    param_dict = {'epochs': 1, 'augmentbool': True, 'batch_size': 32, 'min_contrast': 1, 'max_contrast': 1.3,
+    param_dict = {'epochs': 200, 'augmentbool': True, 'batch_size': 32, 'min_contrast': 1, 'max_contrast': 1.3,
                   'random_brightness': .2, 'target_size': (224, 224, 3), 'orig_size': (300, 300, 1),
-                  'class_weights': {0: 1., 1: 1.}, 'momentum': .9, 'randomcrop': True, 'histogram_eq': True,
-                  'weight_decay': 1e-5}
+                  'class_weights': {0: 1., 1: 1.}, 'momentum': .9, 'randomcrop': True, 'histogram_eq': True}
     models = ['vgg19']
     lrs = [1e-5, 3e-6]
     optimizers = ['adamw']
     l2s = [0]
-    wds = [1e-4, 1e-5, 1e-6]
+    wds = [1e-5, 1e-6, 1e-4]
     regs = ['instance', 'dropout', None]
     for model in models:
-        for lr in lrs:
-            for optimizer in optimizers:
-                for l2 in l2s:
-                    for reg in regs:
-                        for wd in wds:
+        for wd in wds:
+            for lr in lrs:
+                for optimizer in optimizers:
+                    for l2 in l2s:
+                        for reg in regs:
+
                             param_dict['model'] = model
                             param_dict['learning_rate'] = lr
                             param_dict['optimizer'] = optimizer

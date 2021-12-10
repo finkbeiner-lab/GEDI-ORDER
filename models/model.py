@@ -267,23 +267,22 @@ class CNN:
                     layr.activity_regularizer = tf.keras.regularizers.L2(self.p.l2_regularize)
             else:
                 layr.trainable = False
-            print(layr.trainable)
-            tf.print('activity reg', layr.activity_regularizer)
-
+            # print(layr.trainable)
+            # tf.print('activity reg', layr.activity_regularizer)
 
         x = flatten(block5_pool.output)
         x = fc1(x)
-        if self.p.regularize=='instance':
+        if self.p.regularize == 'instance':
             x = instance1(x, training=self.trainable)
-        elif self.p.regularize=='dropout':
+        elif self.p.regularize == 'dropout':
             x = drop1(x, training=self.trainable)
 
         # x = bn1(x)
         x = fc2(x)
-        if self.p.regularize=='instance':
+        if self.p.regularize == 'instance':
             x = instance2(x, training=self.trainable)
-        elif self.p.regularize=='dropout':
-            x = drop1(x, training=self.trainable)
+        elif self.p.regularize == 'dropout':
+            x = drop2(x, training=self.trainable)
         # x = bn2(x)
         x = fc3(x)
         x = tf.keras.layers.Softmax(name='output')(x)
@@ -326,7 +325,6 @@ class CNN:
             print(layr.trainable)
             tf.print('activity reg', layr.activity_regularizer)
 
-
         x = global_pool(conv_lyr.output)
         x = prediction(x)
         x = layers.Softmax(name='output')(x)
@@ -340,7 +338,6 @@ class CNN:
                                                 nesterov=True)
         elif self.p.optimizer == 'adamw':
             optimizer = tfa.optimizers.AdamW(learning_rate=self.p.learning_rate, weight_decay=self.p.weight_decay)
-
 
         raw_model.compile(optimizer=optimizer,
                           loss='binary_crossentropy',
