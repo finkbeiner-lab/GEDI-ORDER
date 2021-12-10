@@ -20,7 +20,7 @@ class Param:
             self.which_model = 'vgg19'  # vgg16, vgg19, resnet50
             self.EPOCHS = 1
             self.learning_rate = 1e-6  # 3e-4
-            self.BATCH_SIZE = 16
+            self.BATCH_SIZE = 32
             self.optimizer = 'adam'  # sgd, adam, adamw
             self.momentum = 0.9
             # Data generator

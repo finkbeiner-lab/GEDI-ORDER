@@ -343,8 +343,8 @@ class Train:
                                           bias_initializer='TruncatedNormal')
         prediction = tf.keras.layers.Dense(self.p.output_size, activation='softmax', name='output')
 
-        drop1 = base_model.get_layer('dropout_1')
-        drop2 = base_model.get_layer('dropout_2')
+        # drop1 = base_model.get_layer('dropout_1')
+        # drop2 = base_model.get_layer('dropout_2')
         block5_pool = base_model.get_layer('block5_pool')
         flatten = tf.keras.layers.Flatten()
 
