@@ -31,7 +31,7 @@ class Param:
             self.orig_size = (300, 300, 1)  # (230, 230, 3) for catdog tfrecord / (300,300,1) for cells
             self.class_weights = {0: 1., 1: 1.}  # rough ratio  # 2.75 vs 1 for original training dataset
             self.randomcrop = True
-            self.histogram_eq = False
+            self.histogram_eq = True
             self.weight_decay = 1e-5  # for AdamW
             self.l2_regularize = 0
             self.regularize = None
