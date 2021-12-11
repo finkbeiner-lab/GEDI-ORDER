@@ -9,30 +9,35 @@ def gridsearch(datadir, retrain_bool):
                   'random_brightness': .2, 'target_size': (224, 224, 3), 'orig_size': (300, 300, 1),
                   'class_weights': {0: 1., 1: 1.}, 'momentum': .9, 'randomcrop': True, 'histogram_eq': True}
     models = ['vgg19']
-    lrs = [1e-5, 3e-6]
-    optimizers = ['adamw']
+    batch_sizes = [32,64]
+    lrs = [1e-4, 1e-5, 3e-6, 1e-6, 1e-7]
+    optimizers = ['sgd']
     l2s = [0]
-    wds = [1e-5, 1e-6, 1e-4]
-    regs = ['instance', 'dropout', None]
+    wds = [1e-5]
+    momentums = [.9, .99]
+    regs = [None]
     for model in models:
-        for wd in wds:
-            for lr in lrs:
-                for optimizer in optimizers:
-                    for l2 in l2s:
-                        for reg in regs:
-
-                            param_dict['model'] = model
-                            param_dict['learning_rate'] = lr
-                            param_dict['optimizer'] = optimizer
-                            param_dict['regularize'] = reg
-                            param_dict['l2_regularize'] = l2
-                            param_dict['weight_decay'] = wd
-                            Tr = Train(parent_dir=datadir, param_dict=param_dict, preprocess_tfrecs=False,
-                                       use_neptune=True)
-                            if retrain_bool:
-                                Tr.retrain()
-                            else:
-                                Tr.train()
+        for batch_size in batch_sizes:
+            for wd in wds:
+                for lr in lrs:
+                    for optimizer in optimizers:
+                        for l2 in l2s:
+                            for reg in regs:
+                                for momentum in momentums:
+                                    param_dict['batch_size']= batch_size
+                                    param_dict['model'] = model
+                                    param_dict['learning_rate'] = lr
+                                    param_dict['optimizer'] = optimizer
+                                    param_dict['regularize'] = reg
+                                    param_dict['l2_regularize'] = l2
+                                    param_dict['weight_decay'] = wd
+                                    param_dict['momentum'] = momentum
+                                    Tr = Train(parent_dir=datadir, param_dict=param_dict, preprocess_tfrecs=False,
+                                               use_neptune=True)
+                                    if retrain_bool:
+                                        Tr.retrain()
+                                    else:
+                                        Tr.train()
 
 
 if __name__ == '__main__':

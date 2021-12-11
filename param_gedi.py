@@ -198,7 +198,8 @@ class Param:
             'randomcrop': self.randomcrop,
             'histogram_eq': self.histogram_eq,
             'l2_regularize': self.l2_regularize,
-            'regularize':self.regularize
+            'regularize': self.regularize,
+            'weight_decay': self.weight_decay
         }
 
         self.VGG_MEAN = [103.939, 116.779, 123.68]
