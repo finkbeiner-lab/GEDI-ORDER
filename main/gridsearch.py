@@ -9,12 +9,12 @@ def gridsearch(datadir, retrain_bool):
                   'random_brightness': .2, 'target_size': (224, 224, 3), 'orig_size': (300, 300, 1),
                   'class_weights': {0: 1., 1: 1.}, 'momentum': .9, 'randomcrop': True, 'histogram_eq': True}
     models = ['vgg19']
-    batch_sizes = [64]
-    lrs = [1e-4, 1e-5, 3e-6, 1e-6, 1e-7]
-    optimizers = ['sgd']
+    batch_sizes = [16, 32, 64]
+    lrs = [1e-5, 1e-6]
+    optimizers = ['sgd', 'adam', 'adamw']
     l2s = [0]
     wds = [1e-5]
-    momentums = [.99]
+    momentums = [.9]
     regs = [None]
     for model in models:
         for batch_size in batch_sizes:

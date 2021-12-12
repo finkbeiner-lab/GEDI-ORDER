@@ -40,7 +40,7 @@ class Train:
 
     def run(self, pos_dirs, neg_dirs, balance_method='cutoff'):
         assert isinstance(pos_dirs, list), 'pos_dirs must be list'
-        if self.preprocess_tfrecs:
+        if self.preprocess_tfrecs or not os.path.exists(os.path.join(self.parent_dir, 'test.tfrecord')):
             self.generate_tfrecs(pos_dirs, neg_dirs, balance_method)
         else:
             assert os.path.exists(os.path.join(self.parent_dir, 'train.tfrecord')), 'set preprocess_tfrecs to true'
@@ -181,7 +181,7 @@ class Train:
                                                          save_best_only=True, mode='max')
 
         cp_early = tf.keras.callbacks.EarlyStopping(
-            monitor='loss', min_delta=0, patience=3, verbose=0,
+            monitor='val_loss', min_delta=0, patience=3, verbose=0,
             mode='auto', baseline=None, restore_best_weights=False
         )
 
@@ -462,12 +462,15 @@ if __name__ == '__main__':
     result = pyfiglet.figlet_format("GEDI-CNN", font="slant")
     print(result)
     parser = argparse.ArgumentParser(description='Train binary classifer GEDI-CNN model')
-    positives = ['/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Livecrops_3',
-                 '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Livecrops_2',
-                 '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Livecrops_1']
-    negatives = ['/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Deadcrops_3',
-                 '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Deadcrops_2',
-                 '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Deadcrops_1']
+    # positives = ['/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Livecrops_3',
+    #              '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Livecrops_2',
+    #              '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Livecrops_1']
+    # negatives = ['/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Deadcrops_3',
+    #              '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Deadcrops_2',
+    #              '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Deadcrops_1']
+
+    positives = ['/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-1703/Livecrops_1', '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-1703/Livecrops_2_3']
+    negatives = ['/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-1703/Deadcrops_1', '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-1703/Deadcrops_2_3']
     parser.add_argument('--datadir', action="store",
                         default='/mnt/finkbeinernas/robodata/Josh/GEDI-ORDER',
                         help='data parent directory',
