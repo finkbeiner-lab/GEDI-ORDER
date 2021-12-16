@@ -489,7 +489,7 @@ if __name__ == '__main__':
     parser.add_argument('--use_neptune', type=int, action="store", default=True,
                         help='Save run info to neptune ai',
                         dest="use_neptune")
-    parser.add_argument('--retrain', type=int, action="store", default=True,
+    parser.add_argument('--retrain', type=int, action="store", default=False,
                         help='Save run info to neptune ai',
                         dest="retrain")
     args = parser.parse_args()

@@ -40,13 +40,13 @@ The code uses dependencies found in requirements.txt. You may install the depend
 Depending on your computer system, you may need to replace `pip` with `pip3`, and Windows, Mac and Linux may have different names for modules, such as matplotlib may be referred to as python-matplotlib.
 
 If you're installing without requirements.txt, the notable dependencies are:
-1. tensorflow-gpu==2.0.0 (if you don't use a gpu for machine learning, install tensorflow==2.0.0 instead)
-2. imageio==2.8.0
-3. opencv-python==4.2.0.34
-4. pandas==1.0.3
-5. matplotlib==3.2.1
+1. tensorflow-gpu
+2. imageio
+3. opencv-python
+4. pandas
+5. matplotlib
 
-If you're using CUDA with a gpu, tensorflow-gpu 2.0 pairs with CUDA 10.0. 
+the code has been tested in python  3.6 and 3.7 with tensorflow-gpu 2.0, 2.3, and 2.5. 
 
 ### Run the Code 
 _We are currently working to make GEDI-CNN more user-friendly. Stay tuned._

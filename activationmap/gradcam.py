@@ -251,7 +251,7 @@ if __name__ == '__main__':
                         default=None,
                         help='directory of images to run', dest="im_dir")
     parser.add_argument('--model_path', action="store",
-                        default='/mnt/finkbeinernas/robodata/Josh/GEDI-ORDER/saved_models/vgg19_2021_12_09_17_47_19.h5',
+                        default='/mnt/finkbeinernas/robodata/Josh/GEDI-ORDER/saved_models/vgg19_2021_12_12_15_01_07.h5',
                         help='path to h5 or hdf5 model', dest="model_path")
     parser.add_argument('--deploy_tfrec', action="store", default='/mnt/finkbeinernas/robodata/Josh/GEDI-ORDER/test.tfrecord',
                         help='results directory', dest="deploy_tfrec")

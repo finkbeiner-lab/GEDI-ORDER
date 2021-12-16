@@ -16,8 +16,8 @@ import argparse
 def deploy_main(p, model_id, SAVE_MONTAGE, SAVECSV, CURATION):
     # p = param.Param()
     # SAVE_MONTAGE = False
-    p.which_model = 'vgg16'
-    p.histogram_eq = False
+    p.which_model = 'vgg19'
+    p.histogram_eq = True
     tfrecord = p.data_deploy
     # SAVECSV = True
     # CURATION = True
@@ -37,6 +37,8 @@ def deploy_main(p, model_id, SAVE_MONTAGE, SAVECSV, CURATION):
     import_path = p.base_gedi_dropout
     import_path = p.base_gedi
     import_path = p.base_gedi_dropout_bn
+    # import_path = '/mnt/finkbeinernas/robodata/Josh/GEDI-ORDER/saved_checkpoints/vgg19_2021_12_12_15_01_07.hdf5'  # 1703
+    import_path = '/mnt/finkbeinernas/robodata/Josh/GEDI-ORDER/saved_checkpoints/vgg19_2021_12_09_17_47_19.hdf5'  # H23
 
     if CURATION:
         curation_folder = '/mnt/finkbeinernas/robodata/GalaxyTEMP/BSMachineLearning_TestCuration/batches/curation_results/v_oza/'
@@ -80,7 +82,7 @@ def deploy_main(p, model_id, SAVE_MONTAGE, SAVECSV, CURATION):
         x = pred_layer(x)
         model = tf.keras.models.Model(inputs=base_model.input, outputs=x)
         model.save(p.base_gedi_dropout_bn)
-    elif 1:
+    elif 0:
         # todo: remove bn layers and run
         base_model = tf.keras.models.load_model(import_path, compile=False)
         block5_pool = base_model.get_layer('block5_pool')
@@ -113,7 +115,7 @@ def deploy_main(p, model_id, SAVE_MONTAGE, SAVECSV, CURATION):
         log_dir=os.path.join(p.tb_log_dir, p.which_model),
         update_freq='epoch')
 
-    callbacks = [tb_callback]
+    callbacks = []
 
     # Predict
     res = model.predict(test_gen, steps=test_length // p.BATCH_SIZE, callbacks=callbacks)
@@ -227,8 +229,8 @@ if __name__ == '__main__':
     parser.add_argument('--resdir', action="store", default='/mnt/finkbeinernas/robodata/GEDI_CLUSTER', dest="resdir")
     parser.add_argument('--SAVE_MONTAGE', action="store", default=0, dest="SAVE_MONTAGE")
     parser.add_argument('--SAVECSV', action="store", default='/mnt/finkbeinernas/robodata/GEDI_CLUSTER', dest="SAVECSV")
-    parser.add_argument('--CURATION', action="store", default='/mnt/finkbeinernas/robodata/GEDI_CLUSTER',
-                        dest="CURATION")
+    # parser.add_argument('--CURATION', action="store", default='/mnt/finkbeinernas/robodata/GEDI_CLUSTER',dest="CURATION")
+    parser.add_argument('--CURATION', action="store", default='',dest="CURATION")
 
     args = parser.parse_args()
     # print('args', args)

@@ -26,9 +26,10 @@ def get_batch_hist(imgs):
 
 p = param.Param()
 tfrecord = p.data_deploy
-Dat = Dataspring(tfrecord)
+tfrecord = '/mnt/finkbeinernas/robodata/Josh/GEDI-ORDER/testH23.tfrecord'
+Dat = Dataspring(p, tfrecord)
 Dat.datagen_base(istraining=False)
-Chk = Dataspring(tfrecord)
+Chk = Dataspring(p, tfrecord)
 test_length = Chk.count_data().numpy()
 print(test_length)
 del Chk

@@ -18,7 +18,7 @@ class Param:
         if param_dict is None:
             self.which_model = 'vgg19'  # vgg16, vgg19, resnet50
             self.EPOCHS = 1
-            self.learning_rate = 1e-6  # 3e-4
+            self.learning_rate = 1e-5  # 3e-4
             self.BATCH_SIZE = 32
             self.optimizer = 'adam'  # sgd, adam, adamw
             self.momentum = 0.9
@@ -153,7 +153,8 @@ class Param:
 
         # self.data_deploy=self.data_val
         self.save_csv_deploy = ''
-        self.data_deploy = os.path.join(self.tfrecord_dir, 'BSMachineLearning_TestCuration_3.tfrecord')
+        # self.data_deploy = os.path.join(self.tfrecord_dir, 'BSMachineLearning_TestCuration_3.tfrecord')
+        self.data_deploy = os.path.join('/mnt/finkbeinernas/robodata/Josh/GEDI-ORDER/testH23.tfrecord')
         # self.data_deploy = self.data_retrain
 
         # self.max_gedi = 16117. # max value of training set
