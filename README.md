@@ -85,7 +85,7 @@ python ../main/train.py --datadir PARENT_DIRECTORY \
 The saliency map or activation map may be seen with gradcam with guided backpropagation. The gradcam script is written in 
 tensorflow 1.x and uses compat mode with tensorflow 2.x. Gradcam takes either a tfrecord or image directory. 
 
-Run 
+Run gradcam: 
 
 python ../activationmap/gradcam.py --im_dir IMAGE_DIRECTORY_TO_RUN_LEAVE_BLANK_IF_USING_TFRECORD \
 --model_path SET_PATH_TO_MODEL \
