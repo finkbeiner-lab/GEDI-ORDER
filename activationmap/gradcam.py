@@ -1,4 +1,5 @@
-"""Activation map with preprocessing option
+"""
+Activation map with preprocessing option
 Set main_fold to None to use tfrecord, set deploy_tfrec to None to run images in gradcam.
 """
 
@@ -23,7 +24,6 @@ import tensorflow as tf
 from preprocessing.datagenerator import Dataspring
 
 __author__ = 'Josh Lamstein'
-__copyright__ == 'Gladstone 2021'
 
 
 def mem(obj, name):
@@ -67,8 +67,8 @@ def batches_from_fold(source_fold, dead_fold, live_fold, batch_size, parser=lamb
         yield tuple(map(np.array, (_imgs, _lbls, _names)))
 
 
-def batches_from_ds(tfrecord):
-    Dat = Dataspring(tfrecord)
+def batches_from_ds(p, tfrecord):
+    Dat = Dataspring(p, tfrecord)
     ds = Dat.datagen_base(istraining=False, count=1)
     for imgs, lbls, files in ds:
         imgs = imgs.numpy()
@@ -157,14 +157,14 @@ def save_batch(g, imgs, lbls, base_path, conf_mat_paths, fnames=None, makepaths=
 
 
 # @profile
-def process_fold(g, source_fold, dead_fold, live_fold, dest_path, conf_mat_paths, batch_size=10, parser=lambda x: x,
+def process_fold(p, g, source_fold, dead_fold, live_fold, dest_path, conf_mat_paths, batch_size=10, parser=lambda x: x,
                  layer_name='block5_conv3', has_labels=True, tfrecord=None):
     pred_df = pd.DataFrame({'filename': [], 'label': [], 'prediction': []})
     if has_labels:
         if source_fold is not None:
             batch_gen = batches_from_fold(source_fold, dead_fold, live_fold, batch_size=batch_size, parser=parser)
         else:
-            batch_gen = batches_from_ds(tfrecord)
+            batch_gen = batches_from_ds(p, tfrecord)
     else:
         batch_gen = batches_from_fold_no_labels(source_fold, dead_fold, live_fold, batch_size=batch_size, parser=parser)
     for imgs, lbls, names in batch_gen:
@@ -191,10 +191,11 @@ def process_fold(g, source_fold, dead_fold, live_fold, dest_path, conf_mat_paths
 
 
 def run_gradcam(main_fold, dest_fold, deploy_tfrec, model_path, layer_name='block5_conv3', imtype='tif'):
+    p = param.Param()
     if main_fold is not None and deploy_tfrec is not None:
         assert 0, 'main fold or deploy_tfrec must be Nan valued (None).'
     guidedbool = True
-    batch_size = 16
+    batch_size = 32
 
     g = Grads(model_path, guidedbool=guidedbool)
     gops = GradOps(vgg_normalize=True)
@@ -219,7 +220,7 @@ def run_gradcam(main_fold, dest_fold, deploy_tfrec, model_path, layer_name='bloc
                     name = subdir.split('/')[-1]
                     cur_source_fold = subdir
                     cur_dest_path = os.path.join(dest_fold, name)
-                    process_fold(g, cur_source_fold, neg_fold, pos_fold, cur_dest_path, conf_mat_paths,
+                    process_fold(p, g, cur_source_fold, neg_fold, pos_fold, cur_dest_path, conf_mat_paths,
                                  batch_size=batch_size,
                                  parser=parser, layer_name=layer_name, has_labels=LABELLED,
                                  tfrecord=deploy_tfrec)
@@ -232,12 +233,12 @@ def run_gradcam(main_fold, dest_fold, deploy_tfrec, model_path, layer_name='bloc
             # livedead = subdir.split('/')[-3]
             cur_dest_path = dest_fold
 
-            process_fold(g, cur_source_fold, neg_fold, pos_fold, cur_dest_path, conf_mat_paths, batch_size=batch_size,
+            process_fold(p, g, cur_source_fold, neg_fold, pos_fold, cur_dest_path, conf_mat_paths, batch_size=batch_size,
                          parser=parser, layer_name=layer_name, has_labels=LABELLED, tfrecord=deploy_tfrec)
     else:
         cur_source_fold = None
 
-        process_fold(g, cur_source_fold, neg_fold, pos_fold, dest_fold, conf_mat_paths, batch_size=batch_size,
+        process_fold(p, g, cur_source_fold, neg_fold, pos_fold, dest_fold, conf_mat_paths, batch_size=batch_size,
                      parser=parser, layer_name=layer_name, has_labels=LABELLED,
                      tfrecord=deploy_tfrec)
     print(f'saved to {dest_fold}')
@@ -251,9 +252,9 @@ if __name__ == '__main__':
                         default=None,
                         help='directory of images to run', dest="im_dir")
     parser.add_argument('--model_path', action="store",
-                        default='/run/media/jlamstein/data/GEDI-ORDER/saved_models/vgg19_2021_11_22_15_00_43.h5',
+                        default='/mnt/finkbeinernas/robodata/Josh/GEDI-ORDER/saved_models/vgg19_2021_12_12_15_01_07.h5',
                         help='path to h5 or hdf5 model', dest="model_path")
-    parser.add_argument('--deploy_tfrec', action="store", default='/run/media/jlamstein/data/GEDI-ORDER/test.tfrecord',
+    parser.add_argument('--deploy_tfrec', action="store", default='/mnt/finkbeinernas/robodata/Josh/GEDI-ORDER/test.tfrecord',
                         help='results directory', dest="deploy_tfrec")
     parser.add_argument('--layer_name', action="store", default='block5_conv3',
                         help='visualize layer', dest="layer_name")

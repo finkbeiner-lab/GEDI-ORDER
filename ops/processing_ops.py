@@ -8,8 +8,8 @@ import tensorflow_addons as tfa
 class Parser:
     """Parse tfrecord"""
 
-    def __init__(self):
-        self.p = param.Param()
+    def __init__(self, p):
+        self.p = p
 
     def tfrec_parse(self, row):
         """
@@ -437,14 +437,14 @@ class Parser:
         cdf_min = cdf[tf.reduce_min(tf.where(tf.greater(cdf, 0)))]
 
         img_shape = tf.shape(image)
-        # print('im shape', image.get_shape())
+        print('im shape', image.get_shape())
         pix_cnt = img_shape[0] * img_shape[1]
         px_map = tf.round(tf.cast(cdf - cdf_min, tf.float32) * 65536. / tf.cast(pix_cnt - 1, tf.float32))
         px_map = tf.cast(px_map, tf.uint16)
-        # print('px map shape', px_map.get_shape())
+        print('px map shape', px_map.get_shape())
 
         eq_hist = tf.expand_dims(tf.gather_nd(px_map, tf.cast(image, tf.int32)), 2)
-        # print('eq hist shape', eq_hist.get_shape())
+        print('eq hist shape', eq_hist.get_shape())
         eq_hist = tf.cast(eq_hist, tf.float32)
         return eq_hist
 

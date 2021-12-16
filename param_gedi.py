@@ -17,10 +17,10 @@ class Param:
     def __init__(self, param_dict=None, parent_dir=None, tfrec_dir=None, res_dir=None):
         if param_dict is None:
             self.which_model = 'vgg19'  # vgg16, vgg19, resnet50
-            self.EPOCHS = 200
-            self.learning_rate = 1e-6  # 3e-4
-            self.BATCH_SIZE = 64
-            self.optimizer = 'sgd'  # sgd, adam
+            self.EPOCHS = 1
+            self.learning_rate = 1e-5  # 3e-4
+            self.BATCH_SIZE = 32
+            self.optimizer = 'adam'  # sgd, adam, adamw
             self.momentum = 0.9
             # Data generator
             self.augmentbool = True
@@ -31,6 +31,10 @@ class Param:
             self.orig_size = (300, 300, 1)  # (230, 230, 3) for catdog tfrecord / (300,300,1) for cells
             self.class_weights = {0: 1., 1: 1.}  # rough ratio  # 2.75 vs 1 for original training dataset
             self.randomcrop = True
+            self.histogram_eq = True
+            self.weight_decay = 1e-5  # for AdamW
+            self.l2_regularize = 0
+            self.regularize = None
 
         else:
             self.which_model = param_dict['model']  # vgg16, vgg19, resnet50
@@ -48,6 +52,10 @@ class Param:
             self.orig_size = param_dict['orig_size']  # (230, 230, 3) for catdog tfrecord / (300,300,1) for cells
             self.class_weights = param_dict['class_weights']  # rough ratio  # 2.75 vs 1 for original training dataset
             self.randomcrop = param_dict['randomcrop']
+            self.histogram_eq = param_dict['histogram_eq']
+            self.weight_decay = param_dict['weight_decay']  # for AdamW
+            self.l2_regularize = param_dict['l2_regularize']
+            self.regularize = param_dict['regularize']
 
         self.training_max_value = 1.0001861
         self.training_min_value = 0
@@ -57,7 +65,7 @@ class Param:
         os_name = platform.node()
         if parent_dir is None:
             self.parent_dir = {'hobbes': '/mnt/finkbeinernas/robodata/Josh/GEDI-ORDER',
-                               'calvin': '/mnt/finkbeinernas/robodata/Josh/GEDI-ORDER',
+                               'calvin': '/mnt/finkbeinerlab/robodata/Josh/GEDI-ORDER',
                                'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/Josh/GEDI-ORDER',
                                'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/Josh/GEDI-ORDER'}[
                 os_name]
@@ -65,7 +73,7 @@ class Param:
             self.parent_dir = parent_dir
         if tfrec_dir is None:
             self.tfrec_dir = {
-                'hobbes': '/run/media/jlamstein/data/gedi/transfer/tfrecs',
+                'hobbes': '/mnt/finkbeinernas/robodata/GEDI_CLUSTER/GEDI_DATA',
                 'calvin': '/run/media/jlamstein/data/gedi/transfer/tfrecs',
                 'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/GEDI_DATA/',
                 'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/GEDI_DATA/'
@@ -81,7 +89,7 @@ class Param:
                 os_name]
         else:
             self.res_dir = res_dir
-        self.base_gedi = os.path.join(self.res_dir, 'tf_to_k_v2.h5')
+        self.base_gedi = os.path.join(self.res_dir, 'gedicnn.h5')
         self.base_gedi_dropout = os.path.join(self.res_dir, 'base_gedi_dropout2.h5')
         self.base_gedi_dropout_bn = os.path.join(self.res_dir, 'base_gedi_dropout_bn.h5')
 
@@ -145,7 +153,8 @@ class Param:
 
         # self.data_deploy=self.data_val
         self.save_csv_deploy = ''
-        self.data_deploy = os.path.join(self.tfrecord_dir, 'BSMachineLearning_TestCuration_5.tfrecord')
+        # self.data_deploy = os.path.join(self.tfrecord_dir, 'BSMachineLearning_TestCuration_3.tfrecord')
+        self.data_deploy = os.path.join('/mnt/finkbeinernas/robodata/Josh/GEDI-ORDER/testH23.tfrecord')
         # self.data_deploy = self.data_retrain
 
         # self.max_gedi = 16117. # max value of training set
@@ -187,7 +196,11 @@ class Param:
             'batch_size': self.BATCH_SIZE,
             'shuffle_size': self.shuffle_buffer_size,
             'epochs': self.EPOCHS,
-            'randomcrop': self.randomcrop
+            'randomcrop': self.randomcrop,
+            'histogram_eq': self.histogram_eq,
+            'l2_regularize': self.l2_regularize,
+            'regularize': self.regularize,
+            'weight_decay': self.weight_decay
         }
 
         self.VGG_MEAN = [103.939, 116.779, 123.68]

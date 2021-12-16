@@ -16,6 +16,8 @@ import argparse
 def deploy_main(p, model_id, SAVE_MONTAGE, SAVECSV, CURATION):
     # p = param.Param()
     # SAVE_MONTAGE = False
+    p.which_model = 'vgg19'
+    p.histogram_eq = True
     tfrecord = p.data_deploy
     # SAVECSV = True
     # CURATION = True
@@ -33,32 +35,35 @@ def deploy_main(p, model_id, SAVE_MONTAGE, SAVECSV, CURATION):
     # import_path = os.path.join(p.retrain_models_dir, "{}.h5".format(model_id))
     # import_path = os.path.join(p.ckpt_dir, "{}.hdf5".format(model_id))
     import_path = p.base_gedi_dropout
-    # import_path = p.base_gedi_dropout_bn
+    import_path = p.base_gedi
+    import_path = p.base_gedi_dropout_bn
+    # import_path = '/mnt/finkbeinernas/robodata/Josh/GEDI-ORDER/saved_checkpoints/vgg19_2021_12_12_15_01_07.hdf5'  # 1703
+    import_path = '/mnt/finkbeinernas/robodata/Josh/GEDI-ORDER/saved_checkpoints/vgg19_2021_12_09_17_47_19.hdf5'  # H23
 
     if CURATION:
-        curation_folder = '/mnt/finkbeinerlab/robodata/GalaxyTEMP/BSMachineLearning_TestCuration/batches/curation_results/v_oza/'
+        curation_folder = '/mnt/finkbeinernas/robodata/GalaxyTEMP/BSMachineLearning_TestCuration/batches/curation_results/v_oza/'
         # Get results from original cnn in csv format
-        orig_cnn_folder = '/mnt/finkbeinerlab/robodata/GalaxyTEMP/BSMachineLearning_TestCuration/batches/curation_results/'
+        orig_cnn_folder = '/mnt/finkbeinernas/robodata/GalaxyTEMP/BSMachineLearning_TestCuration/batches/curation_results/'
         # df = pd.read_csv(os.path.join(curation_folder, 'Batch1_CurationData_29.3761.csv'))
         # df = pd.read_csv(os.path.join(curation_folder, 'Batch1_CurationData_VO_15.234.csv'))
         # df = pd.read_csv(os.path.join(curation_folder, 'Batch2_CurationData_VO_9.2609.csv'))
-        # df = pd.read_csv(os.path.join(curation_folder, 'Batch3_CurationData_VO_11.5307.csv'))
+        df = pd.read_csv(os.path.join(curation_folder, 'Batch3_CurationData_VO_11.5307.csv'))
         # df = pd.read_csv(os.path.join(curation_folder, 'Batch4_CurationData_VO_140.0766.csv'))
-        df = pd.read_csv(os.path.join(curation_folder, 'Batch5_CurationData_VO_10.4167.csv'))
-        orig = pd.read_csv(os.path.join(orig_cnn_folder, 'batch5_gedicnn.csv'))
+        # df = pd.read_csv(os.path.join(curation_folder, 'Batch5_CurationData_VO_10.4167.csv'))
+        orig = pd.read_csv(os.path.join(orig_cnn_folder, 'batch3_gedicnn.csv'))
 
     save_res = os.path.join(p.res_csv_deploy, tfrecord.split('/')[-1].split('.')[0] + '.csv')  # save results
     # Plops = plotops.Plotty(model_id)
 
     # Count samples in tfrecord
-    Chk = pipe.Dataspring(tfrecord, False)
+    Chk = pipe.Dataspring(p, tfrecord, False)
     test_length = Chk.count_data().numpy()
     del Chk
-    DatTest = pipe.Dataspring(tfrecord, True)
+    DatTest = pipe.Dataspring(p, tfrecord, True)
     test_ds = DatTest.datagen_base(istraining=False)
     test_gen = DatTest.generator()
 
-    DatView = pipe.Dataspring(tfrecord)
+    DatView = pipe.Dataspring(p, tfrecord)
     view_ds = DatView.datagen_base(istraining=False)
 
     # Load model
@@ -77,7 +82,7 @@ def deploy_main(p, model_id, SAVE_MONTAGE, SAVECSV, CURATION):
         x = pred_layer(x)
         model = tf.keras.models.Model(inputs=base_model.input, outputs=x)
         model.save(p.base_gedi_dropout_bn)
-    elif 1:
+    elif 0:
         # todo: remove bn layers and run
         base_model = tf.keras.models.load_model(import_path, compile=False)
         block5_pool = base_model.get_layer('block5_pool')
@@ -110,7 +115,7 @@ def deploy_main(p, model_id, SAVE_MONTAGE, SAVECSV, CURATION):
         log_dir=os.path.join(p.tb_log_dir, p.which_model),
         update_freq='epoch')
 
-    callbacks = [tb_callback]
+    callbacks = []
 
     # Predict
     res = model.predict(test_gen, steps=test_length // p.BATCH_SIZE, callbacks=callbacks)
@@ -217,14 +222,15 @@ if __name__ == '__main__':
     print('Deploying GEDI model...')
     parser = argparse.ArgumentParser(description='Deploy GEDICNN model')
     parser.add_argument('--parent', action="store",
-                        default='/mnt/data/GEDI-ORDER',
+                        default='/run/media/jlamstein/data/GEDI-ORDER',
                         dest='parent')
-    parser.add_argument('--tfrecdir', action="store", default='/mnt/data/gedi/transfer/tfrecs', dest="tfrecdir")
-    parser.add_argument('--resdir', action="store", default='/mnt/finkbeinerlab/robodata/GEDI_CLUSTER', dest="resdir")
+    parser.add_argument('--tfrecdir', action="store", default='/run/media/jlamstein/data/gedi/transfer/tfrecs',
+                        dest="tfrecdir")
+    parser.add_argument('--resdir', action="store", default='/mnt/finkbeinernas/robodata/GEDI_CLUSTER', dest="resdir")
     parser.add_argument('--SAVE_MONTAGE', action="store", default=0, dest="SAVE_MONTAGE")
-    parser.add_argument('--SAVECSV', action="store", default='/mnt/finkbeinerlab/robodata/GEDI_CLUSTER', dest="SAVECSV")
-    parser.add_argument('--CURATION', action="store", default='/mnt/finkbeinerlab/robodata/GEDI_CLUSTER',
-                        dest="CURATION")
+    parser.add_argument('--SAVECSV', action="store", default='/mnt/finkbeinernas/robodata/GEDI_CLUSTER', dest="SAVECSV")
+    # parser.add_argument('--CURATION', action="store", default='/mnt/finkbeinernas/robodata/GEDI_CLUSTER',dest="CURATION")
+    parser.add_argument('--CURATION', action="store", default='',dest="CURATION")
 
     args = parser.parse_args()
     # print('args', args)

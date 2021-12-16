@@ -18,6 +18,7 @@ from preprocessing.create_tfrecs_from_lst import Record
 import pyfiglet
 from glob import glob
 import random
+import tensorflow_addons as tfa
 
 __author__ = 'Josh Lamstein'
 __copyright__ = 'Gladstone Institutes 2020'
@@ -39,7 +40,7 @@ class Train:
 
     def run(self, pos_dirs, neg_dirs, balance_method='cutoff'):
         assert isinstance(pos_dirs, list), 'pos_dirs must be list'
-        if self.preprocess_tfrecs:
+        if self.preprocess_tfrecs or not os.path.exists(os.path.join(self.parent_dir, 'test.tfrecord')):
             self.generate_tfrecs(pos_dirs, neg_dirs, balance_method)
         else:
             assert os.path.exists(os.path.join(self.parent_dir, 'train.tfrecord')), 'set preprocess_tfrecs to true'
@@ -89,6 +90,7 @@ class Train:
     def train(self):
 
         print('Running...')
+        tf.keras.backend.clear_session()
         # Setup filepaths and csv to log info about training model
         make_directories(self.p)
         tfrec_dir = self.parent_dir
@@ -123,19 +125,19 @@ class Train:
                     'im_shape': self.p.target_size,
                     'random_crop': self.p.randomcrop}
         # Get length of tfrecords
-        Chk = pipe.Dataspring(data_train)
+        Chk = pipe.Dataspring(self.p, data_train)
         train_length = Chk.count_data().numpy()
         del Chk
-        Chk = pipe.Dataspring(data_val)
+        Chk = pipe.Dataspring(self.p, data_val)
         val_length = Chk.count_data().numpy()
         del Chk
-        Chk = pipe.Dataspring(data_test)
+        Chk = pipe.Dataspring(self.p, data_test)
         test_length = Chk.count_data().numpy()
         del Chk
-        DatTrain = pipe.Dataspring(data_train)
-        DatVal = pipe.Dataspring(data_val)
-        DatTest = pipe.Dataspring(data_test)
-        DatTest2 = pipe.Dataspring(data_test)
+        DatTrain = pipe.Dataspring(self.p, data_train)
+        DatVal = pipe.Dataspring(self.p, data_val)
+        DatTest = pipe.Dataspring(self.p, data_test)
+        DatTest2 = pipe.Dataspring(self.p, data_test)
 
         train_ds = DatTrain.datagen_base(istraining=True)
         val_ds = DatVal.datagen_base(istraining=False)
@@ -160,7 +162,7 @@ class Train:
         #
         # plt.show()
 
-        net = CNN()
+        net = CNN(self.p)
         if self.p.which_model == 'vgg16':
             model = net.vgg16(imsize=self.p.target_size)
         elif self.p.which_model == 'vgg19':
@@ -179,7 +181,7 @@ class Train:
                                                          save_best_only=True, mode='max')
 
         cp_early = tf.keras.callbacks.EarlyStopping(
-            monitor='loss', min_delta=0, patience=3, verbose=0,
+            monitor='val_loss', min_delta=0, patience=3, verbose=0,
             mode='auto', baseline=None, restore_best_weights=False
         )
 
@@ -219,8 +221,11 @@ class Train:
                 test_results = np.where(res > 0, 1, 0)
                 labels = nplbls
             test_acc = np.array(test_results) == np.array(labels)
-            test_acc_batch_avg = np.mean(test_acc)
-            test_accuracy_lst.append(test_acc)
+            if isinstance(test_acc, bool):
+                test_acc = [test_acc]
+            else:
+                test_acc = list(test_acc)
+            test_accuracy_lst.extend(test_acc)
 
         test_accuracy = np.mean(test_accuracy_lst)
         print('test accuracy', test_accuracy)
@@ -229,6 +234,9 @@ class Train:
         run_info['test_accuracy'] = test_accuracy
         run_info['train_loss'] = train_loss[-1]
         run_info['val_loss'] = val_loss[-1]
+        if self.use_neptune:
+            self.p.hyperparams['test_acc'] = test_accuracy
+            self.nep['parameters'] = self.p.hyperparams
 
         run_df = pd.DataFrame([run_info])
         run_df.to_csv(export_info_path)
@@ -240,10 +248,13 @@ class Train:
     def retrain(self, base_model_file=None):
 
         print('Running...')
+        tf.keras.backend.clear_session()
         # Setup filepaths and csv to log info about training model
         make_directories(self.p)
         if base_model_file is None:  # load base model to initialize weights
-            base_model_file = self.p.base_gedi_dropout_bn
+            base_model_file = self.p.base_gedi
+            self.p.which_model = 'vgg16'
+            self.p.histogram_eq = False
 
         tfrec_dir = self.parent_dir
         data_retrain = os.path.join(tfrec_dir, 'train.tfrecord')
@@ -253,6 +264,7 @@ class Train:
         export_path = os.path.join(self.p.retrain_models_dir, '{}_{}.h5'.format(self.p.which_model, timestamp))
         export_info_path = os.path.join(self.p.retrain_run_info_dir, '{}_{}.csv'.format(self.p.which_model, timestamp))
         save_checkpoint_path = os.path.join(self.p.retrain_ckpt_dir, '{}_{}.hdf5'.format(self.p.which_model, timestamp))
+        self.p.hyperparams['model'] = self.p.which_model
         self.p.hyperparams['timestamp'] = timestamp
         self.p.hyperparams['model_timestamp'] = self.p.which_model + '_' + timestamp
         self.p.hyperparams['retraining'] = base_model_file
@@ -273,19 +285,19 @@ class Train:
                     'im_shape': self.p.target_size,
                     'random_crop': self.p.randomcrop}
         # Get length of tfrecords
-        Chk = pipe.Dataspring(data_retrain)
+        Chk = pipe.Dataspring(self.p, data_retrain)
         train_length = Chk.count_data().numpy()
         del Chk
-        Chk = pipe.Dataspring(data_reval)
+        Chk = pipe.Dataspring(self.p, data_reval)
         val_length = Chk.count_data().numpy()
         del Chk
-        Chk = pipe.Dataspring(data_retest)
+        Chk = pipe.Dataspring(self.p, data_retest)
         test_length = Chk.count_data().numpy()
         del Chk
-        DatTrain = pipe.Dataspring(data_retrain)
-        DatVal = pipe.Dataspring(data_reval)
-        DatTest = pipe.Dataspring(data_retest)
-        DatTest2 = pipe.Dataspring(data_retest)
+        DatTrain = pipe.Dataspring(self.p, data_retrain)
+        DatVal = pipe.Dataspring(self.p, data_reval)
+        DatTest = pipe.Dataspring(self.p, data_retest)
+        DatTest2 = pipe.Dataspring(self.p, data_retest)
 
         train_ds = DatTrain.datagen_base(istraining=True)
         val_ds = DatVal.datagen_base(istraining=False)
@@ -320,37 +332,40 @@ class Train:
         # represent every image by mean intensity
         # learn affine transformation, scale and intercept, on average transform human to rat
 
-        glorot = tf.initializers.GlorotUniform()
-        # bn1 = tf.keras.layers.BatchNormalization(momentum=0.9, name='bn_1')
-        # bn2 = tf.keras.layers.BatchNormalization(momentum=0.9, name='bn_2')
-        # fc1_small = tf.keras.layers.Dense(64, name='fc1', activation='relu', kernel_initializer='TruncatedNormal',
-        #                    bias_initializer='TruncatedNormal')
-        # fc2_small = tf.keras.layers.Dense(16, name='fc2', activation='relu', kernel_initializer='TruncatedNormal',
-        #                    bias_initializer='TruncatedNormal')
-        # prediction = tf.keras.layers.Dense(p.output_size, activation='softmax', name='output')
-        #
+        glorot = tf.initializers.GlorotUniform
+        trunc = tf.initializers.TruncatedNormal
+
+        bn1 = tf.keras.layers.BatchNormalization(momentum=0.9, name='bn_1')
+        bn2 = tf.keras.layers.BatchNormalization(momentum=0.9, name='bn_2')
+        fc1_small = tf.keras.layers.Dense(256, name='fc1', activation='relu', kernel_initializer=trunc(),
+                                          bias_initializer=trunc())
+        fc2_small = tf.keras.layers.Dense(256, name='fc2', activation='relu', kernel_initializer=trunc(),
+                                          bias_initializer=trunc())
+        prediction = tf.keras.layers.Dense(self.p.output_size, activation='softmax', name='output')
+
         # drop1 = base_model.get_layer('dropout_1')
         # drop2 = base_model.get_layer('dropout_2')
-        # block5_pool = base_model.get_layer('block5_pool')
-        # flatten = tf.keras.layers.Flatten()
+        block5_pool = base_model.get_layer('block5_pool')
+        flatten = tf.keras.layers.Flatten()
+
         #
-        # #
         # fc1 = base_model.get_layer('fc1')
         # fc2 = base_model.get_layer('fc2')
         # pred_layer = base_model.get_layer('predictions')
-        #
-        # x = flatten(block5_pool.output)
-        # x = fc1_small(x)
+
+        x = flatten(block5_pool.output)
+        x = fc1_small(x)
         # x = drop1(x)
-        # x = fc2_small(x)
+        x = fc2_small(x)
         # x = drop2(x)
-        # x = prediction(x)
-        # model = tf.keras.models.Model(inputs=base_model.input, outputs=x)
-        model = base_model
+        x = prediction(x)
+        model = tf.keras.models.Model(inputs=base_model.input, outputs=x)
+
+        # model = base_model
         for lyr in model.layers:
 
-            if 'block5' in lyr.name or 'fc1' in lyr.name or 'fc2' in lyr.name or 'dropout' in lyr.name:
-                _weights = lyr.get_weights()
+            if 'block3' in lyr.name or 'block4' in lyr.name or 'block5' in lyr.name or 'fc1' in lyr.name or 'fc2' in lyr.name or 'dropout' in lyr.name:
+                # _weights = lyr.get_weights()
                 # if len(_weights) > 0:
                 #     print('resetting weights:', lyr.name)
                 #     W = np.shape(_weights[0])
@@ -359,7 +374,15 @@ class Train:
                 lyr.trainable = True
             else:
                 lyr.trainable = False
-        model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=self.p.learning_rate),
+        if self.p.optimizer == 'adam':
+            optimizer = tf.keras.optimizers.Adam(learning_rate=self.p.learning_rate)
+        elif self.p.optimizer == 'sgd':
+            optimizer = tf.keras.optimizers.SGD(learning_rate=self.p.learning_rate, momentum=self.p.momentum,
+                                                nesterov=True)
+        elif self.p.optimizer == 'adamw':
+            optimizer = tfa.optimizers.AdamW(learning_rate=self.p.learning_rate, weight_decay=self.p.weight_decay)
+
+        model.compile(optimizer=optimizer,
                       loss='binary_crossentropy',
                       metrics=['accuracy'])
         model.summary()
@@ -412,8 +435,11 @@ class Train:
                 test_results = np.where(res > 0, 1, 0)
                 labels = nplbls
             test_acc = np.array(test_results) == np.array(labels)
-            test_acc_batch_avg = np.mean(test_acc)
-            test_accuracy_lst.append(test_acc)
+            if isinstance(test_acc, bool):
+                test_acc = [test_acc]
+            else:
+                test_acc = list(test_acc)
+            test_accuracy_lst.extend(test_acc)
 
         test_accuracy = np.mean(test_accuracy_lst)
         print('test accuracy', test_accuracy)
@@ -436,12 +462,15 @@ if __name__ == '__main__':
     result = pyfiglet.figlet_format("GEDI-CNN", font="slant")
     print(result)
     parser = argparse.ArgumentParser(description='Train binary classifer GEDI-CNN model')
-    positives = ['/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Livecrops_3',
-                 '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Livecrops_2',
-                 '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Livecrops_1']
-    negatives = ['/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Deadcrops_3',
-                 '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Deadcrops_2',
-                 '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Deadcrops_1']
+    # positives = ['/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Livecrops_3',
+    #              '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Livecrops_2',
+    #              '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Livecrops_1']
+    # negatives = ['/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Deadcrops_3',
+    #              '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Deadcrops_2',
+    #              '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Deadcrops_1']
+
+    positives = ['/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-1703/Livecrops_1', '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-1703/Livecrops_2_3']
+    negatives = ['/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-1703/Deadcrops_1', '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-1703/Deadcrops_2_3']
     parser.add_argument('--datadir', action="store",
                         default='/mnt/finkbeinernas/robodata/Josh/GEDI-ORDER',
                         help='data parent directory',
