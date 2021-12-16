@@ -150,6 +150,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Deploy GEDICNN model')
     parser.add_argument('--parent', action="store",
                         default='/run/media/jlamstein/data/GEDI-ORDER',
+                        help='parent directory for Gedi-CNN',
                         dest='parent')
     parser.add_argument('--im_dir', action="store",
                         default='/mnt/finkbeinernas/robodata/JeremyTEMP/GalaxyTEMP/LINCS072017RGEDI-A/Livetraining2',

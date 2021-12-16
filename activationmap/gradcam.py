@@ -1,4 +1,5 @@
-"""Activation map with preprocessing option
+"""
+Activation map with preprocessing option
 Set main_fold to None to use tfrecord, set deploy_tfrec to None to run images in gradcam.
 """
 

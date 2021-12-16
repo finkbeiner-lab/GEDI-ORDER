@@ -27,10 +27,15 @@ In the image below, green is neuron inputted into the GEDI-CNN, blue is weighted
 
 ![Gradcam](/examples/gradcam.png)
 
-## Run GEDI-CNN on Your Data
+
 
 ### Get the Code
 Go to the [GEDI-ORDER github](https://github.com/finkbeiner-lab/GEDI-ORDER) and clone the repo. 
+
+## Next, download the following model weight files from the below links
+The dropbox link is: 
+https://www.dropbox.com/s/4xzfu59cc48lf8y/gedicnn.h5?dl=0
+You will find the model file, gedicnn.h5.
 
 ### Dependencies
 The code is tested in python 3.6 using pip to install packages. Instructions for installing pip may be found [here](https://pip.pypa.io/en/stable/installing/).
@@ -46,8 +51,49 @@ If you're installing without requirements.txt, the notable dependencies are:
 4. pandas
 5. matplotlib
 
-the code has been tested in python  3.6 and 3.7 with tensorflow-gpu 2.0, 2.3, and 2.5. 
+The code has been tested in python 3.6 and 3.7 with tensorflow-gpu 2.0, 2.3, and 2.5. 
 
-### Run the Code 
-_We are currently working to make GEDI-CNN more user-friendly. Stay tuned._
+## Run GEDI-CNN on Your Data
+To run the GEDI-CNN, run deploy.py.
+
+In param.py, set paths for your machine. Ensure that base_gedi pointo your path to the gedicnn.h5 downloaded from dropbox. 
+
+The deploy file takes arguments:
+python ../deploy/deploy.py --parent PARENT_DIRECTORY \
+--im_dir IMAGE_DIRECTORY \
+--model_path PATH_TO_gedicnn.h5_downloaded_from_dropbox \
+--resdir DIRECTOR_TO_STORE_RESULTS \
+--preprocess_tfrecs BOOL_TO_GENERATE_TFRECORDS \
+--use_gedi_cnn BOOL_TRUE_IF_USING_GEDICNN
+
+The deploy script takes a single image directory to run on. The script converts the images into a tfrecord. If that tfrecord has not been generated, 
+set preprocess_tfrecs to True, otherwise, you need not create a tfrecord as it already exists, and sett preprocess_tfrecs to False. 
+
+
+## Finetuning
+If you want to retrain the GEDICNN, run the train file. 
+
+python ../main/train.py --datadir PARENT_DIRECTORY \
+--pos_dir LIST_OF_DIRECTORIES_WITH_IMAGE_CLASS_1 \
+--neg_dir LIST_OF_DIRECTORIES_WITH_IMAGE_CLASS_0 \
+--balance_method OPTIONAL_METHOD_TO_CUTOFF_OR_MULTIPY_SAMPLES_IN_UNBALANCED_DATA \
+--use_neptune BOOL_TO_USE_NEPTUNE_AI_FOR_LOGGING \
+--retrain TRUE_TO_REUSE_GEDI_WEIGHTS_FOR_FINETUNING
+
+## Run Gradcam
+
+The saliency map or activation map may be seen with gradcam with guided backpropagation. The gradcam script is written in 
+tensorflow 1.x and uses compat mode with tensorflow 2.x. Gradcam takes either a tfrecord or image directory. 
+
+Run 
+
+python ../activationmap/gradcam.py --im_dir IMAGE_DIRECTORY_TO_RUN_LEAVE_BLANK_IF_USING_TFRECORD \
+--model_path SET_PATH_TO_MODEL \
+--deploy_tfrec PATH_TO_TFRECORD_IF_USING_IMAGE_DIR_LEAVE_BLANK \
+--layer_name LAYER_NAME_OF_MODEL_TO_VISUALIZE_DEFAULT_IS_block5_conv3_FOR_VGG16 \
+--resdir DIRECTORY_FOR_YOUR_RESULTS \
+--imtype SUFFIX_FOR_IMAGE_TYPE (tif, jpg, png)
+
+If using the gedicnn, set the model path to the gedicnn.h5. 
+
 

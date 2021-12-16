@@ -89,7 +89,7 @@ class Param:
                 os_name]
         else:
             self.res_dir = res_dir
-        self.base_gedi = os.path.join(self.res_dir, 'tf_to_k_v2.h5')
+        self.base_gedi = os.path.join(self.res_dir, 'gedicnn.h5')
         self.base_gedi_dropout = os.path.join(self.res_dir, 'base_gedi_dropout2.h5')
         self.base_gedi_dropout_bn = os.path.join(self.res_dir, 'base_gedi_dropout_bn.h5')
 

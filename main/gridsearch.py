@@ -1,5 +1,5 @@
 """Loop through hyperparameters and train"""
-from main.train_from_file import Train
+from main.train import Train
 import argparse
 import pyfiglet
 
