@@ -149,14 +149,14 @@ if __name__ == '__main__':
     print(result)
     parser = argparse.ArgumentParser(description='Deploy GEDICNN model')
     parser.add_argument('--parent', action="store",
-                        default='/run/media/jlamstein/data/GEDI-ORDER',
+                        default='/mnt/linsley/Soothsayer',
                         help='parent directory for Gedi-CNN',
                         dest='parent')
     parser.add_argument('--im_dir', action="store",
-                        default='/mnt/finkbeinernas/robodata/JeremyTEMP/GalaxyTEMP/LINCS072017RGEDI-A/Livetraining2',
+                        default='/mnt/linsley/Shijie/Galaxy-temp-NSCLC_ML/GXYTMP-2022-0429-NSCLC-H23-10uM/SOOTH_DATA/Live',
                         help='directory of images to run', dest="im_dir")
     parser.add_argument('--model_path', action="store",
-                        default='/mnt/finkbeinernas/robodata/GEDI_CLUSTER/base_gedi.h5',
+                        default='/mnt/linsley/Soothsayer/saved_models/vgg19_2022_05_04_19_59_30.h5',
                         help='path to h5 or hdf5 model', dest="model_path")
     parser.add_argument('--resdir', action="store", default='/mnt/finkbeinernas/robodata/GEDI_CLUSTER',
                         help='results directory', dest="resdir")

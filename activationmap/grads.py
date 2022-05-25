@@ -343,7 +343,7 @@ class Grads:
             img -= np.amin(img)
             img /= np.amax(img)
             img *= 255.
-            img = img.astype(dtype=np.int8)
+            img = np.uint8(img)
             return img
 
         grads_0, preds = self.guided_gradcam_gray(imgs, layer_name, class_id=0, ret_preds=True)
@@ -353,9 +353,9 @@ class Grads:
             grad_pair = [grad_0, grad_1]
             # if np.argmax(lbl) == 1:
             #     grad_pair = grad_pair[::-1]
-
             show_group = [np.sum(img, axis=-1)] + grad_pair
             show_group = list(map(tif_format, show_group))
+            show_group[0] = np.uint8(show_group[0] * 2/3)
 
             res = [np.dstack(show_group)]
             if self.verbose:

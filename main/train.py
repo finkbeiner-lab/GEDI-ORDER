@@ -484,7 +484,7 @@ if __name__ == '__main__':
     parser.add_argument('--balance_method', action="store", default='multiply',
                         help='method to handle unbalanced data: cutoff, multiply or none', dest="balance_method")
     parser.add_argument('--preprocess_tfrecs', type=int, action="store", default=False,
-                        help='generate tfrecords, necessary for new datasets, if already generate set to false',
+                        help='generate tfrecords, necessary for new datasets, if already generated set to false',
                         dest="preprocess_tfrecs")
     parser.add_argument('--use_neptune', type=int, action="store", default=True,
                         help='Save run info to neptune ai',

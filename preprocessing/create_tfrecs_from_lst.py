@@ -50,6 +50,7 @@ class Record:
         self.impaths_live = images_lst_live
         self.impaths_dead = images_lst_dead
         self.balance_method = balance_method
+        assert balance_method=='cutoff' or balance_method=='multiply' or balance_method is None, 'invalid entry for balance method'
         if self.balance_method == 'multiply':
             trainlive, vallive, testlive, traindead, valdead, testdead = self.multiply_dataset(split)
         elif self.balance_method == 'cutoff':

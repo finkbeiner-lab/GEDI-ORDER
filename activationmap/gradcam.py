@@ -252,13 +252,13 @@ if __name__ == '__main__':
                         default=None,
                         help='directory of images to run', dest="im_dir")
     parser.add_argument('--model_path', action="store",
-                        default='/mnt/finkbeinernas/robodata/Josh/GEDI-ORDER/saved_models/vgg19_2021_12_12_15_01_07.h5',
+                        default='/mnt/linsley/Soothsayer/saved_models/vgg19_2022_05_04_19_59_30.h5',
                         help='path to h5 or hdf5 model', dest="model_path")
-    parser.add_argument('--deploy_tfrec', action="store", default='/mnt/finkbeinernas/robodata/Josh/GEDI-ORDER/test.tfrecord',
+    parser.add_argument('--deploy_tfrec', action="store", default='/mnt/linsley/Soothsayer/test.tfrecord',
                         help='results directory', dest="deploy_tfrec")
     parser.add_argument('--layer_name', action="store", default='block5_conv3',
                         help='visualize layer', dest="layer_name")
-    parser.add_argument('--resdir', action="store", default='/mnt/finkbeinernas/robodata/GEDI_CLUSTER/Gradcam/test',
+    parser.add_argument('--resdir', action="store", default='/mnt/linsley/Soothsayer/Gradcam/Sooth',
                         help='results directory', dest="resdir")
     parser.add_argument('--imtype', action="store", default='tif',
                         help='suffix for image, tif, jpg, png', dest="imtype")
