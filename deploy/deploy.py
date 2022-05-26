@@ -54,7 +54,7 @@ class Deploy:
         if deploy_gedi_cnn:
             p.histogram_eq = False
             p.which_model = 'vgg16'
-            import_path = p.base_gedi
+            import_path = model_path
         else:
             import_path = model_path
         print(f'Running model: {import_path}')
@@ -149,18 +149,18 @@ if __name__ == '__main__':
     print(result)
     parser = argparse.ArgumentParser(description='Deploy GEDICNN model')
     parser.add_argument('--parent', action="store",
-                        default='/run/media/jlamstein/data/GEDI-ORDER',
+                        default='/Users/swang/FinkbeinerLab/GEDI-CNN',
                         help='parent directory for Gedi-CNN',
                         dest='parent')
     parser.add_argument('--im_dir', action="store",
-                        default='/mnt/finkbeinernas/robodata/JeremyTEMP/GalaxyTEMP/LINCS072017RGEDI-A/Livetraining2',
+                        default='/Volumes/Finkbeiner-Linsley/Shijie/Galaxy-temp-CRY2tau/GXYTMP-10222021-AAVtau-216-EVall/ObjectCrops',
                         help='directory of images to run', dest="im_dir")
     parser.add_argument('--model_path', action="store",
-                        default='/mnt/finkbeinernas/robodata/GEDI_CLUSTER/base_gedi.h5',
+                        default='/Users/swang/FinkbeinerLab/GEDI-CNN/gedicnn.h5',
                         help='path to h5 or hdf5 model', dest="model_path")
-    parser.add_argument('--resdir', action="store", default='/mnt/finkbeinernas/robodata/GEDI_CLUSTER',
+    parser.add_argument('--resdir', action="store", default='/Users/swang/FinkbeinerLab/GEDI-CNN/DeployResults',
                         help='results directory', dest="resdir")
-    parser.add_argument('--preprocess_tfrecs', type=int, action="store", default=False,
+    parser.add_argument('--preprocess_tfrecs', type=int, action="store", default=True,
                         help='generate tfrecords, necessary for new datasets, if already generate set to false',
                         dest="preprocess_tfrecs")
     parser.add_argument('--use_gedi_cnn', type=int, action="store", default=True,
