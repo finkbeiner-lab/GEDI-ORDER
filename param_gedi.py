@@ -71,15 +71,15 @@ class Param:
                 os_name]
         else:
             self.parent_dir = parent_dir
-        if tfrec_dir is None:
-            self.tfrec_dir = {
-                'hobbes': '/mnt/finkbeinernas/robodata/GEDI_CLUSTER/GEDI_DATA',
-                'calvin': '/run/media/jlamstein/data/gedi/transfer/tfrecs',
-                'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/GEDI_DATA/',
-                'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/GEDI_DATA/'
-            }[os_name]
-        else:
-            self.tfrec_dir = tfrec_dir
+        # if tfrec_dir is None:
+        #     self.tfrec_dir = {
+        #         'hobbes': '/mnt/finkbeinernas/robodata/GEDI_CLUSTER/GEDI_DATA',
+        #         'calvin': '/run/media/jlamstein/data/gedi/transfer/tfrecs',
+        #         'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/GEDI_DATA/',
+        #         'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/GEDI_DATA/'
+        #     }[os_name]
+        # else:
+        #     self.tfrec_dir = tfrec_dir
 
         if res_dir is None:
             self.res_dir = {'hobbes': '/mnt/finkbeinernas/robodata/GEDI_CLUSTER',
@@ -89,7 +89,9 @@ class Param:
                 os_name]
         else:
             self.res_dir = res_dir
-        self.base_gedi = os.path.join(self.res_dir, 'gedicnn.h5')
+            self.tfrec_dir = res_dir
+
+        self.base_gedi = os.path.join(self.res_dir, 'gedicnn.h5') # todo: get rid of this?
         self.base_gedi_dropout = os.path.join(self.res_dir, 'base_gedi_dropout2.h5')
         self.base_gedi_dropout_bn = os.path.join(self.res_dir, 'base_gedi_dropout_bn.h5')
 

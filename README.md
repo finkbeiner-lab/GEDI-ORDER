@@ -56,19 +56,19 @@ The code has been tested in python 3.6 and 3.7 with tensorflow-gpu 2.0, 2.3, and
 ## Run GEDI-CNN on Your Data
 To run the GEDI-CNN, run deploy.py.
 
-In param.py, set paths for your machine. Ensure that base_gedi pointo your path to the gedicnn.h5 downloaded from dropbox. 
+In param_gedi.py, set paths for your machine. 
 
 The deploy file takes arguments:
 python ../deploy/deploy.py --parent PARENT_DIRECTORY \
 --im_dir IMAGE_DIRECTORY \
 --model_path PATH_TO_gedicnn.h5_downloaded_from_dropbox \
---resdir DIRECTOR_TO_STORE_RESULTS \
+--resdir RESULTS_DIRECTORY \
 --preprocess_tfrecs BOOL_TO_GENERATE_TFRECORDS \
 --use_gedi_cnn BOOL_TRUE_IF_USING_GEDICNN
 
-The deploy script takes a single image directory to run on. The script converts the images into a tfrecord. If that tfrecord has not been generated, 
-set preprocess_tfrecs to True, otherwise, you need not create a tfrecord as it already exists, and sett preprocess_tfrecs to False. 
-
+The PARENT_DIRECTORY creates subdirectories for training and model deployment. The IMAGE_DIRECTORY is where all the images are. The script converts the images into a tfrecord. If that tfrecord has not been generated, 
+set preprocess_tfrecs to True, otherwise, you need not create a tfrecord as it already exists, and set preprocess_tfrecs to False. The RESULTS_DIRECTORY stores the predictions from deploying the model. When deploying the GEDI-CNN,
+be sure use_gedi_cnn is set to True.
 
 ## Finetuning
 If you want to retrain the GEDICNN, run the train file. 
