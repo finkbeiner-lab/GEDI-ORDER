@@ -25,9 +25,9 @@ __copyright__ = 'Gladstone Institutes 2020'
 
 
 class Train:
-    def __init__(self, parent_dir, param_dict=None, preprocess_tfrecs=False, use_neptune=True):
+    def __init__(self, parent_dir, tfrec_dir, res_dir, param_dict=None, preprocess_tfrecs=False, use_neptune=True):
         self.parent_dir = parent_dir
-        self.p = param.Param(param_dict=param_dict, parent_dir=self.parent_dir)
+        self.p = param.Param(param_dict=param_dict, parent_dir=self.parent_dir, tfrec_dir=tfrec_dir, res_dir=res_dir)
 
         self.preprocess_tfrecs = preprocess_tfrecs
         self.use_neptune = use_neptune
@@ -475,6 +475,10 @@ if __name__ == '__main__':
                         default='/mnt/finkbeinernas/robodata/Josh/GEDI-ORDER',
                         help='data parent directory',
                         dest='datadir')
+    parser.add_argument('--res_dir', action="store",
+                        default='/mnt/finkbeinernas/robodata/Josh/GEDI-ORDER',
+                        help='data parent directory',
+                        dest='res_dir')
     parser.add_argument('--pos_dir', nargs='+',
                         default=positives,
                         help='directory with positive images', dest="pos_dir")
@@ -495,7 +499,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     print('ARGS:\n', args)
 
-    Tr = Train(parent_dir=args.datadir, param_dict=None, preprocess_tfrecs=args.preprocess_tfrecs,
+    Tr = Train(parent_dir=args.datadir, tfrec_dir=args.res_dir, res_dir=args.res_dir, param_dict=None, preprocess_tfrecs=args.preprocess_tfrecs,
                use_neptune=args.use_neptune)
     if args.retrain:
         print('Retraining on gedi-cnn model...')
