@@ -4,7 +4,7 @@ import argparse
 import pyfiglet
 
 
-def gridsearch(datadir, retrain_bool):
+def gridsearch(datadir, res_dir, retrain_bool):
     param_dict = {'epochs': 200, 'augmentbool': True, 'batch_size': 32, 'min_contrast': 1, 'max_contrast': 1.3,
                   'random_brightness': .2, 'target_size': (224, 224, 3), 'orig_size': (300, 300, 1),
                   'class_weights': {0: 1., 1: 1.}, 'momentum': .9, 'randomcrop': True, 'histogram_eq': True}
@@ -32,7 +32,7 @@ def gridsearch(datadir, retrain_bool):
                                     param_dict['l2_regularize'] = l2
                                     param_dict['weight_decay'] = wd
                                     param_dict['momentum'] = momentum
-                                    Tr = Train(parent_dir=datadir, param_dict=param_dict, preprocess_tfrecs=False,
+                                    Tr = Train(parent_dir=datadir,res_dir=res_dir, param_dict=param_dict, preprocess_tfrecs=False,
                                                use_neptune=True)
                                     if retrain_bool:
                                         Tr.retrain()
@@ -47,9 +47,13 @@ if __name__ == '__main__':
                         default='/mnt/finkbeinernas/robodata/Josh/GEDI-ORDER',
                         help='data parent directory',
                         dest='datadir')
+    parser.add_argument('--res_dir', action="store",
+                        default='/mnt/finkbeinernas/robodata/Josh/GEDI-ORDER',
+                        help='data parent directory',
+                        dest='res_dir')
     parser.add_argument('--retrain', type=int, action="store", default=False,
                         help='Save run info to neptune ai',
                         dest="retrain")
     args = parser.parse_args()
     print('ARGS:\n', args)
-    gridsearch(args.datadir, args.retrain)
+    gridsearch(args.datadir, args.res_dir, args.retrain)

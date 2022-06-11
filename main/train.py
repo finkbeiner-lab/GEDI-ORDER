@@ -25,9 +25,9 @@ __copyright__ = 'Gladstone Institutes 2020'
 
 
 class Train:
-    def __init__(self, parent_dir, tfrec_dir, res_dir, param_dict=None, preprocess_tfrecs=False, use_neptune=True):
+    def __init__(self, parent_dir, res_dir, param_dict=None, preprocess_tfrecs=False, use_neptune=True):
         self.parent_dir = parent_dir
-        self.p = param.Param(param_dict=param_dict, parent_dir=self.parent_dir, tfrec_dir=tfrec_dir, res_dir=res_dir)
+        self.p = param.Param(param_dict=param_dict, parent_dir=self.parent_dir, tfrec_dir=res_dir, res_dir=res_dir)
 
         self.preprocess_tfrecs = preprocess_tfrecs
         self.use_neptune = use_neptune
