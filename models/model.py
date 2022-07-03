@@ -302,6 +302,39 @@ class CNN:
                           metrics=['accuracy'])
         return raw_model
 
+    def vgg19_y(self, imsize):
+        input = layers.Input(shape=(imsize[0], imsize[1], imsize[2]), name='vgg19_input')
+        base_model = tf.keras.applications.VGG19(include_top=False, weights='imagenet', input_tensor=input,
+                                                 input_shape=(imsize[0], imsize[1], imsize[2]))
+        # base_model.trainable = False
+        flat = layers.Flatten()
+        global_average_layer = tf.keras.layers.GlobalAveragePooling2D()
+
+        fc1 = layers.Dense(16, activation='relu', name='dense_1')
+        fc2 = layers.Dense(16, activation='relu', name='dense_2')
+        fc3 = layers.Dense(128, activation='softmax', name='dense_3')
+        prediction = layers.Dense(self.p.output_size, activation='softmax', name='output')
+        for layr in base_model.layers:
+            if ('block5' in layr.name):
+
+                layr.trainable = True
+            else:
+                layr.trainable = False
+            print(layr.trainable)
+        raw_model = tf.keras.Sequential([
+            base_model,
+            global_average_layer,
+            fc1,
+            fc2,
+            prediction
+        ])
+        base_model.summary()
+
+        raw_model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=self.p.learning_rate),
+                          loss='binary_crossentropy',
+                          metrics=['accuracy'])
+        return raw_model
+
     def resnet50(self, imsize):
         base_model = tf.keras.applications.ResNet50(include_top=False, weights='imagenet',
                                                     input_shape=(imsize[0], imsize[1], imsize[2]))
