@@ -8,9 +8,9 @@ import param_gedi as param
 
 
 class GradOps:
-    def __init__(self, vgg_normalize=True):
+    def __init__(self,p,  vgg_normalize=True):
         os_type = platform.system()
-        self.p = param.Param()
+        self.p = p
         if os_type == 'Darwin':
             os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'  # Mac has KMP issues
 

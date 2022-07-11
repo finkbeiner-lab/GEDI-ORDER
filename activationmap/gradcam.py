@@ -191,14 +191,14 @@ def process_fold(p, g, source_fold, dead_fold, live_fold, dest_path, conf_mat_pa
 
 
 def run_gradcam(main_fold, dest_fold, deploy_tfrec, model_path, layer_name='block5_conv3', imtype='tif'):
-    p = param.Param()
+    p = param.Param(parent_dir=dest_fold, res_dir=dest_fold)
     if main_fold is not None and deploy_tfrec is not None:
         assert 0, 'main fold or deploy_tfrec must be Nan valued (None).'
     guidedbool = True
     batch_size = 32
 
     g = Grads(model_path, guidedbool=guidedbool)
-    gops = GradOps(vgg_normalize=True)
+    gops = GradOps(p, vgg_normalize=True)
 
     pos_fold, neg_fold = None, None
 

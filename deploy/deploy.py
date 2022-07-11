@@ -25,14 +25,14 @@ class Deploy:
 
         self.preprocess_tfrecs = preprocess_tfrecs
 
-    def run(self, p, im_dir, model_path=None, use_gedi_cnn=True):
+    def run(self, p, im_dir, model_path=None, use_gedi_cnn=True, get_accuracy=False):
         deploypath = os.path.join(self.parent_dir, 'deploy.tfrecord')
         if self.preprocess_tfrecs:
             self.generate_tfrecs(im_dir)
         else:
             assert os.path.exists(deploypath), 'set preprocess_tfrecs to true'
 
-        self.deploy_main(p, deploypath, model_path, deploy_gedi_cnn=use_gedi_cnn)
+        self.deploy_main(p, deploypath, model_path, deploy_gedi_cnn=use_gedi_cnn, get_accuracy=get_accuracy)
 
     def generate_tfrecs(self, im_dir):
         """
@@ -46,7 +46,7 @@ class Deploy:
         Rec.tiff2record(savedeploy, Rec.impaths, Rec.lbls)
         print(f'Saved tfrecords to {tfrec_dir}')
 
-    def deploy_main(self, p, deploy_tfrec, model_path, deploy_gedi_cnn):
+    def deploy_main(self, p, deploy_tfrec, model_path, deploy_gedi_cnn, get_accuracy):
         # p = param.Param()
         res_dict = {'filepath': [], 'prediction': [], 'label': []}
 
@@ -141,7 +141,10 @@ class Deploy:
         print('Result csv saved to {}'.format(save_res))
 
         test_accuracy = np.mean(test_accuracy_lst)
-        print(f'Percentage of samples that equal {self.default_lbl}:', test_accuracy)
+        if get_accuracy:
+            print(f'Accuracy (DEPLOY DATA MUST HAVE LABELS): {test_accuracy}')
+        else:
+            print(f'ASSUMING DEPLOY DATA NOT LABELED (All labels are 0):\nPercentage of samples that equal {self.default_lbl}:', test_accuracy)
 
 
 if __name__ == '__main__':
@@ -166,10 +169,12 @@ if __name__ == '__main__':
     parser.add_argument('--use_gedi_cnn', type=int, action="store", default=True,
                         help='generate tfrecords, necessary for new datasets, if already generate set to false',
                         dest="use_gedi_cnn")
-
+    parser.add_argument('--get_accuracy', type=int, action="store", default=True,
+                        help='get accuracy if data is labeled',
+                        dest="get_accuracy")
     args = parser.parse_args()
     print('ARGS:\n', args)
     p = param.Param(parent_dir=args.parent, res_dir=args.resdir)
 
     Dep = Deploy(args.parent, args.preprocess_tfrecs)
-    Dep.run(p, args.im_dir, args.model_path, args.use_gedi_cnn)
+    Dep.run(p, args.im_dir, args.model_path, args.use_gedi_cnn, args.get_accuracy)
