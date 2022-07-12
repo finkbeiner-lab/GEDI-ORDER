@@ -24,10 +24,11 @@ __author__ = 'Josh Lamstein'
 __copyright__ = 'Gladstone Institutes 2020'
 
 
+
 class Train:
     def __init__(self, parent_dir, res_dir, param_dict=None, preprocess_tfrecs=False, use_neptune=True):
         self.parent_dir = parent_dir
-        self.p = param.Param(param_dict=param_dict, parent_dir=self.parent_dir, tfrec_dir=res_dir, res_dir=res_dir)
+        self.p = param.Param(param_dict=param_dict, parent_dir=self.parent_dir, res_dir=res_dir)
 
         self.preprocess_tfrecs = preprocess_tfrecs
         self.use_neptune = use_neptune
@@ -56,10 +57,12 @@ class Train:
     def gather_imgs(self, pos_dirs, neg_dirs, filetype='tif'):
         pos_ims = []
         neg_ims = []
+        #import pdb
+        #pdb.set_trace()
         for pos in pos_dirs:
-            pos_ims += glob(os.path.join(pos, f'*.{filetype}'))
+            pos_ims += glob(os.path.join(pos, f'**/*.{filetype}'))
         for neg in neg_dirs:
-            neg_ims += glob(os.path.join(neg, f'*.{filetype}'))
+            neg_ims += glob(os.path.join(neg, f'**/*.{filetype}'))
         random.Random(11).shuffle(pos_ims)
         random.Random(11).shuffle(neg_ims)
         return pos_ims, neg_ims
@@ -499,7 +502,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     print('ARGS:\n', args)
 
-    Tr = Train(parent_dir=args.datadir, tfrec_dir=args.res_dir, res_dir=args.res_dir, param_dict=None, preprocess_tfrecs=args.preprocess_tfrecs,
+    Tr = Train(parent_dir=args.datadir, res_dir=args.res_dir, param_dict=None, preprocess_tfrecs=args.preprocess_tfrecs,
                use_neptune=args.use_neptune)
     if args.retrain:
         print('Retraining on gedi-cnn model...')

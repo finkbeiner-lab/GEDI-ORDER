@@ -60,8 +60,8 @@ class Record:
         self.images_dir_live = images_dir_live
         self.images_dir_dead = images_dir_dead
         # Add dummy folder for batch two, different tree.
-        self.impaths_live = glob.glob(os.path.join(self.images_dir_live, f'*{filetype}'))
-        self.impaths_dead = glob.glob(os.path.join(self.images_dir_dead, f'*{filetype}'))
+        self.impaths_live = glob.glob(os.path.join(self.images_dir_live, f'**/*{filetype}'))
+        self.impaths_dead = glob.glob(os.path.join(self.images_dir_dead, f'**/*{filetype}'))
         if len(self.impaths_dead) < len(self.impaths_live):
             self.impaths_dead, self.impaths_live = \
                 self.balance_dataset(method=balance_method, smaller_lst=self.impaths_dead, larger_lst=self.impaths_live)
