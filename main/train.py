@@ -57,9 +57,15 @@ class Train:
         pos_ims = []
         neg_ims = []
         for pos in pos_dirs:
-            pos_ims += glob(os.path.join(pos, f'*.{filetype}'))
+            fs = glob(os.path.join(pos, f'*.{filetype}'))
+            if len(fs)==0:
+                fs = glob(os.path.join(pos, '**', f'*.{filetype}'))
+            pos_ims += fs
         for neg in neg_dirs:
-            neg_ims += glob(os.path.join(neg, f'*.{filetype}'))
+            gs = glob(os.path.join(neg, f'*.{filetype}'))
+            if len(gs)==0:
+                gs = glob(os.path.join(neg, '**', f'*.{filetype}'))
+            neg_ims += gs
         random.Random(11).shuffle(pos_ims)
         random.Random(11).shuffle(neg_ims)
         return pos_ims, neg_ims
