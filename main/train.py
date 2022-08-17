@@ -57,17 +57,9 @@ class Train:
         pos_ims = []
         neg_ims = []
         for pos in pos_dirs:
-            fs = glob(os.path.join(pos, f'*.{filetype}'))
-            if len(fs) == 0:
-                fs = glob(os.path.join(pos, '**', f'*.{filetype}'))
-            pos_ims += fs
-
+            pos_ims += glob(os.path.join(pos, f'*.{filetype}'))
         for neg in neg_dirs:
-            gs = glob(os.path.join(neg, f'*.{filetype}'))
-            if len(gs) == 0:
-                gs = glob(os.path.join(neg, '**', f'*.{filetype}'))
-            neg_ims += gs
-
+            neg_ims += glob(os.path.join(neg, f'*.{filetype}'))
         random.Random(11).shuffle(pos_ims)
         random.Random(11).shuffle(neg_ims)
         return pos_ims, neg_ims
@@ -477,10 +469,8 @@ if __name__ == '__main__':
     #              '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Deadcrops_2',
     #              '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Deadcrops_1']
 
-    positives = ['/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-1703/Livecrops_1',
-                 '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-1703/Livecrops_2_3']
-    negatives = ['/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-1703/Deadcrops_1',
-                 '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-1703/Deadcrops_2_3']
+    positives = ['/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-1703/Livecrops_1', '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-1703/Livecrops_2_3']
+    negatives = ['/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-1703/Deadcrops_1', '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-1703/Deadcrops_2_3']
     parser.add_argument('--datadir', action="store",
                         default='/mnt/finkbeinernas/robodata/Josh/GEDI-ORDER',
                         help='data parent directory',
@@ -509,8 +499,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     print('ARGS:\n', args)
 
-    Tr = Train(parent_dir=args.datadir, tfrec_dir=args.res_dir, res_dir=args.res_dir, param_dict=None,
-               preprocess_tfrecs=args.preprocess_tfrecs,
+    Tr = Train(parent_dir=args.datadir, tfrec_dir=args.res_dir, res_dir=args.res_dir, param_dict=None, preprocess_tfrecs=args.preprocess_tfrecs,
                use_neptune=args.use_neptune)
     if args.retrain:
         print('Retraining on gedi-cnn model...')

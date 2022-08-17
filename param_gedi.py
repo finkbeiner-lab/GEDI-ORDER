@@ -14,7 +14,7 @@ import numpy as np
 
 
 class Param:
-    def __init__(self, param_dict=None, parent_dir=None, tfrec_dir=None, res_dir=None):
+    def __init__(self, param_dict=None, parent_dir=None,  res_dir=None):
         if param_dict is None:
             self.which_model = 'vgg19'  # vgg16, vgg19, resnet50
             self.EPOCHS = 1
