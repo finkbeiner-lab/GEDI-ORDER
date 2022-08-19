@@ -44,7 +44,7 @@ class Record:
             balance_method: Method to balance binary classes, 'cutoff' - remove data, 'multiply' - duplicate smaller data class to match larger class, None - leave unbalanced
         """
         assert isinstance(images_lst_dead, list), 'images_lst_dead must be list'
-        self.p = param.Param(parent_dir = tfrecord_dir, tfrec_dir=tfrecord_dir, res_dir=tfrecord_dir)
+        self.p = param.Param(parent_dir = tfrecord_dir, res_dir=tfrecord_dir)
 
         self.tfrecord_dir = tfrecord_dir
         self.impaths_live = images_lst_live

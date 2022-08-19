@@ -27,7 +27,7 @@ __copyright__ = 'Gladstone Institutes 2020'
 class Train:
     def __init__(self, parent_dir, res_dir, param_dict=None, preprocess_tfrecs=False, use_neptune=True):
         self.parent_dir = parent_dir
-        self.p = param.Param(param_dict=param_dict, parent_dir=self.parent_dir, tfrec_dir=res_dir, res_dir=res_dir)
+        self.p = param.Param(param_dict=param_dict, parent_dir=self.parent_dir, res_dir=res_dir)
 
         self.preprocess_tfrecs = preprocess_tfrecs
         self.use_neptune = use_neptune
@@ -461,7 +461,8 @@ class Train:
 
         print('Saving model to {}'.format(export_path))
         model.save(export_path)
-        self.nep.stop()
+        if self.use_neptune:
+            self.nep.stop()
 
 
 if __name__ == '__main__':
@@ -505,7 +506,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     print('ARGS:\n', args)
 
-    Tr = Train(parent_dir=args.datadir, tfrec_dir=args.res_dir, res_dir=args.res_dir, param_dict=None, preprocess_tfrecs=args.preprocess_tfrecs,
+    Tr = Train(parent_dir=args.datadir, res_dir=args.res_dir, param_dict=None, preprocess_tfrecs=args.preprocess_tfrecs,
                use_neptune=args.use_neptune)
     if args.retrain:
         print('Retraining on gedi-cnn model...')
