@@ -50,6 +50,6 @@ class Curator:
 if __name__ == '__main__':
     gedicsvs = ['/gladstone/finkbeiner/linsley/GEDI_CLUSTER/deploy_results/IMG-coculture-2-061522-Th3.csv',
                 '/gladstone/finkbeiner/linsley/GEDI_CLUSTER/deploy_results/iMG-coculture-1-061522.csv']
-    savedir = '/gladstone/finkbeiner/linsley/GEDI_CLUSTER/Curation/Josh/Images'
+    savedir = '/gladstone/finkbeiner/linsley/GEDI_CLUSTER/Curation/Gracie/Images'
     Cur = Curator(gedicsvs, savedir)
     Cur.get_data(N=100)

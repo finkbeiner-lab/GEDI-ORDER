@@ -176,7 +176,7 @@ if __name__ == '__main__':
                         dest="get_accuracy")
     args = parser.parse_args()
     print('ARGS:\n', args)
-    p = param.Param(parent_dir=args.parent, res_dir=args.resdir)
+    p = param.Param(parent_dir=args.parent, res_dir=args.parent)
 
     Dep = Deploy(args.parent, args.preprocess_tfrecs)
     Dep.run(p, args.im_dir, args.model_path, args.use_gedi_cnn, args.get_accuracy)
