@@ -26,6 +26,8 @@ class Deploy:
         self.preprocess_tfrecs = preprocess_tfrecs
 
     def run(self, p, im_dir, model_path=None, use_gedi_cnn=True, get_accuracy=False):
+        if not os.path.exists(self.parent):
+            os.makedirs(self.parent)
         deploypath = os.path.join(self.parent, 'deploy.tfrecord')
         if self.preprocess_tfrecs:
             self.generate_tfrecs(im_dir)
