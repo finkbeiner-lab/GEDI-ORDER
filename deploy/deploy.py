@@ -158,7 +158,7 @@ if __name__ == '__main__':
     parser.add_argument('--parent', action="store", default='/gladstone/finkbeiner/linsley/GEDI_CLUSTER',
                         help='parent directory', dest="parent")
     parser.add_argument('--res_dir', action="store", default='/gladstone/finkbeiner/linsley/GEDI_CLUSTER',
-                        help='resources directory with gedicnn model', dest="tfrec_dir")
+                        help='resources directory with gedicnn model', dest="res_dir")
     parser.add_argument('--im_dir', action="store",
                         # default='/gladstone/finkbeiner/elia/BiancaB/Imaging_Experiments/iMG_cocultures/GXYTMP/iMG-coculture-1-061522/CroppedImages',
                         default='/gladstone/finkbeiner/elia/BiancaB/Imaging_Experiments/iMG_cocultures/GXYTMP/IMG-coculture-2-061522-Th3/CroppedImages',
