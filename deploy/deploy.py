@@ -19,14 +19,14 @@ __copyright__ = 'Gladstone 2021'
 
 
 class Deploy:
-    def __init__(self, parent_dir, preprocess_tfrecs):
+    def __init__(self, parent, preprocess_tfrecs):
         self.default_lbl = 0
-        self.parent_dir = parent_dir
+        self.parent = parent
 
         self.preprocess_tfrecs = preprocess_tfrecs
 
     def run(self, p, im_dir, model_path=None, use_gedi_cnn=True, get_accuracy=False):
-        deploypath = os.path.join(self.parent_dir, 'deploy.tfrecord')
+        deploypath = os.path.join(self.parent, 'deploy.tfrecord')
         if self.preprocess_tfrecs:
             self.generate_tfrecs(im_dir)
         else:
@@ -42,7 +42,7 @@ class Deploy:
         """
         tfrec_dir = os.getcwd()
         Rec = Record(im_dir, tfrec_dir, lbl=self.default_lbl)
-        savedeploy = os.path.join(self.parent_dir, 'deploy.tfrecord')
+        savedeploy = os.path.join(self.parent, 'deploy.tfrecord')
         Rec.tiff2record(savedeploy, Rec.impaths, Rec.lbls)
         print(f'Saved tfrecords to {tfrec_dir}')
 
@@ -157,6 +157,8 @@ if __name__ == '__main__':
     #                     dest='parent')
     parser.add_argument('--parent', action="store", default='/gladstone/finkbeiner/linsley/GEDI_CLUSTER',
                         help='parent directory', dest="parent")
+    parser.add_argument('--res_dir', action="store", default='/gladstone/finkbeiner/linsley/GEDI_CLUSTER',
+                        help='resources directory with gedicnn model', dest="tfrec_dir")
     parser.add_argument('--im_dir', action="store",
                         # default='/gladstone/finkbeiner/elia/BiancaB/Imaging_Experiments/iMG_cocultures/GXYTMP/iMG-coculture-1-061522/CroppedImages',
                         default='/gladstone/finkbeiner/elia/BiancaB/Imaging_Experiments/iMG_cocultures/GXYTMP/IMG-coculture-2-061522-Th3/CroppedImages',
@@ -176,7 +178,7 @@ if __name__ == '__main__':
                         dest="get_accuracy")
     args = parser.parse_args()
     print('ARGS:\n', args)
-    p = param.Param(parent_dir=args.parent, res_dir=args.parent)
+    p = param.Param(parent_dir=args.parent, res_dir=args.res_dir)
 
     Dep = Deploy(args.parent, args.preprocess_tfrecs)
     Dep.run(p, args.im_dir, args.model_path, args.use_gedi_cnn, args.get_accuracy)

@@ -31,8 +31,8 @@ class Curator:
         for df in dfs:
             m = min(df.groupby('prediction').size())
             if m < N: N = m
-            neg = df[df.prediction == 0].sample(n=N, random_state=121)
-            pos = df[df.prediction == 1].sample(n=N, random_state=121)
+            neg = df[df.prediction == 0].sample(n=N, random_state=100)  # 121
+            pos = df[df.prediction == 1].sample(n=N, random_state=100)
             data = pd.concat([neg, pos])
             for i, row in data.iterrows():
                 if self.cnt % self.batch_div == 0:
@@ -50,6 +50,9 @@ class Curator:
 if __name__ == '__main__':
     gedicsvs = ['/gladstone/finkbeiner/linsley/GEDI_CLUSTER/deploy_results/IMG-coculture-2-061522-Th3.csv',
                 '/gladstone/finkbeiner/linsley/GEDI_CLUSTER/deploy_results/iMG-coculture-1-061522.csv']
-    savedir = '/gladstone/finkbeiner/linsley/GEDI_CLUSTER/Curation/Gracie/Images'
-    Cur = Curator(gedicsvs, savedir)
-    Cur.get_data(N=100)
+    savedirs = ['/gladstone/finkbeiner/linsley/GEDI_CLUSTER/Curation/Gracie2/Images',
+               '/gladstone/finkbeiner/linsley/GEDI_CLUSTER/Curation/Bianca2/Images',
+               '/gladstone/finkbeiner/linsley/GEDI_CLUSTER/Curation/Josh22/Images']
+    for savedir in savedirs:
+        Cur = Curator(gedicsvs, savedir)
+        Cur.get_data(N=100)
