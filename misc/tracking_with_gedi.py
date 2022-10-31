@@ -46,7 +46,7 @@ class trackSurvival:
         gedi['Sci_PlateID'] = tmp[1]
         gedi['Timepoint'] = tmp[2].str.slice(start=1).astype(int)
         gedi['Sci_WellID'] = tmp[4]
-        gedi['ObjectLabelsFound'] = tmp[13].str.split('.').str[0].astype(int)
+        gedi['ObjectLabelsFound'] = tmp[len(tmp.columns)-1].str.split('.').str[0].astype(int)
         gedi = gedi.rename(columns={'prediction': 'gedi'})
         gedi['MeasurementTag'] = tmp[6]
         gedi = gedi.drop(columns=['filepath', 'label'])
@@ -313,7 +313,8 @@ if __name__ == '__main__':
     #                     help='parent directory for Gedi-CNN',
     #                     dest='parent')
     parser.add_argument('--gedicsv', action="store",
-                        default='/run/media/jlamstein/data/GEDI-ORDER/deploy_results/IMG-coculture-2-061522-Th3.csv',
+                        # default='/run/media/jlamstein/data/GEDI-ORDER/deploy_results/IMG-coculture-2-061522-Th3.csv',
+                        default='/gladstone/finkbeiner/elia/BiancaB/Imaging_Experiments/ReN_cells_GraceFoundation/GXYTMP/RGEDI_100522/GEDI/deploy_results/deploy.csv',
                         help='path to gedi cnn results', dest="gedicsv")
     parser.add_argument('--platemap', action="store",
                         default='/gladstone/finkbeiner/elia/BiancaB/Imaging_Experiments/iMG_cocultures/platelayout_iMGcoculture.csv',
@@ -326,7 +327,8 @@ if __name__ == '__main__':
                         default='/gladstone/finkbeiner/elia/BiancaB/Imaging_Experiments/iMG_cocultures/GXYTMP/IMG-coculture-2-061522-Th3/GEDIImages',
                         help='path to image directory, aligned images most likely', dest="save_dir")
     parser.add_argument('--trackcsv', action="store",
-                        default='/gladstone/finkbeiner/elia/BiancaB/Imaging_Experiments/iMG_cocultures/GXYTMP/IMG-coculture-2-061522-Th3/cell_data.csv',
+                        # default='/gladstone/finkbeiner/elia/BiancaB/Imaging_Experiments/iMG_cocultures/GXYTMP/IMG-coculture-2-061522-Th3/cell_data.csv',
+                        default='/gladstone/finkbeiner/elia/BiancaB/Imaging_Experiments/ReN_cells_GraceFoundation/GXYTMP/RGEDI_100522/OverlaysTablesResults/cell_data.csv',
                         help='path to cell data with tracking info.', dest="trackcsv")
     parser.add_argument('--gedi_cell_data', action="store",
                         default='/gladstone/finkbeiner/elia/BiancaB/Imaging_Experiments/iMG_cocultures/GXYTMP/IMG-coculture-2-061522-Th3/gedi_cell_data.csv',
@@ -334,7 +336,7 @@ if __name__ == '__main__':
     parser.add_argument('--resdir', action="store",
                         default='/gladstone/finkbeiner/elia/BiancaB/Imaging_Experiments/iMG_cocultures/GXYTMP/IMG-coculture-2-061522-Th3',
                         help='results directory', dest="resdir")
-    parser.add_argument('--merge_csvs', type=int, action="store", default=False,
+    parser.add_argument('--merge_csvs', type=int, action="store", default=True,
                         help='Merge gedicsv with trackcsv in cell data. Saved to gedicelldata.',
                         dest="merge_csvs")
     parser.add_argument('--plot_bool', type=int, action="store", default=False,
