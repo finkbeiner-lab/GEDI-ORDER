@@ -197,7 +197,7 @@ class trackSurvival:
                 {'is_dead': [0], 'well': [row.Sci_WellID], 'label': [row.label], 'condition': [row.condition],
                  'time_of_death': [max_timepoint]})
             regression_dfs.append(df)
-        regression_df = pd.concat(regression_dfs)
+        regression_df = pd.concat(regression_dfs).reset_index()
         return regression_df
 
     def plot_gedi(self, gedi_cell_data, img_dir, save_dir, well=None, neuron=None):
@@ -299,8 +299,6 @@ class Survival(trackSurvival):
         print('Done')
 
 
-# todo: check intensity filter
-# todo: clean up curation program for cells
 # todo: check tracks with curation program
 # todo: run a few plates with gedi and this program
 # todo: significance on this plate
@@ -368,4 +366,3 @@ if __name__ == '__main__':
     if args.survival_bool:
         Sur = Survival(args.gedi_cell_data, args.platemap, args.resdir)
         Sur.regression_df(args.control_group)
-    # todo: survival curves for different conditions with plot and csv raw data
