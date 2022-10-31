@@ -221,7 +221,9 @@ class trackSurvival:
             # get img
             print(f'Processing Well {w} T{tp}')
             f = glob(os.path.join(img_dir, w, f'*_T{tp}_*.tif'))  # todo: may need to add tag for channel
-            assert len(f) < 2, 'multiple files in image directory found by wildcard string matching'
+            if len(f) > 1:
+                f = [file for file in f if 'fitc' in file.lower() or 'gfp' in file.lower()]
+            assert len(f) < 2, f'multiple files in image directory found by wildcard string matching {f}'
             if len(f):
                 f = f[0]
                 save_file = os.path.join(save_dir, f.split('/')[-1].split('.')[0] + 'GEDI.png')
@@ -317,24 +319,29 @@ if __name__ == '__main__':
                         default='/gladstone/finkbeiner/elia/BiancaB/Imaging_Experiments/ReN_cells_GraceFoundation/GXYTMP/RGEDI_100522/GEDI/deploy_results/deploy.csv',
                         help='path to gedi cnn results', dest="gedicsv")
     parser.add_argument('--platemap', action="store",
-                        default='/gladstone/finkbeiner/elia/BiancaB/Imaging_Experiments/iMG_cocultures/platelayout_iMGcoculture.csv',
+                        # default='/gladstone/finkbeiner/elia/BiancaB/Imaging_Experiments/iMG_cocultures/platelayout_iMGcoculture.csv',
+                        default='/gladstone/finkbeiner/elia/BiancaB/Imaging_Experiments/iMG_cocultures/wtko.csv',
                         help='path to platemap', dest="platemap")
+    parser.add_argument('--control_group', action="store",
+                        default='WT',
+                        help='control group in platemap', dest="control_group")
     parser.add_argument('--img_dir', action="store",
                         # default='/gladstone/finkbeiner/elia/BiancaB/Imaging_Experiments/iMG_cocultures/GXYTMP/iMG-coculture-1-061522/AlignedImages',
-                        default='/gladstone/finkbeiner/elia/BiancaB/Imaging_Experiments/iMG_cocultures/GXYTMP/IMG-coculture-2-061522-Th3/AlignedImages',
+                        # default='/gladstone/finkbeiner/elia/BiancaB/Imaging_Experiments/iMG_cocultures/GXYTMP/IMG-coculture-2-061522-Th3/AlignedImages',
+                        default='/gladstone/finkbeiner/elia/BiancaB/Imaging_Experiments/ReN_cells_GraceFoundation/GXYTMP/RGEDI_100522/AlignedImages',
                         help='path to image directory, aligned images most likely', dest="img_dir")
     parser.add_argument('--save_dir', action="store",
-                        default='/gladstone/finkbeiner/elia/BiancaB/Imaging_Experiments/iMG_cocultures/GXYTMP/IMG-coculture-2-061522-Th3/GEDIImages',
+                        default='/gladstone/finkbeiner/elia/BiancaB/Imaging_Experiments/ReN_cells_GraceFoundation/GXYTMP/RGEDI_100522/GEDIImages',
                         help='path to image directory, aligned images most likely', dest="save_dir")
     parser.add_argument('--trackcsv', action="store",
                         # default='/gladstone/finkbeiner/elia/BiancaB/Imaging_Experiments/iMG_cocultures/GXYTMP/IMG-coculture-2-061522-Th3/cell_data.csv',
                         default='/gladstone/finkbeiner/elia/BiancaB/Imaging_Experiments/ReN_cells_GraceFoundation/GXYTMP/RGEDI_100522/OverlaysTablesResults/cell_data.csv',
                         help='path to cell data with tracking info.', dest="trackcsv")
     parser.add_argument('--gedi_cell_data', action="store",
-                        default='/gladstone/finkbeiner/elia/BiancaB/Imaging_Experiments/iMG_cocultures/GXYTMP/IMG-coculture-2-061522-Th3/gedi_cell_data.csv',
+                        default='/gladstone/finkbeiner/elia/BiancaB/Imaging_Experiments/ReN_cells_GraceFoundation/GXYTMP/RGEDI_100522/gedi_cell_data.csv',
                         help='path to cell data with tracking info.', dest="gedi_cell_data")
     parser.add_argument('--resdir', action="store",
-                        default='/gladstone/finkbeiner/elia/BiancaB/Imaging_Experiments/iMG_cocultures/GXYTMP/IMG-coculture-2-061522-Th3',
+                        default='/gladstone/finkbeiner/elia/BiancaB/Imaging_Experiments/ReN_cells_GraceFoundation/GXYTMP/RGEDI_100522',
                         help='results directory', dest="resdir")
     parser.add_argument('--merge_csvs', type=int, action="store", default=True,
                         help='Merge gedicsv with trackcsv in cell data. Saved to gedicelldata.',
@@ -360,5 +367,5 @@ if __name__ == '__main__':
         TS.plot_gedi(args.gedi_cell_data, args.img_dir, args.save_dir)
     if args.survival_bool:
         Sur = Survival(args.gedi_cell_data, args.platemap, args.resdir)
-        Sur.regression_df()
+        Sur.regression_df(args.control_group)
     # todo: survival curves for different conditions with plot and csv raw data
