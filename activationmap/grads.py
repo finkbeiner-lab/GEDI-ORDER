@@ -10,7 +10,8 @@ from tensorflow.keras.models import load_model
 import sys
 from pympler import asizeof
 from preprocessing.datagenerator import Dataspring
-
+import pdb
+import matplotlib.pyplot as plt
 
 def mem(obj, name):
     m = asizeof.asizeof(obj)
@@ -221,6 +222,7 @@ class Grads:
     #    @profile
     def batch_heatmaps(self, batch, layer_name, class_id=None, ret_preds=False):
         print('batch_heatmaps')
+       
         with self.using_default():
             if self.layer_func is None:
                 self.layer_func = Grads.layer_grad_func(self.model_n, layer_name, pick_preds=class_id is None,
@@ -252,6 +254,7 @@ class Grads:
     def guided_gradcam(self, batch, layer_name, class_id=None, ret_preds=False):
         grads, preds = self.batch_grads(batch, guided=self.guidedbool, class_id=class_id, ret_preds=True)
         heatmaps, _ = self.batch_heatmaps(batch, layer_name, class_id=class_id, ret_preds=True)
+        
 
         for i in range(grads.shape[0]):
             grads[i] = np.maximum(grads[i], 0)  # ReLU/positively contributing pixel slice
@@ -295,6 +298,7 @@ class Grads:
         grads, preds = self.batch_grads(batch, guided=self.guidedbool, class_id=class_id, ret_preds=True)
         # gradCAM heatmaps from targeted layer_name
         heatmaps, _ = self.batch_heatmaps(batch, layer_name, class_id=class_id, ret_preds=True)
+        
 
         grads_final = []
         for i in range(grads.shape[0]):
@@ -351,6 +355,15 @@ class Grads:
 
         for img, lbl, grad_0, grad_1, pred in zip(imgs, lbls, grads_0, grads_1, preds):
             grad_pair = [grad_0, grad_1]
+            fig, axes = plt.subplots(1, 2, figsize=(4,4))
+            ax = axes.ravel()
+            ax[0].imshow(grad_pair[0])
+            ax[1].imshow(grad_pair[1])
+            fig.savefig('test.png')
+            fig.show()
+
+            plt.close()
+            
             # if np.argmax(lbl) == 1:
             #     grad_pair = grad_pair[::-1]
             gray = np.sum(img, axis=-1)
@@ -359,13 +372,17 @@ class Grads:
             # show_group = [gray,green,blue]
             show_group = list(map(tif_format, show_group))
             gradimg= np.float32(np.dstack(show_group))
-            gradimg[...,0] *= 2
-            gradimg[...,1] += gradimg[...,0]
-            gradimg[...,2] += gradimg[...,0]
+
+            ########## todo: make flag for grayscale
+            # gradimg[...,0] *= 2 # todo: make variable scale factor for visualization
+            # gradimg[...,1] += gradimg[...,0]
+            # gradimg[...,2] += gradimg[...,0]
             gradimg /= np.max(gradimg)
             gradimg *= 255
             gradimg = gradimg.astype(dtype=np.uint8)
+           
             res = [gradimg]
+            
             if self.verbose:
                 mem(res, 'res')
                 mem(show_group, 'show_group')

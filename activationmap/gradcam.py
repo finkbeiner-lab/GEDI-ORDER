@@ -1,3 +1,4 @@
+
 """
 Activation map with preprocessing option
 Set main_fold to None to use tfrecord, set deploy_tfrec to None to run images in gradcam.
@@ -10,13 +11,14 @@ from imageio import imread, imwrite
 import numpy as np
 from subprocess import check_output
 import pandas as pd
-
+import sys
+sys.path.append("../")
 from activationmap.grads import Grads
 from activationmap.grad_ops import GradOps
 import glob
 import param_gedi as param
 # from memory_profiler import profile
-import sys
+
 import argparse
 import pyfiglet
 from pympler import asizeof
@@ -112,7 +114,6 @@ def batches_from_fold_no_labels(source_fold, dead_fold, live_fold, batch_size, p
 def save_batch(g, imgs, lbls, base_path, conf_mat_paths, fnames=None, makepaths=True, layer_name='block5_conv3'):
     """
     Method computes the Guided GradCAM visualization of an image for both classes; saves these representations as a three-channel (image;correct_label_grad;wrong_label_grad) tif image
-
     Args:
         g: Grads object
         imgs: image data tensor
@@ -122,9 +123,7 @@ def save_batch(g, imgs, lbls, base_path, conf_mat_paths, fnames=None, makepaths=
         fnames: optional list of filenames to save with; defaults to integer index of each base image
         makepaths: whether to build the directory tree specified by base_path/conf_mat_paths
         layer_name: name of layer to differentiate wrt. for GradCAM
-
     Returns: list of the indices of images which were written
-
     """
 
     ggcam_gen = g.gen_ggcam_stacks(imgs, lbls, layer_name, ret_preds=True)  # grads.py
@@ -195,7 +194,7 @@ def run_gradcam(main_fold, dest_fold, deploy_tfrec, model_path, layer_name='bloc
     if main_fold is not None and deploy_tfrec is not None:
         assert 0, 'main fold or deploy_tfrec must be Nan valued (None).'
     guidedbool = True
-    batch_size = 32
+    batch_size = 2
 
     g = Grads(model_path, guidedbool=guidedbool)
     gops = GradOps(p, vgg_normalize=True)
@@ -204,17 +203,17 @@ def run_gradcam(main_fold, dest_fold, deploy_tfrec, model_path, layer_name='bloc
 
     # conf_mat_paths = [['artifact_true', 'artifact_false'], ['asyn_false', 'asyn_true']]
     conf_mat_paths = [['zero_true', 'zero_false'], ['one_false', 'one_true']]
-    parser = lambda img: gops.img_parse(img)
+    parser = lambda img: gops.img_parse(img, rgb=False)  # todo: add flag for rgb image, or autodetect
     # layer_name = 'block5_conv3'  # VGG16
     # layer_name = 'block5_conv4'  # VGG19
     # layer_name = 'conv2d_4'  # custom_model
-    LABELLED = True
+    LABELLED = False  # todo: add flag
     # layer_name = 'block1_conv1'
     if main_fold is not None:
         subdirs = glob.glob(os.path.join(main_fold, '**'))
         if os.path.isdir(subdirs[0]):
             for subdir in subdirs:
-                tifs = glob.glob(os.path.join(subdir, f'*.{imtype}'))
+                tifs = glob.glob(os.path.join(subdir, f"*.{imtype}"))
                 if len(tifs) >= batch_size:
                     print('Running {}'.format(subdir))
                     name = subdir.split('/')[-1]
@@ -243,7 +242,6 @@ def run_gradcam(main_fold, dest_fold, deploy_tfrec, model_path, layer_name='bloc
                      tfrecord=deploy_tfrec)
     print(f'saved to {dest_fold}')
 
-
 if __name__ == '__main__':
     result = pyfiglet.figlet_format("GEDI-CNN Gradcam", font="slant")
     print(result)
@@ -252,13 +250,13 @@ if __name__ == '__main__':
                         default=None,
                         help='directory of images to run', dest="im_dir")
     parser.add_argument('--model_path', action="store",
-                        default='/mnt/finkbeinernas/robodata/Josh/GEDI-ORDER/saved_models/vgg19_2021_12_12_15_01_07.h5',
+                        default='/gladstone/finkbeiner/linsley/Shijie_ML/Tau_PFF/Mito/CNN/saved_models/vgg19_2022_11_11_22_41_31.h5',
                         help='path to h5 or hdf5 model', dest="model_path")
-    parser.add_argument('--deploy_tfrec', action="store", default='/mnt/finkbeinernas/robodata/Josh/GEDI-ORDER/test.tfrecord',
+    parser.add_argument('--deploy_tfrec', action="store", default=None,
                         help='results directory', dest="deploy_tfrec")
-    parser.add_argument('--layer_name', action="store", default='block5_conv3',
+    parser.add_argument('--layer_name', action="store", default='block5_conv4',
                         help='visualize layer', dest="layer_name")
-    parser.add_argument('--resdir', action="store", default='/mnt/finkbeinernas/robodata/GEDI_CLUSTER/Gradcam/test',
+    parser.add_argument('--resdir', action="store", default='/gladstone/finkbeiner/linsley/Shijie_ML/Tau_PFF/Mito/CNN_T8-12/Gradcam/test',
                         help='results directory', dest="resdir")
     parser.add_argument('--imtype', action="store", default='tif',
                         help='suffix for image, tif, jpg, png', dest="imtype")
