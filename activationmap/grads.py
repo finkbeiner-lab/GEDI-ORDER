@@ -323,7 +323,7 @@ class Grads:
         return [grads_final]
 
     #    @profile
-    def gen_ggcam_stacks(self, imgs, lbls, layer_name, ret_preds=True):
+    def gen_ggcam_stacks(self, imgs, lbls, layer_name, ret_preds=True, gray_morphology=False):
         """
         Gets gradcam for both labels.
         Args:
@@ -359,10 +359,15 @@ class Grads:
             # show_group = [gray,green,blue]
             show_group = list(map(tif_format, show_group))
             gradimg= np.float32(np.dstack(show_group))
-            gradimg[...,0] *= 2
-            gradimg[...,1] += gradimg[...,0]
-            gradimg[...,2] += gradimg[...,0]
-            gradimg /= np.max(gradimg)
+            if gray_morphology:
+                gradimg[...,0] *= 2
+                gradimg[...,1] += gradimg[...,0]
+                gradimg[...,2] += gradimg[...,0]
+                gradimg /= np.max(gradimg)
+                gradimg *= 255
+            else:
+                gradimg /= np.max(gradimg)
+
             gradimg *= 255
             gradimg = gradimg.astype(dtype=np.uint8)
             res = [gradimg]
