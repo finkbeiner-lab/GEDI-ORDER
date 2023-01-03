@@ -173,11 +173,11 @@ def process_fold(p, g, source_fold, dead_fold, live_fold, dest_path, conf_mat_pa
         print('save batch, {}'.format(names[0]))
         d = save_batch(g, imgs, lbls, dest_path, conf_mat_paths, fnames=names, makepaths=True, layer_name=layer_name,
                        gray_morphology_bool=gray_morphology_bool)
-        print('df')
+        # print('df')
         df = pd.DataFrame(d)
         if not has_labels:
             df.labels = -1
-        print('pred df')
+        # print('pred df')
 
         pred_df = pd.concat((pred_df, df), ignore_index=True)
         # mem(batch_gen, 'batch_gen')
@@ -267,7 +267,7 @@ if __name__ == '__main__':
     parser.add_argument('--layer_name', action="store", default='block5_conv3',
                         help='visualize layer', dest="layer_name")
     parser.add_argument('--resdir', action="store",
-                        default='/gladstone/finkbeiner/elia/BiancaB/Imaging_Experiments/Foxo1_Trap1/GXYTMP/17AAG_R5_IXM/GEDI/Gradcam',
+                        default='/gladstone/finkbeiner/elia/BiancaB/Imaging_Experiments/Foxo1_Trap1/GXYTMP/17AAG_R5_IXM/GEDI/Gradcam2',
                         help='results directory', dest="resdir")
     parser.add_argument('--batch_size', type=int, action="store", default=16,
                         help='Batch size. The remainder of total images / batch_size is truncated.',

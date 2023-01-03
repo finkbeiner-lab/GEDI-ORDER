@@ -38,8 +38,8 @@ def gridsearch(datadir, res_dir, retrain_bool):
                                             param_dict['momentum'] = momentum
                                             param_dict['random_brightness'] = brightness
                                             param_dict['max_contrast'] = max_contrast
-                                            Tr = Train(parent_dir=datadir,res_dir=res_dir, param_dict=param_dict, preprocess_tfrecs=False,
-                                                       use_neptune=True)
+                                            Tr = Train(parent_dir=datadir, res_dir=res_dir, param_dict=param_dict, preprocess_tfrecs=False,
+                                                       use_wandb=True)
                                             if retrain_bool:
                                                 Tr.retrain()
                                             else:

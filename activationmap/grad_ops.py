@@ -134,10 +134,10 @@ class GradOps:
 
         orig_size, target_size, crop_type = img.shape[:2], self.batcher_params['target_size'], self.batcher_params[
             'crop_type']
-        if img.shape[-1] == 4:
+        if img.shape[-1] == 4: # check alpha channel
             img = img[:, :, :-1]
             assert img.shape[-1] == 3
-        if len(img.shape[-1]) != 3:
+        if img.shape[-1] != 3:  # check if grayscale
             img = np.repeat(np.array(img).reshape(orig_size), 3, -1).reshape(
                 orig_size + (3,))  # Make 3d w/ channels last
 

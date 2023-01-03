@@ -112,7 +112,7 @@ class Grads:
         Returns: a Keras function
 
         """
-        print('raw grad func')
+        # print('raw grad func')
         inp = model.input
         preds = model.output
         out = preds.op.inputs[0]  # eliminates activation layer interference
@@ -148,7 +148,7 @@ class Grads:
         Returns: a Keras function
 
         """
-        print('layer_grad_func')
+        # print('layer_grad_func')
         inp = model.input
         preds = model.output
         out = preds.op.inputs[0]
@@ -197,7 +197,7 @@ class Grads:
             The above may apply to all batch methods that follow
 
         """
-        print('batch grads')
+        # print('batch grads')
         with self.using_default(guided=guided):
             if self.raw_func is None:
                 self.raw_func = Grads.raw_grad_func(self.model_g if guided else self.model_n,
@@ -220,7 +220,7 @@ class Grads:
 
     #    @profile
     def batch_heatmaps(self, batch, layer_name, class_id=None, ret_preds=False):
-        print('batch_heatmaps')
+        # print('batch_heatmaps')
         with self.using_default():
             if self.layer_func is None:
                 self.layer_func = Grads.layer_grad_func(self.model_n, layer_name, pick_preds=class_id is None,
@@ -231,7 +231,7 @@ class Grads:
                 grads, layer, preds = self.layer_func([batch, class_id])
 
         heatmaps = []
-        print('batch_heatmaps_loop')
+        # print('batch_heatmaps_loop')
         for i in range(layer.shape[0]):  # batchwise loop
             for j in range(layer.shape[-1]):  # channelwise loop
                 grad_ij = np.sum(grads[i, ..., j])
@@ -243,7 +243,7 @@ class Grads:
             mem(batch, 'batch')
             mem(heatmaps, 'heatmaps')
             mem(layer, 'layer')
-        print('return_batch_heatmaps')
+        # print('return_batch_heatmaps')
         if ret_preds:
             return [heatmaps, preds]
         return [heatmaps]

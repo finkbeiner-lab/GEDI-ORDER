@@ -19,24 +19,26 @@ import pyfiglet
 from glob import glob
 import random
 import tensorflow_addons as tfa
+import wandb
 
 __author__ = 'Josh Lamstein'
 __copyright__ = 'Gladstone Institutes 2020'
 
 
 class Train:
-    def __init__(self, parent_dir, res_dir, param_dict=None, preprocess_tfrecs=False, use_neptune=True):
+    def __init__(self, parent_dir, res_dir, param_dict=None, preprocess_tfrecs=False, use_wandb=True):
         self.parent_dir = parent_dir
         self.p = param.Param(param_dict=param_dict, parent_dir=self.parent_dir, res_dir=res_dir)
 
         self.preprocess_tfrecs = preprocess_tfrecs
-        self.use_neptune = use_neptune
-        if self.use_neptune:
-            import neptune.new as neptune
-            df = pd.read_csv(os.path.join(self.p.parent_dir, 'neptune.csv'))
-            self.nep = neptune.init(df['user'].iloc[0], df['token'].iloc[0])
-        else:
-            self.nep = None
+        self.use_wandb = use_wandb
+        if self.use_wandb:
+            wandb.init("CNN")
+            # import neptune.new as neptune
+            # df = pd.read_csv(os.path.join(self.p.parent_dir, 'neptune.csv'))
+            # self.nep = neptune.init(df['user'].iloc[0], df['token'].iloc[0])
+        # else:
+        #     self.nep = None
 
     def run(self, pos_dirs, neg_dirs, balance_method='cutoff'):
         assert isinstance(pos_dirs, list), 'pos_dirs must be list'
@@ -112,8 +114,9 @@ class Train:
         self.p.hyperparams['timestamp'] = timestamp
         self.p.hyperparams['model_timestamp'] = self.p.which_model + '_' + timestamp
         self.p.hyperparams['retraining'] = ''
-        if self.use_neptune:
-            self.nep["parameters"] = self.p.hyperparams
+        if self.use_wandb:
+            # self.nep["parameters"] = self.p.hyperparams
+            wandb.config.update(self.p.hyperparams)
 
         # todo replace with self.p.hyperparams
         run_info = {'model': self.p.which_model,
@@ -196,10 +199,12 @@ class Train:
             update_freq='epoch')
 
         callbacks = [cp_callback, cp_early]
-        if self.use_neptune:
-            from neptune.new.integrations.tensorflow_keras import NeptuneCallback
-            neptune_cbk = NeptuneCallback(run=self.nep, base_namespace='metrics')
-            callbacks.append(neptune_cbk)
+        if self.use_wandb:
+            # from neptune.new.integrations.tensorflow_keras import NeptuneCallback
+            # neptune_cbk = NeptuneCallback(run=self.nep, base_namespace='metrics')
+            wandb_cbk = wandb.keras.Callback()
+            callbacks.append(wandb_cbk)
+
         history = model.fit(train_gen, steps_per_epoch=train_length // (self.p.BATCH_SIZE), epochs=self.p.EPOCHS,
                             class_weight=self.p.class_weights, validation_data=val_gen,
                             validation_steps=val_length // self.p.BATCH_SIZE, callbacks=callbacks)
@@ -240,16 +245,19 @@ class Train:
         run_info['test_accuracy'] = test_accuracy
         run_info['train_loss'] = train_loss[-1]
         run_info['val_loss'] = val_loss[-1]
-        if self.use_neptune:
+        if self.use_wandb:
             self.p.hyperparams['test_acc'] = test_accuracy
-            self.nep['parameters'] = self.p.hyperparams
+            # self.nep['parameters'] = self.p.hyperparams
+            wandb.config.update(self.p.hyperparams)
+
 
         run_df = pd.DataFrame([run_info])
         run_df.to_csv(export_info_path)
 
         print('Saving model to {}'.format(export_path))
         model.save(export_path)
-        self.nep.stop()
+        # self.nep.stop()
+        wandb.finish()
 
     def retrain(self, base_model_file=None):
 
@@ -274,8 +282,10 @@ class Train:
         self.p.hyperparams['timestamp'] = timestamp
         self.p.hyperparams['model_timestamp'] = self.p.which_model + '_' + timestamp
         self.p.hyperparams['retraining'] = base_model_file
-        if self.use_neptune:
-            self.nep["parameters"] = self.p.hyperparams
+        if self.use_wandb:
+            # self.nep["parameters"] = self.p.hyperparams
+            wandb.config.update(self.p.hyperparams)
+
         run_info = {'model': self.p.which_model,
                     'retraining': base_model_file,
                     'timestamp': timestamp,
@@ -406,10 +416,11 @@ class Train:
         tb_callback = tf.keras.callbacks.TensorBoard(
             log_dir='/home/jlamstein/PycharmProjects/ASYN/log/{}'.format(self.p.which_model),
             update_freq='epoch')
-        if self.use_neptune:
-            from neptune.new.integrations.tensorflow_keras import NeptuneCallback
-            neptune_cbk = NeptuneCallback(run=self.nep, base_namespace='metrics')
-            callbacks.append(neptune_cbk)
+        if self.use_wandb:
+            # from neptune.new.integrations.tensorflow_keras import NeptuneCallback
+            # neptune_cbk = NeptuneCallback(run=self.nep, base_namespace='metrics')
+            wandb_cbk = wandb.keras.Callback()
+            callbacks.append(wandb_cbk)
 
         history = model.fit(train_gen, steps_per_epoch=train_length // (self.p.BATCH_SIZE), epochs=self.p.EPOCHS,
                             class_weight=self.p.class_weights, validation_data=val_gen,
@@ -461,8 +472,11 @@ class Train:
 
         print('Saving model to {}'.format(export_path))
         model.save(export_path)
-        if self.use_neptune:
-            self.nep.stop()
+        if self.use_wandb:
+            self.p.hyperparams['test_acc'] = test_accuracy
+            wandb.config.update(self.p.hyperparams)
+            wandb.finish()
+            # self.nep.stop()
 
 
 if __name__ == '__main__':
@@ -476,14 +490,14 @@ if __name__ == '__main__':
     #              '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Deadcrops_2',
     #              '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Deadcrops_1']
 
-    positives = ['/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-1703/Livecrops_1', '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-1703/Livecrops_2_3']
-    negatives = ['/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-1703/Deadcrops_1', '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-1703/Deadcrops_2_3']
+    positives = ['/gladstone/finkbeiner/linsley/Shijie/ML/NSCLC-1703/Livecrops_1', '/gladstone/finkbeiner/linsley/Shijie/ML/NSCLC-1703/Livecrops_2_3']
+    negatives = ['/gladstone/finkbeiner/linsley/Shijie/ML/NSCLC-1703/Deadcrops_1', '/gladstone/finkbeiner/linsley/Shijie/ML/NSCLC-1703/Deadcrops_2_3']
     parser.add_argument('--datadir', action="store",
-                        default='/mnt/finkbeinernas/robodata/Josh/GEDI-ORDER',
+                        default='/gladstone/finkbeiner/linsley/Josh/GEDI-ORDER',
                         help='data parent directory',
                         dest='datadir')
     parser.add_argument('--res_dir', action="store",
-                        default='/mnt/finkbeinernas/robodata/Josh/GEDI-ORDER',
+                        default='/gladstone/finkbeiner/linsley/Josh/GEDI-ORDER',
                         help='data parent directory',
                         dest='res_dir')
     parser.add_argument('--pos_dir', nargs='+',
@@ -497,9 +511,9 @@ if __name__ == '__main__':
     parser.add_argument('--preprocess_tfrecs', type=int, action="store", default=False,
                         help='generate tfrecords, necessary for new datasets, if already generate set to false',
                         dest="preprocess_tfrecs")
-    parser.add_argument('--use_neptune', type=int, action="store", default=True,
+    parser.add_argument('--use_wandb', type=int, action="store", default=True,
                         help='Save run info to neptune ai',
-                        dest="use_neptune")
+                        dest="use_wandb")
     parser.add_argument('--retrain', type=int, action="store", default=False,
                         help='Save run info to neptune ai',
                         dest="retrain")
@@ -507,7 +521,7 @@ if __name__ == '__main__':
     print('ARGS:\n', args)
 
     Tr = Train(parent_dir=args.datadir, res_dir=args.res_dir, param_dict=None, preprocess_tfrecs=args.preprocess_tfrecs,
-               use_neptune=args.use_neptune)
+               use_wandb=args.use_wandb)
     if args.retrain:
         print('Retraining on gedi-cnn model...')
         Tr.retrain()
