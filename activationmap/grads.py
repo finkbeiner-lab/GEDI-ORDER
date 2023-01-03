@@ -290,7 +290,7 @@ class Grads:
         Returns:
 
         """
-        print('guided gradcam gray')
+        # print('guided gradcam gray')
         # guided backprop
         grads, preds = self.batch_grads(batch, guided=self.guidedbool, class_id=class_id, ret_preds=True)
         # gradCAM heatmaps from targeted layer_name
@@ -336,7 +336,7 @@ class Grads:
 
         """
         # defaults to 8bit
-        print('gen ggcam stacks')
+        # print('gen ggcam stacks')
 
         def tif_format(img):
             img = img.astype(dtype=np.float)
