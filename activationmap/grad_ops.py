@@ -8,7 +8,7 @@ import param_gedi as param
 
 
 class GradOps:
-    def __init__(self,p,  vgg_normalize=True):
+    def __init__(self, p, vgg_normalize=True):
         os_type = platform.system()
         self.p = p
         if os_type == 'Darwin':
@@ -129,16 +129,17 @@ class GradOps:
     #
     #     return img
 
-    def img_parse(self, img, transformer=None, rgb=True):
+    def img_parse(self, img, transformer=None):
         img = np.array(img, dtype=np.float)
 
         orig_size, target_size, crop_type = img.shape[:2], self.batcher_params['target_size'], self.batcher_params[
             'crop_type']
-        if img.shape[-1] == 4:
+        if img.shape[-1] == 4: # check alpha channel
             img = img[:, :, :-1]
             assert img.shape[-1] == 3
-        if not rgb:
-            img = np.repeat(np.array(img).reshape(orig_size), 3, -1).reshape(orig_size + (3,))  # Make 3d w/ channels
+        if img.shape[-1] != 3:  # check if grayscale
+            img = np.repeat(np.array(img).reshape(orig_size), 3, -1).reshape(
+                orig_size + (3,))  # Make 3d w/ channels last
 
         # Apply custom augments if applicable
         if transformer is not None:

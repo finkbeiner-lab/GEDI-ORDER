@@ -19,14 +19,16 @@ __copyright__ = 'Gladstone 2021'
 
 
 class Deploy:
-    def __init__(self, parent_dir, preprocess_tfrecs):
+    def __init__(self, parent, preprocess_tfrecs):
         self.default_lbl = 0
-        self.parent_dir = parent_dir
+        self.parent = parent
 
         self.preprocess_tfrecs = preprocess_tfrecs
 
     def run(self, p, im_dir, model_path=None, use_gedi_cnn=True, get_accuracy=False):
-        deploypath = os.path.join(self.parent_dir, 'deploy.tfrecord')
+        if not os.path.exists(self.parent):
+            os.makedirs(self.parent)
+        deploypath = os.path.join(self.parent, 'deploy.tfrecord')
         if self.preprocess_tfrecs:
             self.generate_tfrecs(im_dir)
         else:
@@ -42,7 +44,7 @@ class Deploy:
         """
         tfrec_dir = os.getcwd()
         Rec = Record(im_dir, tfrec_dir, lbl=self.default_lbl)
-        savedeploy = os.path.join(self.parent_dir, 'deploy.tfrecord')
+        savedeploy = os.path.join(self.parent, 'deploy.tfrecord')
         Rec.tiff2record(savedeploy, Rec.impaths, Rec.lbls)
         print(f'Saved tfrecords to {tfrec_dir}')
 
@@ -151,19 +153,23 @@ if __name__ == '__main__':
     result = pyfiglet.figlet_format("GEDI-CNN", font="slant")
     print(result)
     parser = argparse.ArgumentParser(description='Deploy GEDICNN model')
-    parser.add_argument('--parent', action="store",
-                        default='/run/media/jlamstein/data/GEDI-ORDER',
-                        help='parent directory for Gedi-CNN',
-                        dest='parent')
+    # parser.add_argument('--parent', action="store",
+    #                     default='/run/media/jlamstein/data/GEDI-ORDER',
+    #                     help='parent directory for Gedi-CNN',
+    #                     dest='parent')
+    parser.add_argument('--parent', action="store", default='/gladstone/finkbeiner/linsley/GEDI_CLUSTER',
+                        help='parent directory', dest="parent")
+    parser.add_argument('--res_dir', action="store", default='/gladstone/finkbeiner/linsley/GEDI_CLUSTER',
+                        help='resources directory with gedicnn model', dest="res_dir")
     parser.add_argument('--im_dir', action="store",
-                        default='/mnt/finkbeinernas/robodata/JeremyTEMP/GalaxyTEMP/LINCS072017RGEDI-A/Livetraining2',
+                        # default='/gladstone/finkbeiner/elia/BiancaB/Imaging_Experiments/iMG_cocultures/GXYTMP/iMG-coculture-1-061522/CroppedImages',
+                        default='/gladstone/finkbeiner/elia/BiancaB/Imaging_Experiments/iMG_cocultures/GXYTMP/IMG-coculture-2-061522-Th3/CroppedImages',
+                        # default='/gladstone/finkbeiner/elia/BiancaB/Imaging_Experiments/Foxo1_Trap1/GXYTMP ',
                         help='directory of images to run', dest="im_dir")
     parser.add_argument('--model_path', action="store",
-                        default='/mnt/finkbeinernas/robodata/GEDI_CLUSTER/base_gedi.h5',
+                        default='/gladstone/finkbeiner/linsley/GEDI_CLUSTER/base_gedi.h5',
                         help='path to h5 or hdf5 model', dest="model_path")
-    parser.add_argument('--resdir', action="store", default='/mnt/finkbeinernas/robodata/GEDI_CLUSTER',
-                        help='results directory', dest="resdir")
-    parser.add_argument('--preprocess_tfrecs', type=int, action="store", default=False,
+    parser.add_argument('--preprocess_tfrecs', type=int, action="store", default=True,
                         help='generate tfrecords, necessary for new datasets, if already generate set to false',
                         dest="preprocess_tfrecs")
     parser.add_argument('--use_gedi_cnn', type=int, action="store", default=True,
@@ -174,7 +180,7 @@ if __name__ == '__main__':
                         dest="get_accuracy")
     args = parser.parse_args()
     print('ARGS:\n', args)
-    p = param.Param(parent_dir=args.parent, res_dir=args.resdir)
+    p = param.Param(parent_dir=args.parent, res_dir=args.res_dir)
 
     Dep = Deploy(args.parent, args.preprocess_tfrecs)
     Dep.run(p, args.im_dir, args.model_path, args.use_gedi_cnn, args.get_accuracy)

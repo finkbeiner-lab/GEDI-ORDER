@@ -82,8 +82,8 @@ class Param:
         #     self.tfrec_dir = tfrec_dir
 
         if res_dir is None:
-            self.res_dir = {'hobbes': '/mnt/finkbeinernas/robodata/GEDI_CLUSTER',
-                            'calvin': '/mnt/finkbeinerlab/robodata/GEDI_CLUSTER',
+            self.res_dir = {'hobbes': '/gladstone/finkbeiner/linsley/GEDI_CLUSTER',
+                            'calvin': '/gladstone/finkbeiner/linsley/GEDI_CLUSTER',
                             'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER',
                             'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER'}[
                 os_name]

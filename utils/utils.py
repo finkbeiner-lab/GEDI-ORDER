@@ -12,17 +12,17 @@ def update_timestring():
 def make_directories(p):
     "Make directories"
     if not os.path.exists(p.run_info_dir):
-        os.mkdir(p.run_info_dir)
+        os.makedirs(p.run_info_dir)
     if not os.path.exists(p.confusion_dir):
-        os.mkdir(p.confusion_dir)
+        os.makedirs(p.confusion_dir)
     if not os.path.exists(p.res_csv_deploy):
-        os.mkdir(p.res_csv_deploy)
+        os.makedirs(p.res_csv_deploy)
     if not os.path.exists(p.models_dir):
-        os.mkdir(p.models_dir)
+        os.makedirs(p.models_dir)
     if not os.path.exists(p.ckpt_dir):
-        os.mkdir(p.ckpt_dir)
+        os.makedirs(p.ckpt_dir)
     if not os.path.exists(p.tb_log_dir):
-        os.mkdir(p.tb_log_dir)
+        os.makedirs(p.tb_log_dir)
 
     if not os.path.exists(p.retrain_run_info_dir):
         os.makedirs(p.retrain_run_info_dir, exist_ok=False)

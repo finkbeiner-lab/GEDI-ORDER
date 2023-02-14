@@ -1,4 +1,3 @@
-
 """
 Activation map with preprocessing option
 Set main_fold to None to use tfrecord, set deploy_tfrec to None to run images in gradcam.
@@ -11,14 +10,13 @@ from imageio import imread, imwrite
 import numpy as np
 from subprocess import check_output
 import pandas as pd
-import sys
-sys.path.append("../")
+
 from activationmap.grads import Grads
 from activationmap.grad_ops import GradOps
 import glob
 import param_gedi as param
 # from memory_profiler import profile
-
+import sys
 import argparse
 import pyfiglet
 from pympler import asizeof
@@ -111,9 +109,11 @@ def batches_from_fold_no_labels(source_fold, dead_fold, live_fold, batch_size, p
 
 
 # @profile
-def save_batch(g, imgs, lbls, base_path, conf_mat_paths, fnames=None, makepaths=True, layer_name='block5_conv3'):
+def save_batch(g, imgs, lbls, base_path, conf_mat_paths, fnames=None, makepaths=True, layer_name='block5_conv3',
+               gray_morphology_bool=True):
     """
     Method computes the Guided GradCAM visualization of an image for both classes; saves these representations as a three-channel (image;correct_label_grad;wrong_label_grad) tif image
+
     Args:
         g: Grads object
         imgs: image data tensor
@@ -123,10 +123,13 @@ def save_batch(g, imgs, lbls, base_path, conf_mat_paths, fnames=None, makepaths=
         fnames: optional list of filenames to save with; defaults to integer index of each base image
         makepaths: whether to build the directory tree specified by base_path/conf_mat_paths
         layer_name: name of layer to differentiate wrt. for GradCAM
+
     Returns: list of the indices of images which were written
+
     """
 
-    ggcam_gen = g.gen_ggcam_stacks(imgs, lbls, layer_name, ret_preds=True)  # grads.py
+    ggcam_gen = g.gen_ggcam_stacks(imgs, lbls, layer_name, ret_preds=True,
+                                   gray_morphology=gray_morphology_bool)  # grads.py
     writes = []
     res_dict = {'filename': [], 'label': [], 'prediction': []}
     for i, lbl in enumerate(lbls):
@@ -157,7 +160,7 @@ def save_batch(g, imgs, lbls, base_path, conf_mat_paths, fnames=None, makepaths=
 
 # @profile
 def process_fold(p, g, source_fold, dead_fold, live_fold, dest_path, conf_mat_paths, batch_size=10, parser=lambda x: x,
-                 layer_name='block5_conv3', has_labels=True, tfrecord=None):
+                 layer_name='block5_conv3', gray_morphology_bool=True, has_labels=True, tfrecord=None):
     pred_df = pd.DataFrame({'filename': [], 'label': [], 'prediction': []})
     if has_labels:
         if source_fold is not None:
@@ -168,12 +171,13 @@ def process_fold(p, g, source_fold, dead_fold, live_fold, dest_path, conf_mat_pa
         batch_gen = batches_from_fold_no_labels(source_fold, dead_fold, live_fold, batch_size=batch_size, parser=parser)
     for imgs, lbls, names in batch_gen:
         print('save batch, {}'.format(names[0]))
-        d = save_batch(g, imgs, lbls, dest_path, conf_mat_paths, fnames=names, makepaths=True, layer_name=layer_name)
-        print('df')
+        d = save_batch(g, imgs, lbls, dest_path, conf_mat_paths, fnames=names, makepaths=True, layer_name=layer_name,
+                       gray_morphology_bool=gray_morphology_bool)
+        # print('df')
         df = pd.DataFrame(d)
         if not has_labels:
             df.labels = -1
-        print('pred df')
+        # print('pred df')
 
         pred_df = pd.concat((pred_df, df), ignore_index=True)
         # mem(batch_gen, 'batch_gen')
@@ -189,13 +193,12 @@ def process_fold(p, g, source_fold, dead_fold, live_fold, dest_path, conf_mat_pa
     return 0
 
 
-def run_gradcam(main_fold, dest_fold, deploy_tfrec, model_path, layer_name='block5_conv3', batch_size=2,imtype='tif'):
+def run_gradcam(main_fold, dest_fold, deploy_tfrec, model_path, batch_size, layer_name='block5_conv3',
+                gray_morphology_bool=True, imtype='tif'):
     p = param.Param(parent_dir=dest_fold, res_dir=dest_fold)
     if main_fold is not None and deploy_tfrec is not None:
         assert 0, 'main fold or deploy_tfrec must be Nan valued (None).'
     guidedbool = True
-    if isinstance(batch_size, str):
-        batch_size = int(batch_size)
 
     g = Grads(model_path, guidedbool=guidedbool)
     gops = GradOps(p, vgg_normalize=True)
@@ -204,17 +207,17 @@ def run_gradcam(main_fold, dest_fold, deploy_tfrec, model_path, layer_name='bloc
 
     # conf_mat_paths = [['artifact_true', 'artifact_false'], ['asyn_false', 'asyn_true']]
     conf_mat_paths = [['zero_true', 'zero_false'], ['one_false', 'one_true']]
-    parser = lambda img: gops.img_parse(img, rgb=False)  # todo: add flag for rgb image, or autodetect
+    parser = lambda img: gops.img_parse(img)
     # layer_name = 'block5_conv3'  # VGG16
     # layer_name = 'block5_conv4'  # VGG19
     # layer_name = 'conv2d_4'  # custom_model
-    LABELLED = False  # todo: add flag
+    LABELLED = False
     # layer_name = 'block1_conv1'
     if main_fold is not None:
         subdirs = glob.glob(os.path.join(main_fold, '**'))
         if os.path.isdir(subdirs[0]):
             for subdir in subdirs:
-                tifs = glob.glob(os.path.join(subdir, f"*.{imtype}"))
+                tifs = glob.glob(os.path.join(subdir, f'*.{imtype}'))
                 if len(tifs) >= batch_size:
                     print('Running {}'.format(subdir))
                     name = subdir.split('/')[-1]
@@ -222,7 +225,8 @@ def run_gradcam(main_fold, dest_fold, deploy_tfrec, model_path, layer_name='bloc
                     cur_dest_path = os.path.join(dest_fold, name)
                     process_fold(p, g, cur_source_fold, neg_fold, pos_fold, cur_dest_path, conf_mat_paths,
                                  batch_size=batch_size,
-                                 parser=parser, layer_name=layer_name, has_labels=LABELLED,
+                                 parser=parser, layer_name=layer_name, gray_morphology_bool=gray_morphology_bool,
+                                 has_labels=LABELLED,
                                  tfrecord=deploy_tfrec)
                     print(f'saved to {cur_dest_path}')
         # Directory does not have subdirectories
@@ -233,37 +237,52 @@ def run_gradcam(main_fold, dest_fold, deploy_tfrec, model_path, layer_name='bloc
             # livedead = subdir.split('/')[-3]
             cur_dest_path = dest_fold
 
-            process_fold(p, g, cur_source_fold, neg_fold, pos_fold, cur_dest_path, conf_mat_paths, batch_size=batch_size,
-                         parser=parser, layer_name=layer_name, has_labels=LABELLED, tfrecord=deploy_tfrec)
+            process_fold(p, g, cur_source_fold, neg_fold, pos_fold, cur_dest_path, conf_mat_paths,
+                         batch_size=batch_size,
+                         parser=parser, layer_name=layer_name, gray_morphology_bool=gray_morphology_bool,
+                         has_labels=LABELLED, tfrecord=deploy_tfrec)
     else:
+        print(f'Running gradcam on tfrecord: {deploy_tfrec}')
         cur_source_fold = None
 
         process_fold(p, g, cur_source_fold, neg_fold, pos_fold, dest_fold, conf_mat_paths, batch_size=batch_size,
-                     parser=parser, layer_name=layer_name, has_labels=LABELLED,
+                     parser=parser, layer_name=layer_name, gray_morphology_bool=gray_morphology_bool,
+                     has_labels=LABELLED,
                      tfrecord=deploy_tfrec)
     print(f'saved to {dest_fold}')
+
 
 if __name__ == '__main__':
     result = pyfiglet.figlet_format("GEDI-CNN Gradcam", font="slant")
     print(result)
     parser = argparse.ArgumentParser(description='Gradcam on GEDICNN model')
     parser.add_argument('--im_dir', action="store",
-                        default=None,
+                        default='/gladstone/finkbeiner/elia/BiancaB/Imaging_Experiments/Foxo1_Trap1/GXYTMP/17AAG_R5_IXM/CroppedImages/A09',
                         help='directory of images to run', dest="im_dir")
     parser.add_argument('--model_path', action="store",
-                        default='/gladstone/finkbeiner/linsley/Shijie_ML/Tau_PFF/Mito/CNN/saved_models/vgg19_2022_11_11_22_41_31.h5',
+                        default='/gladstone/finkbeiner/linsley/GEDI_CLUSTER/gedicnn.h5',
                         help='path to h5 or hdf5 model', dest="model_path")
     parser.add_argument('--deploy_tfrec', action="store", default=None,
                         help='results directory', dest="deploy_tfrec")
-    parser.add_argument('--layer_name', action="store", default='block5_conv4',
+    parser.add_argument('--layer_name', action="store", default='block5_conv3',
                         help='visualize layer', dest="layer_name")
-    parser.add_argument('--batch_size', action="store", default=64,
-                        help='batch size', dest="batch_size")
-    parser.add_argument('--resdir', action="store", default='/gladstone/finkbeiner/linsley/Shijie_ML/Tau_PFF/Mito/CNN_T8-12/Gradcam/test',
+    parser.add_argument('--resdir', action="store",
+                        default='/gladstone/finkbeiner/elia/BiancaB/Imaging_Experiments/Foxo1_Trap1/GXYTMP/17AAG_R5_IXM/GEDI/Gradcam2',
                         help='results directory', dest="resdir")
+    parser.add_argument('--batch_size', type=int, action="store", default=16,
+                        help='Batch size. The remainder of total images / batch_size is truncated.',
+                        dest="batch_size")
+    # parser.add_argument('--labelled', type=int, action="store", default=False,
+    #                     help='If false, you only need one image directory. If true, you need two directories, one with negative samples, the other with positive.',
+    #                     dest="preprocess_tfrecs")
+    parser.add_argument('--gray_morphology', type=int, action="store", default=True,
+                        help='Generate gradcam images with gray morphology. If false, generate gradcam images with red morphology.',
+                        dest="gray_morphology")
     parser.add_argument('--imtype', action="store", default='tif',
                         help='suffix for image, tif, jpg, png', dest="imtype")
 
     args = parser.parse_args()
     print('ARGS:\n', args)
-    run_gradcam(args.im_dir, args.resdir, args.deploy_tfrec, args.model_path, args.layer_name,args.batch_size, args.imtype)
+
+    run_gradcam(args.im_dir, args.resdir, args.deploy_tfrec, args.model_path, args.batch_size, args.layer_name,
+                args.gray_morphology, args.imtype)
