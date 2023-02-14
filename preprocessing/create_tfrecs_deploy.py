@@ -44,8 +44,10 @@ class Record:
     def __init__(self, images_dir_A, tfrecord_dir, lbl):
         self.images_dir_A = images_dir_A
         # Add dummy folder for batch two, different tree.
-        self.impaths_A = glob.glob(os.path.join(self.images_dir_A, '**/*.tif'))
-
+        imgs = glob.glob(os.path.join(self.images_dir_A, '*.tif'))
+        if len(imgs)==0:
+            imgs = glob.glob(os.path.join(self.images_dir_A, '**', '*.tif'))
+        self.impaths_A = imgs
         self.tfrecord_dir = tfrecord_dir
 
         self.impaths = np.array(self.impaths_A)

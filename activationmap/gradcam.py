@@ -189,12 +189,13 @@ def process_fold(p, g, source_fold, dead_fold, live_fold, dest_path, conf_mat_pa
     return 0
 
 
-def run_gradcam(main_fold, dest_fold, deploy_tfrec, model_path, layer_name='block5_conv3', imtype='tif'):
+def run_gradcam(main_fold, dest_fold, deploy_tfrec, model_path, layer_name='block5_conv3', batch_size=2,imtype='tif'):
     p = param.Param(parent_dir=dest_fold, res_dir=dest_fold)
     if main_fold is not None and deploy_tfrec is not None:
         assert 0, 'main fold or deploy_tfrec must be Nan valued (None).'
     guidedbool = True
-    batch_size = 2
+    if isinstance(batch_size, str):
+        batch_size = int(batch_size)
 
     g = Grads(model_path, guidedbool=guidedbool)
     gops = GradOps(p, vgg_normalize=True)
@@ -256,6 +257,8 @@ if __name__ == '__main__':
                         help='results directory', dest="deploy_tfrec")
     parser.add_argument('--layer_name', action="store", default='block5_conv4',
                         help='visualize layer', dest="layer_name")
+    parser.add_argument('--batch_size', action="store", default=64,
+                        help='batch size', dest="batch_size")
     parser.add_argument('--resdir', action="store", default='/gladstone/finkbeiner/linsley/Shijie_ML/Tau_PFF/Mito/CNN_T8-12/Gradcam/test',
                         help='results directory', dest="resdir")
     parser.add_argument('--imtype', action="store", default='tif',
@@ -263,5 +266,4 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     print('ARGS:\n', args)
-
-    run_gradcam(args.im_dir, args.resdir, args.deploy_tfrec, args.model_path, args.layer_name, args.imtype)
+    run_gradcam(args.im_dir, args.resdir, args.deploy_tfrec, args.model_path, args.layer_name,args.batch_size, args.imtype)

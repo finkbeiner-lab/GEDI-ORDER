@@ -5,13 +5,13 @@ import pyfiglet
 
 
 def gridsearch(datadir, res_dir, retrain_bool):
-    param_dict = {'epochs': 750, 'augmentbool': True, 'batch_size': 32, 'min_contrast': 1, 'max_contrast': 1.3,
+    param_dict = {'epochs': 50, 'augmentbool': True, 'batch_size': 32, 'min_contrast': 1, 'max_contrast': 1.3,
                   'random_brightness': .2, 'target_size': (224, 224, 3), 'orig_size': (300, 300, 1),
                   'class_weights': {0: 1., 1: 1.}, 'momentum': .9, 'randomcrop': True, 'histogram_eq': True}
     models = ['vgg19']
-    batch_sizes = [32]
-    lrs = [1e-5]
-    optimizers = ['adam']
+    batch_sizes = [32, 64]
+    lrs = [1e-5, 1e-6]
+    optimizers = ['adam', 'sgd']
     l2s = [0]
     wds = [1e-5]
     momentums = [.9]

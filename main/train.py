@@ -31,9 +31,9 @@ class Train:
 
         self.preprocess_tfrecs = preprocess_tfrecs
         self.use_neptune = use_neptune
-        if self.use_neptune:
+        if self.use_neptune: # switch to wandb
             import neptune.new as neptune
-            df = pd.read_csv(os.path.join(self.p.parent_dir, 'neptune.csv'))
+            df = pd.read_csv(os.path.join('/home/swang', 'neptune.csv'))
             self.nep = neptune.init(df['user'].iloc[0], df['token'].iloc[0])
         else:
             self.nep = None
@@ -249,7 +249,6 @@ class Train:
 
         print('Saving model to {}'.format(export_path))
         model.save(export_path)
-        self.nep.stop()
 
     def retrain(self, base_model_file=None):
 
@@ -510,6 +509,6 @@ if __name__ == '__main__':
                use_neptune=args.use_neptune)
     if args.retrain:
         print('Retraining on gedi-cnn model...')
-        Tr.retrain()
+        Tr.retrain()  # todo: make retrainable argument
     else:
         Tr.run(args.pos_dir, args.neg_dir, args.balance_method)  # generates tfrecs if arg is set to true and trains

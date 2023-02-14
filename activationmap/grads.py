@@ -355,14 +355,14 @@ class Grads:
 
         for img, lbl, grad_0, grad_1, pred in zip(imgs, lbls, grads_0, grads_1, preds):
             grad_pair = [grad_0, grad_1]
-            fig, axes = plt.subplots(1, 2, figsize=(4,4))
-            ax = axes.ravel()
-            ax[0].imshow(grad_pair[0])
-            ax[1].imshow(grad_pair[1])
-            fig.savefig('test.png')
-            fig.show()
-
-            plt.close()
+            # fig, axes = plt.subplots(1, 2, figsize=(4,4))
+            # ax = axes.ravel()
+            # ax[0].imshow(grad_pair[0])
+            # ax[1].imshow(grad_pair[1])
+            # fig.savefig('test.png')
+            # fig.show()
+            #
+            # plt.close()
             
             # if np.argmax(lbl) == 1:
             #     grad_pair = grad_pair[::-1]

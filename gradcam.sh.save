@@ -1,0 +1,5 @@
+export PYTHONPATH=/home/swang/Documents/GEDI-ORDER/
+export modelpath=/gladstone/finkbeiner/linsley/Shijie_ML/Tau_PFF/Mito/CNN_T4-7/saved_models/vgg19_2022_11_30_13_44_56.h5
+python /home/swang/Documents/GEDI-ORDER/activationmap/gradcam.py --im_dir /gladstone/finkbeiner/linsley/Shijie_ML/Tau_PFF/Mito/Lipo_T4-7 \
+--model_path $modelpath \
+--resdir /gladstone/finkbeiner/linsley/Shijie_ML/Tau_PFF/Mito/CNN/Gradcam/lipo-T4-7
