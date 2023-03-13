@@ -157,22 +157,22 @@ if __name__ == '__main__':
     #                     default='/run/media/jlamstein/data/GEDI-ORDER',
     #                     help='parent directory for Gedi-CNN',
     #                     dest='parent')
-    parser.add_argument('--parent', action="store", default='/gladstone/finkbeiner/linsley/GEDI_CLUSTER',
+    parser.add_argument('--parent', action="store", default='/gladstone/finkbeiner/linsley/Shijie_ML/Tau_PFF/Mito/CNN_T8-12',
                         help='parent directory', dest="parent")
     parser.add_argument('--res_dir', action="store", default='/gladstone/finkbeiner/linsley/GEDI_CLUSTER',
                         help='resources directory with gedicnn model', dest="res_dir")
     parser.add_argument('--im_dir', action="store",
                         # default='/gladstone/finkbeiner/elia/BiancaB/Imaging_Experiments/iMG_cocultures/GXYTMP/iMG-coculture-1-061522/CroppedImages',
-                        default='/gladstone/finkbeiner/elia/BiancaB/Imaging_Experiments/iMG_cocultures/GXYTMP/IMG-coculture-2-061522-Th3/CroppedImages',
+                        default='/gladstone/finkbeiner/linsley/Shijie_ML/Tau_PFF/Mito/PFF_Lipo_T8-12',
                         # default='/gladstone/finkbeiner/elia/BiancaB/Imaging_Experiments/Foxo1_Trap1/GXYTMP ',
                         help='directory of images to run', dest="im_dir")
     parser.add_argument('--model_path', action="store",
-                        default='/gladstone/finkbeiner/linsley/GEDI_CLUSTER/base_gedi.h5',
+                        default='/gladstone/finkbeiner/linsley/Shijie_ML/Tau_PFF/Mito/CNN_T8-12/saved_models/vgg19_2022_11_29_18_20_56.h5',
                         help='path to h5 or hdf5 model', dest="model_path")
     parser.add_argument('--preprocess_tfrecs', type=int, action="store", default=True,
                         help='generate tfrecords, necessary for new datasets, if already generate set to false',
                         dest="preprocess_tfrecs")
-    parser.add_argument('--use_gedi_cnn', type=int, action="store", default=True,
+    parser.add_argument('--use_gedi_cnn', type=int, action="store", default=False,
                         help='generate tfrecords, necessary for new datasets, if already generate set to false',
                         dest="use_gedi_cnn")
     parser.add_argument('--get_accuracy', type=int, action="store", default=True,

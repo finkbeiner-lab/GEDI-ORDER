@@ -39,7 +39,8 @@ class Grads:
         self.guidedbool = guidedbool
         self.raw_func = None
         self.layer_func = None
-        self.verbose = False
+        self.verbose = True
+        self.grads = None
 
         with Grads.using_context(*self.normal):
             self.model_n = load_model(model_path)
@@ -200,23 +201,25 @@ class Grads:
         # print('batch grads')
         with self.using_default(guided=guided):
             if self.raw_func is None:
+                # _weights = self.model_g.get_layer('block5_conv3').get_weights()[0]
+                # print('weights', _weights)
                 self.raw_func = Grads.raw_grad_func(self.model_g if guided else self.model_n,
                                                     pick_preds=class_id is None,
                                                     ret_preds=True)
             # func = Grads.raw_grad_func(self.model_g if guided else self.model_n, pick_preds=class_id is None,
             #                            ret_preds=True)
             if class_id is None:
-                grads, preds = self.raw_func([batch])
+                self.grads, preds = self.raw_func([batch])
             else:
-                grads, preds = self.raw_func([batch, class_id])
+                self.grads, preds = self.raw_func([batch, class_id])
         if self.verbose:
-            mem(grads, 'grads')
+            mem(self.grads, 'grads')
             mem(preds, 'preds')
             mem(self.model_g, 'model_g')
             mem(self.model_n, 'model_n')
         if ret_preds:
-            return [grads, preds]
-        return [grads]
+            return [self.grads, preds]
+        return [self.grads]
 
     #    @profile
     def batch_heatmaps(self, batch, layer_name, class_id=None, ret_preds=False):
@@ -250,24 +253,24 @@ class Grads:
 
     #    @profile
     def guided_gradcam(self, batch, layer_name, class_id=None, ret_preds=False):
-        grads, preds = self.batch_grads(batch, guided=self.guidedbool, class_id=class_id, ret_preds=True)
+        self.grads, preds = self.batch_grads(batch, guided=self.guidedbool, class_id=class_id, ret_preds=True)
         heatmaps, _ = self.batch_heatmaps(batch, layer_name, class_id=class_id, ret_preds=True)
 
-        for i in range(grads.shape[0]):
-            grads[i] = np.maximum(grads[i], 0)  # ReLU/positively contributing pixel slice
+        for i in range(self.grads.shape[0]):
+            self.grads[i] = np.maximum(self.grads[i], 0)  # ReLU/positively contributing pixel slice
             heatmap = resize(heatmaps[i], (224, 224))  # interpolate heatmap over entire pixel area
             # ^^ may wish to use custom interpolation instead
 
-            for ch in range(grads[i].shape[-1]):
-                grads[i, ..., ch] *= heatmap
+            for ch in range(self.grads[i].shape[-1]):
+                self.grads[i, ..., ch] *= heatmap
 
-            if np.amax(grads[i]) > 0: grads[i] /= np.amax(grads[i])  # 0-1 normalization over composite image
+            if np.amax(self.grads[i]) > 0: self.grads[i] /= np.amax(self.grads[i])  # 0-1 normalization over composite image
         if self.verbose:
-            mem(grads, 'guided grads')
+            mem(self.grads, 'guided grads')
             mem(heatmaps, 'guided heatmaps')
         if ret_preds:
-            return [grads, preds]
-        return [grads]
+            return [self.grads, preds]
+        return [self.grads]
 
     def process_images(self, imgs, lbls):
         Dat = Dataspring(None)
@@ -292,15 +295,15 @@ class Grads:
         """
         # print('guided gradcam gray')
         # guided backprop
-        grads, preds = self.batch_grads(batch, guided=self.guidedbool, class_id=class_id, ret_preds=True)
+        self.grads, preds = self.batch_grads(batch, guided=self.guidedbool, class_id=class_id, ret_preds=True)
         # gradCAM heatmaps from targeted layer_name
         heatmaps, _ = self.batch_heatmaps(batch, layer_name, class_id=class_id, ret_preds=True)
 
         grads_final = []
-        for i in range(grads.shape[0]):
+        for i in range(self.grads.shape[0]):
             # consider other grayscale methods
-            grads[i] = np.maximum(grads[i], 0)
-            grad = np.max(grads[i], axis=-1)
+            self.grads[i] = np.maximum(self.grads[i], 0)
+            grad = np.max(self.grads[i], axis=-1)
             heatmap = resize(heatmaps[i], (224, 224))
             # _f = '/mnt/finkbeinerlab/robodata/Josh/Gradcam/results/batches16bit/10_single_unnormalized'
             # np.save(_f + f'/neg_backprop_grads_label_{class_id}.npy', grad)
@@ -313,17 +316,22 @@ class Grads:
             if np.amax(grad) > 0: grad /= np.amax(grad)
             grads_final.append(grad)
         if self.verbose:
-            mem(grads, 'gray guided grads')
+            mem(self.grads, 'gray guided grads')
             mem(heatmaps, 'gray guided heatmaps')
             mem(grad, 'gray guided grad')
+            mem(grads_final, 'grads final')
             mem(heatmap, 'gray guided heatmap')
             mem(batch, 'gray batch')
+        # del grads
+        # del heatmaps
+        # del grad
+        # del batch
         if ret_preds:
             return [grads_final, preds]
         return [grads_final]
 
     #    @profile
-    def gen_ggcam_stacks(self, imgs, lbls, layer_name, ret_preds=True, gray_morphology=False):
+    def gen_ggcam_stacks(self, imgs, orig_imgs, lbls, layer_name, ret_preds=True, gray_morphology=False):
         """
         Gets gradcam for both labels.
         Args:
@@ -349,7 +357,7 @@ class Grads:
         grads_0, preds = self.guided_gradcam_gray(imgs, layer_name, class_id=0, ret_preds=True)
         grads_1, preds = self.guided_gradcam_gray(imgs, layer_name, class_id=1, ret_preds=True)
 
-        for img, lbl, grad_0, grad_1, pred in zip(imgs, lbls, grads_0, grads_1, preds):
+        for img, lbl, grad_0, grad_1, pred in zip(orig_imgs, lbls, grads_0, grads_1, preds):
             grad_pair = [grad_0, grad_1]
             # if np.argmax(lbl) == 1:
             #     grad_pair = grad_pair[::-1]

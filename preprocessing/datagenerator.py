@@ -55,6 +55,7 @@ class Dataspring(Parser):
         ds = ds.map(self.reshape_ims, num_parallel_calls=self.p.num_parallel_calls)
 
         # Normalization
+
         if self.p.histogram_eq:
             ds = ds.map(self.normalize_histeq, num_parallel_calls=self.p.num_parallel_calls)
         ds = ds.map(self.set_max_to_one_by_image, num_parallel_calls=self.p.num_parallel_calls)
@@ -80,7 +81,7 @@ class Dataspring(Parser):
             if self.verbose:
                 print('Using inceptionv3')
             ds = ds.map(self.inception_scale, num_parallel_calls=self.p.num_parallel_calls)
-        elif self.p.which_model=='resnet50':
+        elif self.p.which_model == 'resnet50':
             ds = ds.map(self.make_vgg, num_parallel_calls=self.p.num_parallel_calls)
 
         elif self.p.which_model == 'raw':
@@ -134,24 +135,24 @@ class Dataspring(Parser):
 
 
 if __name__ == '__main__':
-    p = param.Param(parent_dir='/gladstone/finkbeiner/barbe/Stephanie/GEDI-ORDER',
-                    res_dir='/gladstone/finkbeiner/barbe/Stephanie/GEDI-ORDER')
+    p = param.Param(parent_dir='/gladstone/finkbeiner/linsley/Shijie_ML/Tau_PFF/Mito/CNN_T8-12',
+                    res_dir='/gladstone/finkbeiner/linsley/Shijie_ML/Tau_PFF/Mito/CNN_T8-12')
     print(p.which_model)
     tfrecord = os.path.join(p.parent_dir, 'test.tfrecord')
-    Dat = Dataspring(p,tfrecord)
+    Dat = Dataspring(p, tfrecord)
     Dat.datagen_base(istraining=False)
     label_lst = []
-    length = Dat.count_data()
-    labels = None
-    for i in range(length):
-        imgs, lbls, files = Dat.datagen()
-        if labels is None:
-            labels = lbls.numpy()
-        else:
-            labels = np.hstack((labels, lbls.numpy()))
-
-    print(np.unique(labels, return_counts=True))
-
+    # length = Dat.count_data()
+    # labels = None
+    # for i in range(length):
+    #     imgs, lbls, files = Dat.datagen()
+    #     if labels is None:
+    #         labels = lbls.numpy()
+    #     else:
+    #         labels = np.hstack((labels, lbls.numpy()))
+    #
+    # print(np.unique(labels, return_counts=True))
+    #
     # for i in range(1):
     #     imgs, lbls, files = Dat.datagen()
     #     for img, lbl, file in zip(imgs, lbls, files):
@@ -167,20 +168,20 @@ if __name__ == '__main__':
 
     #
     # if p.which_model is None:
-    #     for i in range(1):
-    #         imgs, lbls, files = Dat.datagen()
-    #         for img, lbl in zip(imgs, lbls):
-    #             plt.figure()
-    #             lbl = lbl.numpy()
-    #             # im = (img + 1) * 127.5
-    #             im = np.array(img)
-    #             im = np.reshape(im, (224,224))
-    #             print('min',np.min(im))
-    #             print('max', np.max(im))
-    #             im = np.uint8(255 * im / np.max(im))
-    #             plt.imshow(im)
-    #             plt.title(lbl)
-    #         plt.show()
+    for i in range(1):
+        imgs, lbls, files = Dat.datagen()
+        for img, lbl in zip(imgs[:3], lbls[:3]):
+            plt.figure()
+            lbl = lbl.numpy()
+            # im = (img + 1) * 127.5
+            im = np.array(img)
+            im = np.reshape(im, (224, 224, 3))
+            print('min', np.min(im))
+            print('max', np.max(im))
+            im = np.uint8(255 * im / np.max(im))
+            plt.imshow(im)
+            plt.title(lbl)
+        plt.show()
     # else:
     #     ###### VGG16 #######
     #     for i in range(3):
