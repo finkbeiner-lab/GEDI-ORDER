@@ -16,34 +16,41 @@ def gridsearch(datadir, res_dir, retrain_bool):
     wds = [1e-5]
     momentums = [.9]
     regs = [None]
+    #histogram_eqs = [True, False]
+    histogram_eqs = [False]
+    augmentations = [True]
     brightnesses = [.1, .2, .3]
     max_contrasts = [1.1, 1.3, 1.5]
     for model in models:
         for batch_size in batch_sizes:
-            for wd in wds:
-                for lr in lrs:
-                    for optimizer in optimizers:
-                        for l2 in l2s:
-                            for reg in regs:
-                                for momentum in momentums:
-                                    for brightness in brightnesses:
-                                        for max_contrast in max_contrasts:
-                                            param_dict['batch_size']= batch_size
-                                            param_dict['model'] = model
-                                            param_dict['learning_rate'] = lr
-                                            param_dict['optimizer'] = optimizer
-                                            param_dict['regularize'] = reg
-                                            param_dict['l2_regularize'] = l2
-                                            param_dict['weight_decay'] = wd
-                                            param_dict['momentum'] = momentum
-                                            param_dict['random_brightness'] = brightness
-                                            param_dict['max_contrast'] = max_contrast
-                                            Tr = Train(parent_dir=datadir, res_dir=res_dir, param_dict=param_dict, preprocess_tfrecs=False,
-                                                       use_wandb=True)
-                                            if retrain_bool:
-                                                Tr.retrain()
-                                            else:
-                                                Tr.train()
+            for histogram_eq in histogram_eqs:
+                for wd in wds:
+                    for lr in lrs:
+                        for optimizer in optimizers:
+                            for l2 in l2s:
+                                for reg in regs:
+                                    for momentum in momentums:
+                                        for brightness in brightnesses:
+                                            for max_contrast in max_contrasts:
+                                                for aug in augmentations:
+                                                    param_dict['augmentbool'] = aug
+                                                    param_dict['batch_size']= batch_size
+                                                    param_dict['model'] = model
+                                                    param_dict['learning_rate'] = lr
+                                                    param_dict['optimizer'] = optimizer
+                                                    param_dict['regularize'] = reg
+                                                    param_dict['l2_regularize'] = l2
+                                                    param_dict['weight_decay'] = wd
+                                                    param_dict['momentum'] = momentum
+                                                    param_dict['random_brightness'] = brightness
+                                                    param_dict['max_contrast'] = max_contrast
+                                                    param_dict['histogram_eq'] = histogram_eq
+                                                    Tr = Train(parent_dir=datadir, res_dir=res_dir, param_dict=param_dict, preprocess_tfrecs=False,
+                                                               use_wandb=True)
+                                                    if retrain_bool:
+                                                        Tr.retrain()
+                                                    else:
+                                                        Tr.train()
 
 
 if __name__ == '__main__':

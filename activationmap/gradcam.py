@@ -265,7 +265,7 @@ if __name__ == '__main__':
     print(result)
     parser = argparse.ArgumentParser(description='Gradcam on GEDICNN model')
     parser.add_argument('--im_dir', action="store",
-                        default='/gladstone/finkbeiner/linsley/Shijie_ML/Tau_PFF/Mito/Lipo_T8-12',
+                        default='/gladstone/finkbeiner/linsley/Shijie_ML/Tau_PFF/Mito/PFF_Lipo_T8-12',
                         # default=None,
                         help='directory of images to run', dest="im_dir")
     parser.add_argument('--model_path', action="store",
