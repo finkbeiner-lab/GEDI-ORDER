@@ -137,21 +137,21 @@ if __name__ == '__main__':
     p = param.Param(parent_dir='/gladstone/finkbeiner/lab/MITOPHAGY',
                     res_dir='/gladstone/finkbeiner/lab/MITOPHAGY')
     print(p.which_model)
-    tfrecord = os.path.join(p.parent_dir, 'train.tfrecord')
+    tfrecord = os.path.join(p.parent_dir, 'test.tfrecord')
     Dat = Dataspring(p,tfrecord)
     Dat.datagen_base(istraining=False)
     label_lst = []
     # length = Dat.count_data()
     labels = None
-    length = 1000
-    # for i in range(length):
-    #     imgs, lbls, files = Dat.datagen()
-    #     if labels is None:
-    #         labels = lbls.numpy()
-    #     else:
-    #         labels = np.hstack((labels, lbls.numpy()))
-    #
-    # print(np.unique(labels, return_counts=True))
+    length = 20
+    for i in range(length):
+        imgs, lbls, files = Dat.datagen()
+        if labels is None:
+            labels = lbls.numpy()
+        else:
+            labels = np.hstack((labels, lbls.numpy()))
+
+    print(np.unique(labels, return_counts=True))
     #
     # for i in range(1):
     #     imgs, lbls, files = Dat.datagen()

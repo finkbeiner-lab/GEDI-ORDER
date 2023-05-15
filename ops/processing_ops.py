@@ -69,7 +69,8 @@ class Parser:
         print(img)
         lbl = tf.cast(parsed['label'], tf.int32)
         ratio = parsed['ratio']  # useful to have ratio, but model is a binary classifier with binary ground truth.
-        lbls = tf.one_hot(lbl, 2)  # one hot, verify this in pytest
+        # TODO: SUBTRACTING 1 FROM LABEL BECAUSE SET UP FOR MASKRCNN DATA
+        lbls = tf.one_hot(lbl-1, self.p.output_size)  # one hot, verify this in pytest
         img = tf.reshape(img, [-1, self.p.orig_size[0], self.p.orig_size[1], self.p.orig_size[2]])
         # if self.p.orig_size[0] > self.p.target_size[0]:
         #     x0 = (self.p.orig_size[1] - self.p.target_size[1]) // 2
