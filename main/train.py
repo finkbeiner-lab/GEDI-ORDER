@@ -202,7 +202,7 @@ class Train:
         if self.use_wandb:
             # from neptune.new.integrations.tensorflow_keras import NeptuneCallback
             # neptune_cbk = NeptuneCallback(run=self.nep, base_namespace='metrics')
-            wandb_cbk = wandb.keras.WandbCallback()
+            wandb_cbk = wandb.keras.WandbCallback(save_model=False, save_graph=False)
             callbacks.append(wandb_cbk)
 
         history = model.fit(train_gen, steps_per_epoch=train_length // (self.p.BATCH_SIZE), epochs=self.p.EPOCHS,
