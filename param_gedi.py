@@ -19,7 +19,7 @@ class Param:
             self.which_model = 'vgg19'  # vgg16, vgg19, resnet50
             self.EPOCHS = 1
             self.learning_rate = 1e-5  # 3e-4
-            self.BATCH_SIZE = 32
+            self.BATCH_SIZE = 16
             self.optimizer = 'adam'  # sgd, adam, adamw
             self.momentum = 0.9
             # Data generator
@@ -28,10 +28,10 @@ class Param:
             self.min_contrast = 1
             self.max_contrast = 1.3
             self.target_size = (224, 224, 3)
-            self.orig_size = (300, 300, 1)  # (230, 230, 3) for catdog tfrecord / (300,300,1) for cells
+            self.orig_size = (300, 300, 3)  # (230, 230, 3) for catdog tfrecord / (300,300,1) for cells
             self.class_weights = {0: 1., 1: 1.}  # rough ratio  # 2.75 vs 1 for original training dataset
-            self.randomcrop = True
-            self.histogram_eq = True
+            self.randomcrop = False
+            self.histogram_eq = False
             self.weight_decay = 1e-5  # for AdamW
             self.l2_regularize = 0
             self.regularize = None
@@ -160,7 +160,7 @@ class Param:
         # self.data_deploy = self.data_retrain
 
         # self.max_gedi = 16117. # max value of training set
-        self.output_size = 2
+        self.output_size = 7
 
         self.orig_width = 300
         self.orig_height = 300

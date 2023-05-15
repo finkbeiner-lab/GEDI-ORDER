@@ -310,6 +310,7 @@ class Train:
         Chk = pipe.Dataspring(self.p, data_retest)
         test_length = Chk.count_data().numpy()
         del Chk
+
         DatTrain = pipe.Dataspring(self.p, data_retrain)
         DatVal = pipe.Dataspring(self.p, data_reval)
         DatTest = pipe.Dataspring(self.p, data_retest)
@@ -490,14 +491,18 @@ if __name__ == '__main__':
     #              '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Deadcrops_2',
     #              '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Deadcrops_1']
 
-    positives = ['/gladstone/finkbeiner/linsley/Shijie/ML/NSCLC-1703/Livecrops_1', '/gladstone/finkbeiner/linsley/Shijie/ML/NSCLC-1703/Livecrops_2_3']
-    negatives = ['/gladstone/finkbeiner/linsley/Shijie/ML/NSCLC-1703/Deadcrops_1', '/gladstone/finkbeiner/linsley/Shijie/ML/NSCLC-1703/Deadcrops_2_3']
+    # positives = ['/gladstone/finkbeiner/linsley/Shijie/ML/NSCLC-1703/Livecrops_1', '/gladstone/finkbeiner/linsley/Shijie/ML/NSCLC-1703/Livecrops_2_3']
+    # negatives = ['/gladstone/finkbeiner/linsley/Shijie/ML/NSCLC-1703/Deadcrops_1', '/gladstone/finkbeiner/linsley/Shijie/ML/NSCLC-1703/Deadcrops_2_3']
+    positives= ['mito']
+    negatives= ['mito']
     parser.add_argument('--datadir', action="store",
-                        default='/gladstone/finkbeiner/linsley/Josh/GEDI-ORDER',
+                        # default='/gladstone/finkbeiner/linsley/Josh/GEDI-ORDER',
+                        default='/gladstone/finkbeiner/lab/MITOPHAGY',
                         help='data parent directory',
                         dest='datadir')
     parser.add_argument('--res_dir', action="store",
-                        default='/gladstone/finkbeiner/linsley/Josh/GEDI-ORDER',
+                        # default='/gladstone/finkbeiner/linsley/Josh/GEDI-ORDER',
+                        default='/gladstone/finkbeiner/lab/MITOPHAGY',
                         help='data parent directory',
                         dest='res_dir')
     parser.add_argument('--pos_dir', nargs='+',

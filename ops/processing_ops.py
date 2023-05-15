@@ -30,6 +30,7 @@ class Parser:
         parsed = tf.io.parse_single_example(row, features)
         # file = parsed['filename']
         img = tf.decode_raw(parsed['image'], tf.float32)
+        print(img)
         lbl = tf.cast(parsed['label'], tf.int32)
         lbls = tf.one_hot(lbl, 2)  # test this in pytest
         img = tf.decode_raw(img, tf.float32)
@@ -63,7 +64,9 @@ class Parser:
 
         parsed = tf.io.parse_example(row, features)
         files = parsed['filename']
+        print(files)
         img = tf.io.decode_raw(parsed['image'], tf.float32)
+        print(img)
         lbl = tf.cast(parsed['label'], tf.int32)
         ratio = parsed['ratio']  # useful to have ratio, but model is a binary classifier with binary ground truth.
         lbls = tf.one_hot(lbl, 2)  # one hot, verify this in pytest

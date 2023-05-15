@@ -134,24 +134,25 @@ class Dataspring(Parser):
 
 
 if __name__ == '__main__':
-    p = param.Param(parent_dir='/gladstone/finkbeiner/barbe/Stephanie/GEDI-ORDER',
-                    res_dir='/gladstone/finkbeiner/barbe/Stephanie/GEDI-ORDER')
+    p = param.Param(parent_dir='/gladstone/finkbeiner/lab/MITOPHAGY',
+                    res_dir='/gladstone/finkbeiner/lab/MITOPHAGY')
     print(p.which_model)
-    tfrecord = os.path.join(p.parent_dir, 'test.tfrecord')
+    tfrecord = os.path.join(p.parent_dir, 'train.tfrecord')
     Dat = Dataspring(p,tfrecord)
     Dat.datagen_base(istraining=False)
     label_lst = []
-    length = Dat.count_data()
+    # length = Dat.count_data()
     labels = None
-    for i in range(length):
-        imgs, lbls, files = Dat.datagen()
-        if labels is None:
-            labels = lbls.numpy()
-        else:
-            labels = np.hstack((labels, lbls.numpy()))
-
-    print(np.unique(labels, return_counts=True))
-
+    length = 1000
+    # for i in range(length):
+    #     imgs, lbls, files = Dat.datagen()
+    #     if labels is None:
+    #         labels = lbls.numpy()
+    #     else:
+    #         labels = np.hstack((labels, lbls.numpy()))
+    #
+    # print(np.unique(labels, return_counts=True))
+    #
     # for i in range(1):
     #     imgs, lbls, files = Dat.datagen()
     #     for img, lbl, file in zip(imgs, lbls, files):
@@ -165,44 +166,45 @@ if __name__ == '__main__':
     #         print(np.min(img))
     #         print(img[-1,:,0]*255.0)
 
-    #
-    # if p.which_model is None:
-    #     for i in range(1):
-    #         imgs, lbls, files = Dat.datagen()
-    #         for img, lbl in zip(imgs, lbls):
-    #             plt.figure()
-    #             lbl = lbl.numpy()
-    #             # im = (img + 1) * 127.5
-    #             im = np.array(img)
-    #             im = np.reshape(im, (224,224))
-    #             print('min',np.min(im))
-    #             print('max', np.max(im))
-    #             im = np.uint8(255 * im / np.max(im))
-    #             plt.imshow(im)
-    #             plt.title(lbl)
-    #         plt.show()
-    # else:
-    #     ###### VGG16 #######
-    #     for i in range(3):
-    #         imgs, lbls, files = Dat.datagen()
-    #         for img, lbl, file in zip(imgs, lbls, files):
-    #             lbl = lbl.numpy()
-    #             img = img.numpy()
-    #             img[:, :, 0] += p.VGG_MEAN[0]
-    #             img[:, :, 1] += p.VGG_MEAN[1]
-    #             img[:, :, 2] += p.VGG_MEAN[2]
-    #             print(img)
-    #             print('f', file)
-    #             print(np.max(img))
-    #             print(np.min(img))
-    #             rgb = np.copy(img)
-    #             rgb[:, :, 0] = img[:, :, 2]
-    #             rgb[:, :, 2] = img[:, :, 0]
-    #             rgb = np.float32(rgb)
-    #             rgb *= 1
-    #             rgb[rgb > 255] = 255
-    #             im = np.uint8(rgb)
-    #             plt.figure()
-    #             plt.imshow(im)
-    #             plt.title(lbl)
-    #         plt.show()
+
+    if p.which_model is None:
+        for i in range(1):
+            imgs, lbls, files = Dat.datagen()
+            for img, lbl in zip(imgs, lbls):
+                plt.figure()
+                lbl = lbl.numpy()
+                # im = (img + 1) * 127.5
+                im = np.array(img)
+                im = np.reshape(im, (224,224))
+                print('min',np.min(im))
+                print('max', np.max(im))
+                im = np.uint8(255 * im / np.max(im))
+                plt.imshow(im)
+                plt.title(lbl)
+            plt.show()
+    else:
+        ###### VGG16 #######
+        for i in range(3):
+            imgs, lbls, files = Dat.datagen()
+            for img, lbl, file in zip(imgs, lbls, files):
+                lbl = lbl.numpy()
+                img = img.numpy()
+                img[:, :, 0] += p.VGG_MEAN[0]
+                img[:, :, 1] += p.VGG_MEAN[1]
+                img[:, :, 2] += p.VGG_MEAN[2]
+                print(img)
+                print('f', file)
+                print(np.max(img))
+                print(np.min(img))
+                rgb = np.copy(img)
+                # rgb[:, :, 0] = img[:, :, 2]
+                # rgb[:, :, 2] = img[:, :, 0]
+                rgb = np.float32(rgb)
+                rgb *= 1
+                rgb[rgb > 255] = 255
+                im = np.uint8(rgb)
+                plt.figure()
+                plt.imshow(im)
+                plt.title(lbl)
+                break
+            plt.show()

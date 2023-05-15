@@ -211,7 +211,7 @@ def run_gradcam(main_fold, dest_fold, deploy_tfrec, model_path, batch_size, laye
     # layer_name = 'block5_conv3'  # VGG16
     # layer_name = 'block5_conv4'  # VGG19
     # layer_name = 'conv2d_4'  # custom_model
-    LABELLED = False
+    LABELLED = True if main_fold is None else False
     # layer_name = 'block1_conv1'
     if main_fold is not None:
         subdirs = glob.glob(os.path.join(main_fold, '**'))
@@ -257,17 +257,22 @@ if __name__ == '__main__':
     print(result)
     parser = argparse.ArgumentParser(description='Gradcam on GEDICNN model')
     parser.add_argument('--im_dir', action="store",
-                        default='/gladstone/finkbeiner/elia/BiancaB/Imaging_Experiments/Foxo1_Trap1/GXYTMP/17AAG_R5_IXM/CroppedImages/A09',
+                        # default='/gladstone/finkbeiner/elia/BiancaB/Imaging_Experiments/Foxo1_Trap1/GXYTMP/17AAG_R5_IXM/CroppedImages/A09',
+                        default=None,
                         help='directory of images to run', dest="im_dir")
     parser.add_argument('--model_path', action="store",
-                        default='/gladstone/finkbeiner/linsley/GEDI_CLUSTER/gedicnn.h5',
+                        # default='/gladstone/finkbeiner/linsley/GEDI_CLUSTER/gedicnn.h5',
+                        default='/gladstone/finkbeiner/lab/MITOPHAGY/saved_models/vgg19_2023_05_13_12_33_47.h5',
                         help='path to h5 or hdf5 model', dest="model_path")
-    parser.add_argument('--deploy_tfrec', action="store", default=None,
+    parser.add_argument('--deploy_tfrec', action="store", default='/gladstone/finkbeiner/lab/MITOPHAGY/test.tfrecord',
                         help='results directory', dest="deploy_tfrec")
-    parser.add_argument('--layer_name', action="store", default='block5_conv3',
+    parser.add_argument('--layer_name', action="store", default='block5_conv4',
                         help='visualize layer', dest="layer_name")
+                        # layer_name = 'block5_conv3'  # VGG16
+                        # layer_name = 'block5_conv4'  # VGG19
+                        # layer_name = 'conv2d_4'  # custom_model
     parser.add_argument('--resdir', action="store",
-                        default='/gladstone/finkbeiner/elia/BiancaB/Imaging_Experiments/Foxo1_Trap1/GXYTMP/17AAG_R5_IXM/GEDI/Gradcam2',
+                        default='/gladstone/finkbeiner/lab/MITOPHAGY/gradcam',
                         help='results directory', dest="resdir")
     parser.add_argument('--batch_size', type=int, action="store", default=16,
                         help='Batch size. The remainder of total images / batch_size is truncated.',
