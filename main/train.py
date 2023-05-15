@@ -206,7 +206,7 @@ class Train:
             callbacks.append(wandb_cbk)
 
         history = model.fit(train_gen, steps_per_epoch=train_length // (self.p.BATCH_SIZE), epochs=self.p.EPOCHS,
-                            class_weight=self.p.class_weights, validation_data=val_gen,
+                            validation_data=val_gen,
                             validation_steps=val_length // self.p.BATCH_SIZE, callbacks=callbacks)
 
         train_acc = history.history['accuracy']
@@ -424,7 +424,7 @@ class Train:
             callbacks.append(wandb_cbk)
 
         history = model.fit(train_gen, steps_per_epoch=train_length // (self.p.BATCH_SIZE), epochs=self.p.EPOCHS,
-                            class_weight=self.p.class_weights, validation_data=val_gen,
+                            validation_data=val_gen,
                             validation_steps=val_length // self.p.BATCH_SIZE, callbacks=callbacks)
 
         train_acc = history.history['accuracy']
