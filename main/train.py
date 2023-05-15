@@ -225,7 +225,7 @@ class Train:
             imgs, lbls, files = DatTest2.datagen()
             # res = model.predict((imgs, lbls), steps=test_length // self.pBATCH_SIZE, workers=4, use_multiprocessing=True)
             nplbls = lbls.numpy()
-            if self.p.output_size == 2:
+            if self.p.output_size > 1:
                 test_results = np.argmax(res[i * self.p.BATCH_SIZE: (i + 1) * self.p.BATCH_SIZE], axis=1)
                 labels = np.argmax(nplbls, axis=1)
             elif self.p.output_size == 1:
