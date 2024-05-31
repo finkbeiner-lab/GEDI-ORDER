@@ -33,7 +33,7 @@ class Train:
         self.preprocess_tfrecs = preprocess_tfrecs
         self.use_wandb = use_wandb
         if self.use_wandb:
-            wandb.init("CNN")
+            wandb.init(project="TauEVpools-Tau40x-ADctrlF7-8")
             # import neptune.new as neptune
             # df = pd.read_csv(os.path.join(self.p.parent_dir, 'neptune.csv'))
             # self.nep = neptune.init(df['user'].iloc[0], df['token'].iloc[0])
@@ -85,6 +85,8 @@ class Train:
         """
         split = [.7, .15, .15]
         tfrec_dir = self.parent_dir
+        if not os.path.exists(tfrec_dir):
+            os.makedirs(tfrec_dir)
         pos_ims, neg_ims = self.gather_imgs(pos_dirs, neg_dirs, filetype='tif')
         Rec = Record(pos_ims, neg_ims, tfrec_dir, split, balance_method)
         savetrain = 'train.tfrecord'

@@ -16,11 +16,13 @@ def gridsearch(datadir, res_dir, retrain_bool):
     wds = [1e-5]
     momentums = [.9]
     regs = [None]
-    #histogram_eqs = [True, False]
-    histogram_eqs = [False]
+    histogram_eqs = [True, False]
+    #histogram_eqs = [False]
     augmentations = [True]
-    brightnesses = [.1, .2, .3]
-    max_contrasts = [1.1, 1.3, 1.5]
+    #brightnesses = [.1, .2, .3]
+    brightnesses = [.1]
+    #max_contrasts = [1.1, 1.3, 1.5]
+    max_contrasts = [1.1]
     for model in models:
         for batch_size in batch_sizes:
             for histogram_eq in histogram_eqs:
