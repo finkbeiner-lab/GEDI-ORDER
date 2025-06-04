@@ -66,24 +66,26 @@ class Param:
         if parent_dir is None:
             self.parent_dir = {'hobbes': '/mnt/finkbeinernas/robodata/Josh/GEDI-ORDER',
                                'calvin': '/mnt/finkbeinerlab/robodata/Josh/GEDI-ORDER',
+                               'ajdatacruncher': '/gladstone/finkbeiner/linsley/Shijie_ML/CNN_CLUSTER',
                                'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/Josh/GEDI-ORDER',
                                'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/Josh/GEDI-ORDER'}[
                 os_name]
         else:
             self.parent_dir = parent_dir
-        # if tfrec_dir is None:
-        #     self.tfrec_dir = {
-        #         'hobbes': '/mnt/finkbeinernas/robodata/GEDI_CLUSTER/GEDI_DATA',
-        #         'calvin': '/run/media/jlamstein/data/gedi/transfer/tfrecs',
-        #         'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/GEDI_DATA/',
-        #         'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/GEDI_DATA/'
-        #     }[os_name]
-        # else:
-        #     self.tfrec_dir = tfrec_dir
+        if tfrec_dir is None:
+            self.tfrec_dir = {
+                'hobbes': '/mnt/finkbeinernas/robodata/GEDI_CLUSTER/GEDI_DATA',
+                'calvin': '/run/media/jlamstein/data/gedi/transfer/tfrecs',
+                'ajdatacruncher': '/gladstone/finkbeiner/linsley/Shijie_ML/CNN_CLUSTER',
+                'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/GEDI_DATA/',
+                'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/GEDI_DATA/'
+            }[os_name]
+        else:
+            self.tfrec_dir = tfrec_dir
 
         if res_dir is None:
             self.res_dir = {'hobbes': '/mnt/finkbeinernas/robodata/GEDI_CLUSTER',
-                            'calvin': '/mnt/finkbeinerlab/robodata/GEDI_CLUSTER',
+                            'ajdatacruncher': '/gladstone/finkbeiner/linsley/Shijie_ML/CNN_CLUSTER',
                             'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER',
                             'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER'}[
                 os_name]

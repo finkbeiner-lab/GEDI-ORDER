@@ -102,13 +102,22 @@ class Record:
             livelst:
             deadlst:
 
-        Returns:
+        Returns:a
 
         """
+        print(f"DEBUG: livelst (positive images): {livelst}")
+        print(f"DEBUG: deadlst (negative images): {deadlst}")
+        print(f"DEBUG: len(livelst) = {len(livelst)}, len(deadlst) = {len(deadlst)}")
+
         livelbls = [1 for _ in livelst]
         deadlbls = [0 for _ in deadlst]
         impaths = np.array(livelst + deadlst)
         lbls = np.int16(np.array(livelbls + deadlbls))
+
+        print(f"DEBUG: Total images = {len(impaths)}")
+        if len(impaths) == 0:
+            raise ValueError("No image paths were loaded. Check pos_dir and neg_dir contents.")
+        
         shuffled_idx = np.arange(len(impaths))
         chk_shuffle = shuffled_idx.copy()
         np.random.seed(0)
@@ -242,13 +251,26 @@ class Record:
 
 if __name__ == '__main__':
     p = param.Param()
-    pos_dir = '/mnt/finkbeinerlab/robodata/JeremyTEMP/GalaxyTEMP/LINCS072017RGEDI-A/LiveVoronoi'
-    neg_dir = '/mnt/finkbeinerlab/robodata/JeremyTEMP/GalaxyTEMP/LINCS072017RGEDI-A/DeadVoronoi'
+    pos_dir = '/gladstone/finkbeiner/linsley/Shijie_ML/TauKO/Mito/'
+    neg_dir = '/gladstone/finkbeiner/linsley/Shijie_ML/TauWT/Mito/'
     split = [.7, .15, .15]
-    _poss = glob.glob(os.path.join(pos_dir, '*.tif'))
-    _negs = glob.glob(os.path.join(neg_dir, '*.tif'))
-    poss = [f for f in _poss if get_timepoint(f) < 11]
-    negs = [f for f in _negs if get_timepoint(f) < 11]
+    img_exts = ('*.png', '*.tif', '*.tiff')
+    pos_ims = []
+    neg_ims = []
+    for ext in img_exts:
+        pos_ims.extend(glob.glob(os.path.join(pos_dir, ext)))
+        neg_ims.extend(glob.glob(os.path.join(neg_dir, ext)))
+
+    # poss = [f for f in _poss if get_timepoint(f) < 11]
+    # negs = [f for f in _negs if get_timepoint(f) < 11]
+    print(f"Found {len(pos_ims)} positive image candidates")
+    print(f"Found {len(neg_ims)} negative image candidates")
+
+    # SW: removes the timepoint filter
+    # poss = [f for f in pos_ims if get_timepoint(f) < 11]
+    # negs = [f for f in neg_ims if get_timepoint(f) < 11]
+    poss = pos_ims
+    negs = neg_ims
 
     if len(poss) > len(negs):
         poss = random.sample(poss, len(negs))

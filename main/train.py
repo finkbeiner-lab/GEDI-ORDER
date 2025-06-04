@@ -20,23 +20,41 @@ from glob import glob
 import random
 import tensorflow_addons as tfa
 
+
 __author__ = 'Josh Lamstein'
 __copyright__ = 'Gladstone Institutes 2020'
 
 
 class Train:
-    def __init__(self, parent_dir, param_dict=None, preprocess_tfrecs=False, use_neptune=True):
+    def __init__(self, parent_dir, param_dict=None, preprocess_tfrecs=False, use_wandb=True):
         self.parent_dir = parent_dir
         self.p = param.Param(param_dict=param_dict, parent_dir=self.parent_dir)
 
         self.preprocess_tfrecs = preprocess_tfrecs
-        self.use_neptune = use_neptune
-        if self.use_neptune:
-            import neptune.new as neptune
-            df = pd.read_csv(os.path.join(self.p.parent_dir, 'neptune.csv'))
-            self.nep = neptune.init(df['user'].iloc[0], df['token'].iloc[0])
+        self.use_wandb = use_wandb
+        if self.use_wandb:
+            import wandb
+            run = wandb.init(
+            # Set the wandb entity where your project will be logged (generally your team name).
+            entity="swang202",
+            # Set the wandb project where this run will be logged.
+            project="TauKO",
+            # Track hyperparameters and run metadata.
+            config={
+                "learning_rate": self.p.learning_rate,
+                "architecture": self.p.which_model,
+                "dataset": "TauKO",
+                "epochs": self.p.EPOCHS
+            },
+)
+            csv = os.path.join(self.p.parent_dir, 'wandb.csv')
+            if os.path.exists(csv):
+                df = pd.read_csv(csv)
+            else:
+                df = None
+            # self.nep = neptune.init(df['user'].iloc[0], df['token'].iloc[0])
         else:
-            self.nep = None
+            self.use_wandb = None
 
     def run(self, pos_dirs, neg_dirs, balance_method='cutoff'):
         assert isinstance(pos_dirs, list), 'pos_dirs must be list'
@@ -88,7 +106,6 @@ class Train:
         print(f'Saved tfrecords to {tfrec_dir}')
 
     def train(self):
-
         print('Running...')
         tf.keras.backend.clear_session()
         # Setup filepaths and csv to log info about training model
@@ -106,8 +123,8 @@ class Train:
         self.p.hyperparams['timestamp'] = timestamp
         self.p.hyperparams['model_timestamp'] = self.p.which_model + '_' + timestamp
         self.p.hyperparams['retraining'] = ''
-        if self.use_neptune:
-            self.nep["parameters"] = self.p.hyperparams
+        # if self.use_neptune:
+        #     self.nep["parameters"] = self.p.hyperparams
 
         # todo replace with self.p.hyperparams
         run_info = {'model': self.p.which_model,
@@ -181,8 +198,8 @@ class Train:
                                                          save_best_only=True, mode='max')
 
         cp_early = tf.keras.callbacks.EarlyStopping(
-            monitor='val_loss', min_delta=0, patience=3, verbose=0,
-            mode='auto', baseline=None, restore_best_weights=False
+            monitor='val_loss', min_delta=0.001, patience=3, verbose=1,
+            mode='min', baseline=None, restore_best_weights=True
         )
 
         tb_callback = tf.keras.callbacks.TensorBoard(
@@ -190,13 +207,13 @@ class Train:
             update_freq='epoch')
 
         callbacks = [cp_callback, cp_early]
-        if self.use_neptune:
-            from neptune.new.integrations.tensorflow_keras import NeptuneCallback
-            neptune_cbk = NeptuneCallback(run=self.nep, base_namespace='metrics')
-            callbacks.append(neptune_cbk)
-        history = model.fit(train_gen, steps_per_epoch=train_length // (self.p.BATCH_SIZE), epochs=self.p.EPOCHS,
-                            class_weight=self.p.class_weights, validation_data=val_gen,
-                            validation_steps=val_length // self.p.BATCH_SIZE, callbacks=callbacks)
+        # if self.use_neptune:
+        #     from neptune.new.integrations.tensorflow_keras import NeptuneCallback
+        #     neptune_cbk = NeptuneCallback(run=self.nep, base_namespace='metrics')
+        #     callbacks.append(neptune_cbk)
+        # history = model.fit(train_gen, steps_per_epoch=train_length // (self.p.BATCH_SIZE), epochs=self.p.EPOCHS,
+        #                     class_weight=self.p.class_weights, validation_data=val_gen,
+        #                     validation_steps=val_length // self.p.BATCH_SIZE, callbacks=callbacks)
 
         train_acc = history.history['accuracy']
         val_acc = history.history['val_accuracy']
@@ -234,16 +251,16 @@ class Train:
         run_info['test_accuracy'] = test_accuracy
         run_info['train_loss'] = train_loss[-1]
         run_info['val_loss'] = val_loss[-1]
-        if self.use_neptune:
-            self.p.hyperparams['test_acc'] = test_accuracy
-            self.nep['parameters'] = self.p.hyperparams
+        # if self.use_neptune:
+        #     self.p.hyperparams['test_acc'] = test_accuracy
+        #     self.nep['parameters'] = self.p.hyperparams
 
         run_df = pd.DataFrame([run_info])
         run_df.to_csv(export_info_path)
 
         print('Saving model to {}'.format(export_path))
         model.save(export_path)
-        self.nep.stop()
+
 
     def retrain(self, base_model_file=None):
 
@@ -268,8 +285,8 @@ class Train:
         self.p.hyperparams['timestamp'] = timestamp
         self.p.hyperparams['model_timestamp'] = self.p.which_model + '_' + timestamp
         self.p.hyperparams['retraining'] = base_model_file
-        if self.use_neptune:
-            self.nep["parameters"] = self.p.hyperparams
+        # if self.use_neptune:
+        #     self.nep["parameters"] = self.p.hyperparams
         run_info = {'model': self.p.which_model,
                     'retraining': base_model_file,
                     'timestamp': timestamp,
@@ -400,10 +417,10 @@ class Train:
         tb_callback = tf.keras.callbacks.TensorBoard(
             log_dir='/home/jlamstein/PycharmProjects/ASYN/log/{}'.format(self.p.which_model),
             update_freq='epoch')
-        if self.use_neptune:
-            from neptune.new.integrations.tensorflow_keras import NeptuneCallback
-            neptune_cbk = NeptuneCallback(run=self.nep, base_namespace='metrics')
-            callbacks.append(neptune_cbk)
+        # if self.use_neptune:
+        #     from neptune.new.integrations.tensorflow_keras import NeptuneCallback
+        #     neptune_cbk = NeptuneCallback(run=self.nep, base_namespace='metrics')
+        #     callbacks.append(neptune_cbk)
 
         history = model.fit(train_gen, steps_per_epoch=train_length // (self.p.BATCH_SIZE), epochs=self.p.EPOCHS,
                             class_weight=self.p.class_weights, validation_data=val_gen,
@@ -455,20 +472,12 @@ class Train:
 
         print('Saving model to {}'.format(export_path))
         model.save(export_path)
-        self.nep.stop()
 
 
 if __name__ == '__main__':
-    result = pyfiglet.figlet_format("GEDI-CNN", font="slant")
+    result = pyfiglet.figlet_format("CNN", font="slant")
     print(result)
-    parser = argparse.ArgumentParser(description='Train binary classifer GEDI-CNN model')
-    # positives = ['/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Livecrops_3',
-    #              '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Livecrops_2',
-    #              '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Livecrops_1']
-    # negatives = ['/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Deadcrops_3',
-    #              '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Deadcrops_2',
-    #              '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-H23/Deadcrops_1']
-
+    parser = argparse.ArgumentParser(description='Train binary classifer CNN model')
     positives = ['/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-1703/Livecrops_1', '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-1703/Livecrops_2_3']
     negatives = ['/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-1703/Deadcrops_1', '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-1703/Deadcrops_2_3']
     parser.add_argument('--datadir', action="store",
@@ -486,17 +495,24 @@ if __name__ == '__main__':
     parser.add_argument('--preprocess_tfrecs', type=int, action="store", default=False,
                         help='generate tfrecords, necessary for new datasets, if already generate set to false',
                         dest="preprocess_tfrecs")
-    parser.add_argument('--use_neptune', type=int, action="store", default=True,
-                        help='Save run info to neptune ai',
-                        dest="use_neptune")
+    parser.add_argument('--use_wandb', type=int, action="store", default=True,
+                        help='Save run info to wandb',
+                        dest="use_wandb")
+    parser.add_argument('--epochs', default=10, type=int)
+    parser.add_argument('--batch_size', default=32, type=int)
+    parser.add_argument('--which_model', default='vgg16', type=str)
+    parser.add_argument('--optimizer', default='adam', type=str,
+                        help='Optimizer to use: adam, sgd, adamw, etc.', dest='optimizer')
+    parser.add_argument('--learning_rate', default=0.0005, type=float,  
+                        help='Learning rate')
     parser.add_argument('--retrain', type=int, action="store", default=False,
-                        help='Save run info to neptune ai',
+                        help='Save run info to wandb',
                         dest="retrain")
     args = parser.parse_args()
     print('ARGS:\n', args)
 
     Tr = Train(parent_dir=args.datadir, param_dict=None, preprocess_tfrecs=args.preprocess_tfrecs,
-               use_neptune=args.use_neptune)
+               use_wandb=args.use_wandb)
     if args.retrain:
         print('Retraining on gedi-cnn model...')
         Tr.retrain()
