@@ -11,3 +11,4 @@ __pycache__/
 *.tfrecords
 .neptune/
 .DS_Store
+wandb/

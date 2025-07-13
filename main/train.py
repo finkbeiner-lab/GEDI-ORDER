@@ -21,6 +21,8 @@ import random
 import tensorflow_addons as tfa
 
 
+
+
 __author__ = 'Josh Lamstein'
 __copyright__ = 'Gladstone Institutes 2020'
 
@@ -38,7 +40,7 @@ class Train:
             # Set the wandb entity where your project will be logged (generally your team name).
             entity="swang202",
             # Set the wandb project where this run will be logged.
-            project="TauKO",
+            project="TauKO_mito_ko_vs_oeTau",
             # Track hyperparameters and run metadata.
             config={
                 "learning_rate": self.p.learning_rate,
@@ -58,6 +60,8 @@ class Train:
 
     def run(self, pos_dirs, neg_dirs, balance_method='cutoff'):
         assert isinstance(pos_dirs, list), 'pos_dirs must be list'
+
+        #bug: train.sh always process tfrecs regardless of 0 or 1
         if self.preprocess_tfrecs or not os.path.exists(os.path.join(self.parent_dir, 'test.tfrecord')):
             self.generate_tfrecs(pos_dirs, neg_dirs, balance_method)
         else:
@@ -71,7 +75,7 @@ class Train:
             assert os.path.exists(os.path.join(self.parent_dir, 'retrain.tfrecord')), 'set preprocess_tfrecs to true'
         self.retrain()
 
-    def gather_imgs(self, pos_dirs, neg_dirs, filetype='tif'):
+    def gather_imgs(self, pos_dirs, neg_dirs, filetype='png'):
         pos_ims = []
         neg_ims = []
         for pos in pos_dirs:
@@ -95,7 +99,7 @@ class Train:
         """
         split = [.7, .15, .15]
         tfrec_dir = self.parent_dir
-        pos_ims, neg_ims = self.gather_imgs(pos_dirs, neg_dirs, filetype='tif')
+        pos_ims, neg_ims = self.gather_imgs(pos_dirs, neg_dirs, filetype='png')
         Rec = Record(pos_ims, neg_ims, tfrec_dir, split, balance_method)
         savetrain = 'train.tfrecord'
         saveval = 'val.tfrecord'
@@ -119,7 +123,8 @@ class Train:
         timestamp = update_timestring()
         export_path = os.path.join(self.p.models_dir, '{}_{}.h5'.format(self.p.which_model, timestamp))
         export_info_path = os.path.join(self.p.run_info_dir, '{}_{}.csv'.format(self.p.which_model, timestamp))
-        save_checkpoint_path = os.path.join(self.p.ckpt_dir, '{}_{}.hdf5'.format(self.p.which_model, timestamp))
+        #changed .hdf5 to .keras
+        save_checkpoint_path = os.path.join(self.p.ckpt_dir, '{}_{}.keras'.format(self.p.which_model, timestamp))
         self.p.hyperparams['timestamp'] = timestamp
         self.p.hyperparams['model_timestamp'] = self.p.which_model + '_' + timestamp
         self.p.hyperparams['retraining'] = ''
@@ -205,15 +210,26 @@ class Train:
         tb_callback = tf.keras.callbacks.TensorBoard(
             log_dir=os.path.join(self.p.tb_log_dir, self.p.which_model),
             update_freq='epoch')
+        
+        #callbacks = [cp_callback, cp_early]
+        callbacks = [cp_callback, cp_early, tb_callback]
 
-        callbacks = [cp_callback, cp_early]
+        if self.use_wandb:
+            #from wandb.keras import WandbCallback
+            from wandb.integration.keras import WandbCallback
+            wandb_cb = WandbCallback(log_graph=False)
+            callbacks.append(wandb_cb)
+        
+
         # if self.use_neptune:
         #     from neptune.new.integrations.tensorflow_keras import NeptuneCallback
         #     neptune_cbk = NeptuneCallback(run=self.nep, base_namespace='metrics')
         #     callbacks.append(neptune_cbk)
-        # history = model.fit(train_gen, steps_per_epoch=train_length // (self.p.BATCH_SIZE), epochs=self.p.EPOCHS,
-        #                     class_weight=self.p.class_weights, validation_data=val_gen,
-        #                     validation_steps=val_length // self.p.BATCH_SIZE, callbacks=callbacks)
+        print(f"Train length: {train_length}, Val length: {val_length}, Batch size: {self.p.BATCH_SIZE}")
+        history = model.fit(train_gen, steps_per_epoch=int(train_length // self.p.BATCH_SIZE), epochs=self.p.EPOCHS,
+                             #class_weight=self.p.class_weights, 
+                             validation_data=val_gen,
+                             validation_steps=int(val_length // self.p.BATCH_SIZE), callbacks=callbacks)
 
         train_acc = history.history['accuracy']
         val_acc = history.history['val_accuracy']
@@ -224,7 +240,7 @@ class Train:
         print('Evaluating model...')
 
         # Predict on test dataset
-        res = model.predict(test_gen, steps=test_length // self.p.BATCH_SIZE)
+        res = model.predict(test_gen, steps=int(test_length // self.p.BATCH_SIZE))
         test_accuracy_lst = []
         # Get accuracy, compare predictions with labels
         for i in range(int(test_length // self.p.BATCH_SIZE)):
@@ -417,14 +433,19 @@ class Train:
         tb_callback = tf.keras.callbacks.TensorBoard(
             log_dir='/home/jlamstein/PycharmProjects/ASYN/log/{}'.format(self.p.which_model),
             update_freq='epoch')
+        
+        if self.use_wandb:
+            wandb_cb = WandbCallback()
+            callbacks.append(wandb_cb)
         # if self.use_neptune:
         #     from neptune.new.integrations.tensorflow_keras import NeptuneCallback
         #     neptune_cbk = NeptuneCallback(run=self.nep, base_namespace='metrics')
         #     callbacks.append(neptune_cbk)
 
         history = model.fit(train_gen, steps_per_epoch=train_length // (self.p.BATCH_SIZE), epochs=self.p.EPOCHS,
-                            class_weight=self.p.class_weights, validation_data=val_gen,
-                            validation_steps=val_length // self.p.BATCH_SIZE, callbacks=callbacks)
+                            #class_weight=self.p.class_weights, 
+                            validation_data=val_gen,
+                            validation_steps=int(val_length // self.p.BATCH_SIZE), callbacks=callbacks)
 
         train_acc = history.history['accuracy']
         val_acc = history.history['val_accuracy']
@@ -439,7 +460,7 @@ class Train:
         model.trainable = False
 
         # Predict on test dataset
-        res = model.predict(test_gen, steps=test_length // self.p.BATCH_SIZE)
+        res = model.predict(test_gen, steps=int(test_length // self.p.BATCH_SIZE))
         test_accuracy_lst = []
         # Get accuracy, compare predictions with labels
         for i in range(int(test_length // self.p.BATCH_SIZE)):
@@ -490,17 +511,19 @@ if __name__ == '__main__':
     parser.add_argument('--neg_dir', nargs='+',
                         default=negatives,
                         help='directory with negative images', dest="neg_dir")
-    parser.add_argument('--balance_method', action="store", default='multiply',
+    parser.add_argument('--balance_method', action="store", default='cutoff',
                         help='method to handle unbalanced data: cutoff, multiply or none', dest="balance_method")
-    parser.add_argument('--preprocess_tfrecs', type=int, action="store", default=False,
+    parser.add_argument('--preprocess_tfrecs', type=str, action="store", default=False,
                         help='generate tfrecords, necessary for new datasets, if already generate set to false',
                         dest="preprocess_tfrecs")
+    parser.add_argument('--momentum', default=0.9, type=float,
+                        help='Momentum for SGD optimizer (if used)')
     parser.add_argument('--use_wandb', type=int, action="store", default=True,
                         help='Save run info to wandb',
                         dest="use_wandb")
-    parser.add_argument('--epochs', default=10, type=int)
+    parser.add_argument('--epochs', default=20, type=int)
     parser.add_argument('--batch_size', default=32, type=int)
-    parser.add_argument('--which_model', default='vgg16', type=str)
+    parser.add_argument('--which_model', default='vgg19', type=str)
     parser.add_argument('--optimizer', default='adam', type=str,
                         help='Optimizer to use: adam, sgd, adamw, etc.', dest='optimizer')
     parser.add_argument('--learning_rate', default=0.0005, type=float,  
@@ -509,9 +532,24 @@ if __name__ == '__main__':
                         help='Save run info to wandb',
                         dest="retrain")
     args = parser.parse_args()
+
+    # Convert string "0"/"1" to boolean for preprocess_tfrecs
+    args.preprocess_tfrecs = bool(int(args.preprocess_tfrecs))
+    
     print('ARGS:\n', args)
 
-    Tr = Train(parent_dir=args.datadir, param_dict=None, preprocess_tfrecs=args.preprocess_tfrecs,
+    # SW: make sure args is passed to Train
+    param_dict = {
+        'epochs': args.epochs,
+        'batch_size': args.batch_size,
+        'learning_rate': args.learning_rate,  
+        'model': args.which_model,      
+        'optimizer': args.optimizer,
+        'balance_method': args.balance_method,
+        'momentum': 0.9       
+    }
+
+    Tr = Train(parent_dir=args.datadir, param_dict=param_dict, preprocess_tfrecs=args.preprocess_tfrecs,
                use_wandb=args.use_wandb)
     if args.retrain:
         print('Retraining on gedi-cnn model...')

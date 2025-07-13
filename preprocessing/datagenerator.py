@@ -119,8 +119,15 @@ class Dataspring(Parser):
         """
         while True:
             imgs, lbls, files = next(self.it)
-            X = {'input_1': imgs, 'files': files}
-            yield X, lbls
+            #X = {'input_layer': imgs, 'files': files}
+            #SW: structure of inputs error, expected: keras_tensor. Removing 'files' - 20250704
+            
+            #X = {'input_layer': imgs}
+            
+            #SW: model is expecting a plain tensor, not a dictionary
+            #yield X, lbls
+            
+            yield imgs, lbls
 
     def retrain_orig_generator(self):
         """
