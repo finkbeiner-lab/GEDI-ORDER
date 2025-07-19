@@ -12,3 +12,7 @@ __pycache__/
 .neptune/
 .DS_Store
 wandb/
+*.keras
+model_*.keras
+*.keras
+model_*.keras

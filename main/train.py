@@ -19,8 +19,7 @@ import pyfiglet
 from glob import glob
 import random
 import tensorflow_addons as tfa
-
-
+import wandb
 
 
 __author__ = 'Josh Lamstein'
@@ -35,13 +34,9 @@ class Train:
         self.preprocess_tfrecs = preprocess_tfrecs
         self.use_wandb = use_wandb
         if self.use_wandb:
-            import wandb
             run = wandb.init(
-            # Set the wandb entity where your project will be logged (generally your team name).
-            entity="swang202",
-            # Set the wandb project where this run will be logged.
-            project="TauKO_mito_ko_vs_oeTau",
-            # Track hyperparameters and run metadata.
+            #entity="swang202",
+            #project="TauKO_mito_ko_vs_oeTau",
             config={
                 "learning_rate": self.p.learning_rate,
                 "architecture": self.p.which_model,
@@ -86,7 +81,7 @@ class Train:
         random.Random(11).shuffle(neg_ims)
         return pos_ims, neg_ims
 
-    def generate_tfrecs(self, pos_dirs, neg_dirs, balance_method='multiply'):
+    def generate_tfrecs(self, pos_dirs, neg_dirs, balance_method='cutoff'):
         """
         Builds tfrecords from images sorted in directories by label
         Args:
@@ -100,6 +95,15 @@ class Train:
         split = [.7, .15, .15]
         tfrec_dir = self.parent_dir
         pos_ims, neg_ims = self.gather_imgs(pos_dirs, neg_dirs, filetype='png')
+
+        # SW: Too much dadta - set Cutoff to max_images_per_class
+        # Shuffle deterministically using a fixed seed
+        random.seed(42)
+        random.shuffle(pos_ims)
+        random.shuffle(neg_ims)
+        pos_ims = sorted(pos_ims)[:10000]
+        neg_ims = sorted(neg_ims)[:10000]
+
         Rec = Record(pos_ims, neg_ims, tfrec_dir, split, balance_method)
         savetrain = 'train.tfrecord'
         saveval = 'val.tfrecord'
@@ -215,11 +219,61 @@ class Train:
         callbacks = [cp_callback, cp_early, tb_callback]
 
         if self.use_wandb:
-            #from wandb.keras import WandbCallback
-            from wandb.integration.keras import WandbCallback
-            wandb_cb = WandbCallback(log_graph=False)
-            callbacks.append(wandb_cb)
-        
+            from wandb.integration.keras import (
+                WandbMetricsLogger,
+                WandbModelCheckpoint,
+                WandbEvalCallback
+            )
+
+            class MyEvalCallback(WandbEvalCallback):
+                def add_ground_truth(self, epoch, logs=None):
+                    import numpy as np
+                    images, labels = next(iter(val_gen))
+                    table = wandb.Table(columns=["image", "label"])
+                    for i in range(min(32, len(images))):
+                        img = images[i].numpy() if hasattr(images[i], 'numpy') else images[i]
+                        lbl = labels[i].numpy() if hasattr(labels[i], 'numpy') else labels[i]
+                        if img.max() <= 1.0:
+                            img = (img * 255).astype(np.uint8)
+                        # Handle different label formats
+                        if lbl.ndim > 0 and lbl.size > 1:
+                            # One-hot encoded or multi-dimensional - get the argmax
+                            scalar_lbl = int(np.argmax(lbl))
+                        else:
+                            # Already scalar or single element
+                            scalar_lbl = int(lbl.item() if hasattr(lbl, 'item') else lbl)
+                        table.add_data(wandb.Image(img), scalar_lbl)
+                    wandb.log({"ground_truth": table})
+
+                def add_model_predictions(self, epoch, logs=None):
+                    import numpy as np
+                    images, labels = next(iter(val_gen))
+                    preds = self.model.predict(images)
+                    pred_labels = preds.argmax(axis=1) if preds.shape[-1] > 1 else (preds > 0.5).astype(int)
+                    table = wandb.Table(columns=["image", "prediction"])
+                    for i in range(min(32, len(images))):
+                        img = images[i].numpy() if hasattr(images[i], 'numpy') else images[i]
+                        if img.max() <= 1.0:
+                            img = (img * 255).astype(np.uint8)
+                        scalar_pred = int(pred_labels[i].item() if hasattr(pred_labels[i], 'item') else pred_labels[i])
+                        table.add_data(wandb.Image(img), scalar_pred)
+                    wandb.log({"predictions": table})
+
+
+            wandb_callbacks = [
+                WandbMetricsLogger(log_freq='batch'),
+                WandbModelCheckpoint(
+                    filepath=save_checkpoint_path,
+                    monitor="val_accuracy",
+                    save_best_only=True
+                ),
+                MyEvalCallback(
+                    data_table_columns=["image", "label"],
+                    pred_table_columns=["image", "prediction"]
+                )
+            ]
+            callbacks += wandb_callbacks
+
 
         # if self.use_neptune:
         #     from neptune.new.integrations.tensorflow_keras import NeptuneCallback
@@ -432,15 +486,64 @@ class Train:
 
         tb_callback = tf.keras.callbacks.TensorBoard(
             log_dir='/home/jlamstein/PycharmProjects/ASYN/log/{}'.format(self.p.which_model),
-            update_freq='epoch')
+            update_freq='epoch' # Change from 'epoch' to 'batch'
+            )
         
         if self.use_wandb:
-            wandb_cb = WandbCallback()
-            callbacks.append(wandb_cb)
-        # if self.use_neptune:
-        #     from neptune.new.integrations.tensorflow_keras import NeptuneCallback
-        #     neptune_cbk = NeptuneCallback(run=self.nep, base_namespace='metrics')
-        #     callbacks.append(neptune_cbk)
+            from wandb.integration.keras import (
+                WandbMetricsLogger,
+                WandbModelCheckpoint,
+                WandbEvalCallback
+            )
+
+            class MyEvalCallback(WandbEvalCallback):
+                def add_ground_truth(self, epoch, logs=None):
+                    import numpy as np
+                    images, labels = next(iter(val_gen))
+                    table = wandb.Table(columns=["image", "label"])
+                    for i in range(min(32, len(images))):
+                        img = images[i].numpy() if hasattr(images[i], 'numpy') else images[i]
+                        lbl = labels[i].numpy() if hasattr(labels[i], 'numpy') else labels[i]
+                        if img.max() <= 1.0:
+                            img = (img * 255).astype(np.uint8)
+                        # Handle different label formats
+                        if lbl.ndim > 0 and lbl.size > 1:
+                            # One-hot encoded or multi-dimensional - get the argmax
+                            scalar_lbl = int(np.argmax(lbl))
+                        else:
+                            # Already scalar or single element
+                            scalar_lbl = int(lbl.item() if hasattr(lbl, 'item') else lbl)
+                        table.add_data(wandb.Image(img), scalar_lbl)
+                    wandb.log({"ground_truth": table})
+
+                def add_model_predictions(self, epoch, logs=None):
+                    import numpy as np
+                    images, labels = next(iter(val_gen))
+                    preds = self.model.predict(images)
+                    pred_labels = preds.argmax(axis=1) if preds.shape[-1] > 1 else (preds > 0.5).astype(int)
+                    table = wandb.Table(columns=["image", "prediction"])
+                    for i in range(min(32, len(images))):
+                        img = images[i].numpy() if hasattr(images[i], 'numpy') else images[i]
+                        if img.max() <= 1.0:
+                            img = (img * 255).astype(np.uint8)
+                        scalar_pred = int(pred_labels[i].item() if hasattr(pred_labels[i], 'item') else pred_labels[i])
+                        table.add_data(wandb.Image(img), scalar_pred)
+                    wandb.log({"predictions": table})
+
+
+            wandb_callbacks = [
+                WandbMetricsLogger(log_freq='batch'),
+                WandbModelCheckpoint(
+                    filepath=save_checkpoint_path,
+                    monitor="val_accuracy",
+                    save_best_only=True
+                ),
+                MyEvalCallback(
+                    data_table_columns=["image", "label"],
+                    pred_table_columns=["image", "prediction"]
+                )
+            ]
+            callbacks += wandb_callbacks
 
         history = model.fit(train_gen, steps_per_epoch=train_length // (self.p.BATCH_SIZE), epochs=self.p.EPOCHS,
                             #class_weight=self.p.class_weights, 

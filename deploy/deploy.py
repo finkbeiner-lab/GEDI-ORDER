@@ -13,6 +13,8 @@ import pandas as pd
 import argparse
 from preprocessing.create_tfrecs_deploy import Record
 import pyfiglet
+from tqdm import tqdm
+
 
 __author__ = 'Josh Lamstein'
 __copyright__ = 'Gladstone 2021'
@@ -56,8 +58,15 @@ class Deploy:
             p.which_model = 'vgg16'
             import_path = model_path
         else:
+            p.histogram_eq = False  # or whatever you used during training
+            p.which_model = args.which_model  # Match your training model
             import_path = model_path
-        print(f'Running model: {import_path}')
+        #print(f'Running model: {import_path}')
+        print(f'Running model: {import_path} (architecture: {p.which_model})')
+        # p.res_csv_deploy = os.path.join(p.res_dir, 'deploy_results')
+        p.res_csv_deploy = p.res_csv_deploy if p.res_csv_deploy else os.path.join(p.res_dir, 'deploy_results')
+        if not os.path.exists(p.res_csv_deploy):
+            os.makedirs(p.res_csv_deploy, exist_ok=True)        
 
         save_res = os.path.join(p.res_csv_deploy, deploy_tfrec.split('/')[-1].split('.')[0] + '.csv')  # save results
         # Plops = plotops.Plotty(model_id)
@@ -110,12 +119,28 @@ class Deploy:
         callbacks = [tb_callback]
 
         # Predict
-        res = model.predict(test_gen, steps=test_length // p.BATCH_SIZE, callbacks=callbacks)
-        predictions = np.argmax(res, axis=1)
+        steps = max(1, int(test_length // p.BATCH_SIZE))
+        print(f"Test length: {test_length}, Batch size: {p.BATCH_SIZE}, Steps: {steps}")
+        res = model.predict(test_gen, steps=steps)
+        #res = model.predict(test_gen, steps=test_length // p.BATCH_SIZE)
+        # for binary classification with sigmoid, predictions would be shape (N, 1) and should be:
+        # predictions = np.argmax(res, axis=1)
+        if res.shape[-1] > 1:
+            predictions = np.argmax(res, axis=1)  # Multi-class
+        else:
+            predictions = (res > 0.5).astype(int).squeeze()  # Binary
         test_accuracy_lst = []
         verdict = {'prediction': [], 'curation': [], 'orig_cnn': [], 'Filename': []}
+
         # for i in range(1):
-        for i in range(int(test_length // p.BATCH_SIZE)):
+        # Instead of storing all predictions, process batch by batch, show progress with tqdm
+        print('Processing batches...')
+        # for i in range(int(test_length // p.BATCH_SIZE)):
+        steps = max(1, int(test_length // p.BATCH_SIZE))
+        for i in tqdm(range(steps), desc="Processing batches"):
+        #for i in tqdm(range(int(test_length // p.BATCH_SIZE)), desc="Processing batches"):
+            batch_preds = model.predict(next(test_gen))  # Single batch
+
             # image_batch, lbl_batch = DatTest.datagen()
             # # Plops.show_batch(image_batch, lbl_batch)
 
@@ -123,7 +148,10 @@ class Deploy:
             files = _files.numpy()
             nplbls = lbls.numpy()
             test_results = predictions[i * p.BATCH_SIZE: (i + 1) * p.BATCH_SIZE]
-            labels = np.argmax(nplbls, axis=1)
+            # If labels are already single integers, np.argmax
+            # labels = np.argmax(nplbls, axis=1)
+            labels = nplbls if nplbls.ndim == 1 else np.argmax(nplbls, axis=1)
+
             for j, (t, ell, _file) in enumerate(zip(test_results, labels, files)):
                 file = _file.decode('utf-8')
                 res_dict['filepath'].append(file)
@@ -133,6 +161,8 @@ class Deploy:
             test_acc_batch_avg = np.mean(test_acc)
             test_accuracy_lst.append(test_acc)
 
+            print(f'Batch {i+1}: Accuracy = {test_acc_batch_avg:.3f}')
+
         # save csv of results
         if not os.path.exists(p.res_csv_deploy):
             os.mkdir(p.res_csv_deploy)
@@ -141,11 +171,13 @@ class Deploy:
         print('Result csv saved to {}'.format(save_res))
 
         test_accuracy = np.mean(test_accuracy_lst)
-        print(f'Percentage of samples that equal {self.default_lbl}:', test_accuracy)
+        #print(f'Percentage of samples that equal {self.default_lbl}:', test_accuracy)
+        print(f'Percentage of samples that equal {self.default_lbl} in deploy tfrecord: {test_accuracy * 100:.2f}%')
+
 
 
 if __name__ == '__main__':
-    result = pyfiglet.figlet_format("GEDI-CNN", font="slant")
+    result = pyfiglet.figlet_format("DEPLOY CNN", font="slant")
     print(result)
     parser = argparse.ArgumentParser(description='Deploy GEDICNN model')
     parser.add_argument('--parent', action="store",
@@ -166,8 +198,15 @@ if __name__ == '__main__':
     parser.add_argument('--use_gedi_cnn', type=int, action="store", default=True,
                         help='generate tfrecords, necessary for new datasets, if already generate set to false',
                         dest="use_gedi_cnn")
+    parser.add_argument('--which_model', type=str, action="store", default="resnet50",
+                        help='which model to use, ResNet50 or VGG19 or VGG16',
+                        dest="which_model")
+                        
 
     args = parser.parse_args()
+    # Convert string "0"/"1" to boolean for preprocess_tfrecs
+    args.preprocess_tfrecs = bool(int(args.preprocess_tfrecs))
+
     print('ARGS:\n', args)
     p = param.Param(parent_dir=args.parent, res_dir=args.resdir)
 
