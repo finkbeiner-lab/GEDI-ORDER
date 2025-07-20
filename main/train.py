@@ -56,7 +56,7 @@ class Train:
     def run(self, pos_dirs, neg_dirs, balance_method='cutoff'):
         assert isinstance(pos_dirs, list), 'pos_dirs must be list'
 
-        #bug: train.sh always process tfrecs regardless of 0 or 1
+        #bug: train.sh always process tfrecs regardless of 0 or 1, solved
         if self.preprocess_tfrecs or not os.path.exists(os.path.join(self.parent_dir, 'test.tfrecord')):
             self.generate_tfrecs(pos_dirs, neg_dirs, balance_method)
         else:
