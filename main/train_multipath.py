@@ -1,6 +1,6 @@
 """
 Train model
-
+Setting train/test/val from three different paths
 
 """
 
@@ -53,12 +53,13 @@ class Train:
         else:
             self.use_wandb = None
 
-    def run(self, pos_dirs, neg_dirs, split, balance_method='cutoff'):
+    def run(self, pos_dirs, neg_dirs, balance_method='cutoff'):
         assert isinstance(pos_dirs, list), 'pos_dirs must be list'
 
-        #bug: train.sh always process tfrecs regardless of 0 or 1, solved
+        # bug: train.sh always process tfrecs regardless of 0 or 1, solved
+        # add split_method, original: 'percentage'
         if self.preprocess_tfrecs or not os.path.exists(os.path.join(self.parent_dir, 'test.tfrecord')):
-            self.generate_tfrecs(pos_dirs, neg_dirs, balance_method)
+            self.generate_tfrecs(pos_dirs, neg_dirs, balance_method, split_method='tiles')
         else:
             assert os.path.exists(os.path.join(self.parent_dir, 'train.tfrecord')), 'set preprocess_tfrecs to true'
         self.train()
@@ -81,7 +82,7 @@ class Train:
         random.Random(11).shuffle(neg_ims)
         return pos_ims, neg_ims
 
-    def generate_tfrecs(self, pos_dirs, neg_dirs, balance_method='cutoff', split_method='tiles'):
+    def generate_tfrecs(self, pos_dirs, neg_dirs, split, balance_method='cutoff', split_method='tiles'):
         """
         Builds tfrecords from images sorted in directories by label
         Args:
@@ -92,17 +93,22 @@ class Train:
         Returns:
 
         """
-        split = [.7, .15, .15]
+
+        split = [.7, .15, .15]  # Required parameter, ignored when split_method='tiles'
         tfrec_dir = self.parent_dir
         pos_ims, neg_ims = self.gather_imgs(pos_dirs, neg_dirs, filetype='png')
+        
+        print(f"DEBUG: Sample image paths:")
+        print(f"Positive: {pos_ims[:3] if pos_ims else 'None'}")
+        print(f"Negative: {neg_ims[:3] if neg_ims else 'None'}")
 
         # SW: Too much dadta - set Cutoff to max_images_per_class
         # Shuffle deterministically using a fixed seed
-        random.seed(42)
-        random.shuffle(pos_ims)
-        random.shuffle(neg_ims)
-        pos_ims = sorted(pos_ims)[:10000]
-        neg_ims = sorted(neg_ims)[:10000]
+        # random.seed(42)
+        # random.shuffle(pos_ims)
+        # random.shuffle(neg_ims)
+        # pos_ims = sorted(pos_ims)[:10000]
+        # neg_ims = sorted(neg_ims)[:10000]
 
         Rec = Record(pos_ims, neg_ims, tfrec_dir, split, balance_method, split_method=split_method)
         savetrain = 'train.tfrecord'
@@ -125,7 +131,9 @@ class Train:
         assert os.path.exists(data_train), 'check tfrecord path and that tfrecord exists'
 
         timestamp = update_timestring()
-        export_path = os.path.join(self.p.models_dir, '{}_{}.h5'.format(self.p.which_model, timestamp))
+        #export_path = os.path.join(self.p.models_dir, '{}_{}.h5'.format(self.p.which_model, timestamp))
+        export_path = os.path.join(self.p.models_dir, '{}_{}.keras'.format(self.p.which_model, timestamp))
+
         export_info_path = os.path.join(self.p.run_info_dir, '{}_{}.csv'.format(self.p.which_model, timestamp))
         #changed .hdf5 to .keras
         save_checkpoint_path = os.path.join(self.p.ckpt_dir, '{}_{}.keras'.format(self.p.which_model, timestamp))

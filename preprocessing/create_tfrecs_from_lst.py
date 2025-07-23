@@ -33,7 +33,7 @@ import random
 
 class Record:
 
-    def __init__(self, images_lst_live, images_lst_dead, tfrecord_dir, split, balance_method):
+    def __init__(self, images_lst_live, images_lst_dead, tfrecord_dir, split, balance_method, split_method='percentage'):
         """
         Class for building tfrecords. Takes lists, combines them using cutoff or multiply balance methods.
         Args:
@@ -41,6 +41,7 @@ class Record:
             images_lst_dead: Image list with dead labels (0)
             tfrecord_dir: Save directory for tfrecs
             split: List to split data into training, validation, testing
+            split_method: 'percentage' for old method, 'wells' for well-based split
             balance_method: Method to balance binary classes, 'cutoff' - remove data, 'multiply' - duplicate smaller data class to match larger class, None - leave unbalanced
         """
         assert isinstance(images_lst_dead, list), 'images_lst_dead must be list'
@@ -50,19 +51,26 @@ class Record:
         self.impaths_live = images_lst_live
         self.impaths_dead = images_lst_dead
         self.balance_method = balance_method
-        if self.balance_method == 'multiply':
-            trainlive, vallive, testlive, traindead, valdead, testdead = self.multiply_dataset(split)
-        elif self.balance_method == 'cutoff':
-            self.impaths_live, self.impaths_dead = \
-                self.balance_dataset(method=self.balance_method, lista=self.impaths_live, listb=self.impaths_dead)
-            livelen = len(self.impaths_live)
-            deadlen = len(self.impaths_dead)
-            trainlive = self.impaths_live[:int(livelen * split[0])]
-            vallive = self.impaths_live[int(livelen * split[0]):int(livelen * (split[0] + split[1]))]
-            testlive = self.impaths_live[int(livelen * (split[0] + split[1])):]
-            traindead = self.impaths_dead[:int(deadlen * split[0])]
-            valdead = self.impaths_dead[int(deadlen * split[0]):int(deadlen * (split[0] + split[1]))]
-            testdead = self.impaths_dead[int(deadlen * (split[0] + split[1])):]
+
+        if split_method == 'tiles':
+            # Use well-based splitting
+            trainlive, vallive, testlive, traindead, valdead, testdead = self.split_by_tile_id(
+                self.impaths_live, self.impaths_dead)
+        else:
+            # Use original percentage-based splitting
+            if self.balance_method == 'multiply':
+                trainlive, vallive, testlive, traindead, valdead, testdead = self.multiply_dataset(split)
+            elif self.balance_method == 'cutoff':
+                self.impaths_live, self.impaths_dead = \
+                    self.balance_dataset(method=self.balance_method, lista=self.impaths_live, listb=self.impaths_dead)
+                livelen = len(self.impaths_live)
+                deadlen = len(self.impaths_dead)
+                trainlive = self.impaths_live[:int(livelen * split[0])]
+                vallive = self.impaths_live[int(livelen * split[0]):int(livelen * (split[0] + split[1]))]
+                testlive = self.impaths_live[int(livelen * (split[0] + split[1])):]
+                traindead = self.impaths_dead[:int(deadlen * split[0])]
+                valdead = self.impaths_dead[int(deadlen * split[0]):int(deadlen * (split[0] + split[1]))]
+                testdead = self.impaths_dead[int(deadlen * (split[0] + split[1])):]
 
         self.trainpaths, self.trainlbls = self.label_and_shuffle(trainlive, traindead)
         self.valpaths, self.vallbls = self.label_and_shuffle(vallive, valdead)
@@ -165,6 +173,86 @@ class Record:
         vallive, valdead = self.balance_dataset(self.balance_method, vallive, valdead)
         testlive, testdead = self.balance_dataset(self.balance_method, testlive, testdead)
         return trainlive, vallive, testlive, traindead, valdead, testdead
+    
+    ## SW: Split images by tile ID to avoid data leakage
+    # This function assumes that the filenames contain tile IDs in a specific format (4x4 or 3x3).
+    # It splits the images into training, validation, and test sets based on these tile #.
+    def split_by_tile_id(self, pos_ims, neg_ims):
+        """Split images based on tile ID patterns in filenames"""
+        
+        # Define tile ID patterns for each split - look for _[number]_Confocal
+        train_tiles = ["_1_Confocal", "_4_Confocal", "_6_Confocal", "_7_Confocal", "_9_Confocal", 
+                    "_12_Confocal", "_10_Confocal", "_14_Confocal", "_15_Confocal", "_16_Confocal"]
+        val_tiles = ["_2_Confocal", "_8_Confocal", "_11_Confocal"]
+        test_tiles = ["_3_Confocal", "_5_Confocal", "_13_Confocal"]
+        
+        print(f"DEBUG: Total images - Pos: {len(pos_ims)}, Neg: {len(neg_ims)}")
+        print(f"DEBUG: First few positive image paths:")
+        for i, img in enumerate(pos_ims[:3]):
+            print(f"  {i}: {img}")
+        
+        def assign_split(filename):
+            for tile in train_tiles:
+                if tile in filename:
+                    return 'train'
+            for tile in val_tiles:
+                if tile in filename:
+                    return 'val'
+            for tile in test_tiles:
+                if tile in filename:
+                    return 'test'
+            return None  # File doesn't match any tile pattern
+        
+        # Test the pattern matching with first few files
+        print(f"DEBUG: Testing pattern matching:")
+        for img in pos_ims[:3]:
+            result = assign_split(img)
+            print(f"  {img} -> {result}")
+        
+        # Split positive images
+        pos_train, pos_val, pos_test = [], [], []
+        unmatched_pos = []
+        for img in pos_ims:
+            split = assign_split(img)
+            if split == 'train':
+                pos_train.append(img)
+            elif split == 'val':
+                pos_val.append(img)
+            elif split == 'test':
+                pos_test.append(img)
+            else:
+                unmatched_pos.append(img)
+        
+        # Split negative images
+        neg_train, neg_val, neg_test = [], [], []
+        unmatched_neg = []
+        for img in neg_ims:
+            split = assign_split(img)
+            if split == 'train':
+                neg_train.append(img)
+            elif split == 'val':
+                neg_val.append(img)
+            elif split == 'test':
+                neg_test.append(img)
+            else:
+                unmatched_neg.append(img)
+        
+        print(f"Tile-based split results:")
+        print(f"Train: {len(pos_train)} pos, {len(neg_train)} neg")
+        print(f"Val:   {len(pos_val)} pos, {len(neg_val)} neg")
+        print(f"Test:  {len(pos_test)} pos, {len(neg_test)} neg")
+        print(f"Unmatched: {len(unmatched_pos)} pos, {len(unmatched_neg)} neg")
+        
+        if unmatched_pos:
+            print(f"Sample unmatched positive examples:")
+            for img in unmatched_pos[:3]:
+                print(f"  {img}")
+        
+        if len(pos_val) == 0 and len(neg_val) == 0:
+            print("WARNING: No validation images found!")
+        
+        return pos_train, pos_val, pos_test, neg_train, neg_val, neg_test
+ 
 
     def balance_dataset(self, method, lista, listb):
         """
@@ -190,6 +278,8 @@ class Record:
             elif method == 'cutoff':
                 big_new = random.sample(listb, len(lista))
                 assert len(lista) == len(big_new), 'lengths do not match in cutoff'
+                print('Cutoff dataset: smaller: {}, larger: {}'.format(len(lista), len(listb)))
+                print('Cutoff dataset: new smaller: {}, new larger: {}'.format(len(big_new), len(listb)))
                 return lista, big_new
             else:
                 print('Unbalanced dataset: smaller: {}, larger: {}'.format(len(lista), len(listb)))

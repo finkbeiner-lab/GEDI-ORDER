@@ -21,38 +21,56 @@ __copyright__ = 'Gladstone 2021'
 
 
 class Deploy:
-    def __init__(self, parent_dir, preprocess_tfrecs, default_lbl=0):
+    def __init__(self, parent_dir, preprocess_tfrecs, default_lbl):
         self.default_lbl = default_lbl
         self.parent_dir = parent_dir  
         self.preprocess_tfrecs = preprocess_tfrecs
         if not os.path.exists(self.parent_dir):
             raise FileNotFoundError(f"Parent directory {self.parent_dir} does not exist.")      
 
+    # def run(self, p, im_dir, model_path=None, use_gedi_cnn=True, which_model=None):
+    #     deploypath = os.path.join(self.parent_dir, 'deploy.tfrecord')
+    #     if self.preprocess_tfrecs:
+    #         self.generate_tfrecs(im_dir) 
+    #     else:
+    #         assert os.path.exists(deploypath), 'set preprocess_tfrecs to true'
+
+    #     self.deploy_main(p, deploypath, model_path, deploy_gedi_cnn=use_gedi_cnn, which_model=which_model)
+        
     def run(self, p, im_dir, model_path=None, use_gedi_cnn=True, which_model=None):
-        deploypath = os.path.join(self.parent_dir, 'deploy.tfrecord')
+        # Look for existing validation TFRecord
+        deploypath = os.path.join(self.parent_dir, 'deploy.tfrecord')  # Change name here
+        
         if self.preprocess_tfrecs:
-            self.generate_tfrecs(im_dir) 
+            #self.generate_tfrecs(im_dir)
+            self.generate_tfrecs(im_dir, self.default_lbl)  # SW: Pass the label 
         else:
-            assert os.path.exists(deploypath), 'set preprocess_tfrecs to true'
+            assert os.path.exists(deploypath), f'Validation TFRecord not found at {deploypath}'
 
         self.deploy_main(p, deploypath, model_path, deploy_gedi_cnn=use_gedi_cnn, which_model=which_model)
 
-    def generate_tfrecs(self, im_dir, default_lbl=None):
+    def generate_tfrecs(self, im_dir, default_lbl):
         """        
         Generate tfrecords from images in im_dir
         Args:
             im_dir: directory with images for analysis
+            default_lbl: label to assign to all images
+
         """
+            # Use the passed default_lbl or fall back to self.default_lbl
+        lbl = default_lbl
+
         tfrec_dir = self.parent_dir
         if not os.path.exists(tfrec_dir):
             os.makedirs(tfrec_dir, exist_ok=True)   
-        Rec = Record(im_dir, tfrec_dir, lbl=self.default_lbl)
+        #Rec = Record(im_dir, tfrec_dir, lbl=self.default_lbl)
+        Rec = Record(im_dir, tfrec_dir, lbl=lbl) 
         savedeploy = os.path.join(self.parent_dir, 'deploy.tfrecord')
         Rec.tiff2record(savedeploy, Rec.impaths, Rec.lbls)
         print(f'Saved tfrecords to {tfrec_dir}')
 
     def deploy_main(self, p, deploy_tfrec, model_path, deploy_gedi_cnn, which_model=None):
-        # p = param.Param()
+        p = param.Param()
         res_dict = {'filepath': [], 'prediction': [], 'label': []}
 
         # if testing on CURATION
@@ -61,17 +79,19 @@ class Deploy:
             p.which_model = 'vgg16'
             import_path = model_path
         else:
-            p.histogram_eq = False  # or whatever you used during training
+            p.histogram_eq = True  # or whatever you used during training
             p.which_model = which_model if which_model else 'resnet50'  # Use passed parameter
             import_path = model_path
         #print(f'Running model: {import_path}')
         print(f'Running model: {import_path} (architecture: {p.which_model})')
-        #p.res_csv_deploy = os.path.join(p.res_dir, 'deploy_results')
-        p.res_csv_deploy = os.path.join(p.res_dir, 'predictions')
-        #p.res_csv_deploy = p.res_csv_deploy if p.res_csv_deploy else os.path.join(p.res_dir, 'deploy_results')
+        # p.res_csv_deploy = os.path.join(p.res_dir, 'deploy_results')
+        # p.res_csv_deploy = p.res_csv_deploy if p.res_csv_deploy else os.path.join(p.res_dir, 'deploy_results')
+        p.res_csv_deploy = p.res_dir if p.res_dir else os.path.join(p.parent_dir, 'deploy_results')  
+    
         if not os.path.exists(p.res_csv_deploy):
             os.makedirs(p.res_csv_deploy, exist_ok=True)        
 
+        #save_res = os.path.join(p.res_csv_deploy, deploy_tfrec.split('/')[-1].split('.')[0] + '.csv')
         save_res = os.path.join(p.res_csv_deploy, deploy_tfrec.split('/')[-1].split('.')[0] + '.csv')
         
         # Plops = plotops.Plotty(model_id)
@@ -125,7 +145,6 @@ class Deploy:
         # Predict
         import math
         steps = max(1, math.ceil(test_length / p.BATCH_SIZE))
-        #steps = max(1, int(test_length // p.BATCH_SIZE))
         print(f"Test length: {test_length}, Batch size: {p.BATCH_SIZE}, Steps: {steps}")
         res = model.predict(test_gen, steps=steps)
         #res = model.predict(test_gen, steps=test_length // p.BATCH_SIZE)
@@ -138,46 +157,31 @@ class Deploy:
         test_accuracy_lst = []
         verdict = {'prediction': [], 'curation': [], 'orig_cnn': [], 'Filename': []}
 
+        # for i in range(1):
         # Instead of storing all predictions, process batch by batch, show progress with tqdm
-        # for i in range(int(test_length // p.BATCH_SIZE)):
-
         print('Processing batches...')
-        steps = max(1, math.ceil(test_length / p.BATCH_SIZE))
-        #steps = max(1, int(test_length // p.BATCH_SIZE))
+        # for i in range(int(test_length // p.BATCH_SIZE)):
+        steps = max(1, int(test_length // p.BATCH_SIZE))
+        for i in tqdm(range(steps), desc="Processing batches"):
+            #batch_preds = model.predict(next(test_gen))  # Single batch
 
-        print(f"Predictions array length: {len(predictions)}")
-        print(f"Expected samples: {steps * p.BATCH_SIZE}")
+            # image_batch, lbl_batch = DatTest.datagen()
+            # # Plops.show_batch(image_batch, lbl_batch)
 
-        for i in tqdm(range(steps), desc="Processing batches"):    
-            # Get batch data from the view generator
             imgs, lbls, _files = DatView.datagen()
             files = _files.numpy()
             nplbls = lbls.numpy()
-            # Get the corresponding predictions for this batch
-            start_idx = i * p.BATCH_SIZE
-            end_idx = min((i + 1) * p.BATCH_SIZE, len(predictions))
-            test_results = predictions[start_idx:end_idx]
-            # Process labels
+            test_results = predictions[i * p.BATCH_SIZE: (i + 1) * p.BATCH_SIZE]
+            # If labels are already single integers, np.argmax
+            # labels = np.argmax(nplbls, axis=1)
             labels = nplbls if nplbls.ndim == 1 else np.argmax(nplbls, axis=1)
-                   
-            # for j, (t, ell, _file) in enumerate(zip(test_results, labels, files)):
-            #     file = _file.decode('utf-8')
-            #     res_dict['filepath'].append(file)
-            #     res_dict['prediction'].append(t)
-            #     res_dict['label'].append(ell)
-            # test_acc = np.array(test_results) == np.array(labels)
-            # test_acc_batch_avg = np.mean(test_acc)
-            # test_accuracy_lst.append(test_acc)
-            # Store results for each sample in the batch
+
             for j, (t, ell, _file) in enumerate(zip(test_results, labels, files)):
-                if j < len(test_results):  # Safety check
-                    file = _file.decode('utf-8')
-                    res_dict['filepath'].append(file)
-                    res_dict['prediction'].append(int(t))  # Ensure it's a Python int
-                    res_dict['label'].append(int(ell))     # Ensure it's a Python int
-            
-            # Calculate batch accuracy
-            test_acc = np.array(test_results) == np.array(labels[:len(test_results)])
+                file = _file.decode('utf-8')
+                res_dict['filepath'].append(file)
+                res_dict['prediction'].append(t)
+                res_dict['label'].append(ell)
+            test_acc = np.array(test_results) == np.array(labels)
             test_acc_batch_avg = np.mean(test_acc)
             test_accuracy_lst.append(test_acc)
 
@@ -189,13 +193,13 @@ class Deploy:
         correct_predictions = sum(np.array(res_dict['prediction']) == np.array(res_dict['label']))
         overall_accuracy = correct_predictions / total_samples
         
-        # Now calculate batch-level accuracy properly
-        test_accuracy = overall_accuracy  # Use the actual overall accuracy
+        test_accuracy = overall_accuracy
+
 
         # Create summary metrics
         summary_metrics = {
             'total_samples': int(total_samples),
-            'correct_predictions': int(correct_predictions), 
+            'correct_predictions': int(correct_predictions),
             'overall_accuracy': float(overall_accuracy),
             'batch_accuracies': [float(np.mean(batch_acc)) for batch_acc in test_accuracy_lst],
             'mean_batch_accuracy': float(np.mean([np.mean(batch_acc) for batch_acc in test_accuracy_lst])),
@@ -218,6 +222,7 @@ class Deploy:
         # save csv of results
         print('Result csv saved to {}'.format(save_res))
         #print(f'Percentage of samples that equal {self.default_lbl}:', test_accuracy)
+        print(f'Percentage of samples that equal {self.default_lbl} in deploy tfrecord: {test_accuracy * 100:.2f}%')
         print(f'Percentage of samples that equal {self.default_lbl} in deploy tfrecord: {test_accuracy * 100:.2f}%')
         print(f'Mean batch accuracy on deploy tfrecord: {test_accuracy * 100:.2f}%')
 
@@ -253,9 +258,10 @@ if __name__ == '__main__':
                         
 
     args = parser.parse_args()
-    # args.preprocess_tfrecs and args.default_lbl are already correct types (int)
     print('ARGS:\n', args)
     p = param.Param(parent_dir=args.parent, res_dir=args.resdir)
 
+    #Dep = Deploy(args.parent, args.preprocess_tfrecs, args.default_lbl)
     Dep = Deploy(args.parent, args.preprocess_tfrecs, args.default_lbl)
+        
     Dep.run(p, args.im_dir, args.model_path, args.use_gedi_cnn, args.which_model)
