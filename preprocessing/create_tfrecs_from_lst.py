@@ -113,8 +113,8 @@ class Record:
         Returns:a
 
         """
-        print(f"DEBUG: livelst (positive images): {livelst}")
-        print(f"DEBUG: deadlst (negative images): {deadlst}")
+        print(f"DEBUG: First 3 positive images: {livelst[:3]}")
+        print(f"DEBUG: First 3 negative images: {deadlst[:3]}")
         print(f"DEBUG: len(livelst) = {len(livelst)}, len(deadlst) = {len(deadlst)}")
 
         livelbls = [1 for _ in livelst]
@@ -181,10 +181,16 @@ class Record:
         """Split images based on tile ID patterns in filenames"""
         
         # Define tile ID patterns for each split - look for _[number]_Confocal
-        train_tiles = ["_1_Confocal", "_4_Confocal", "_6_Confocal", "_7_Confocal", "_9_Confocal", 
-                    "_12_Confocal", "_10_Confocal", "_14_Confocal", "_15_Confocal", "_16_Confocal"]
-        val_tiles = ["_2_Confocal", "_8_Confocal", "_11_Confocal"]
-        test_tiles = ["_3_Confocal", "_5_Confocal", "_13_Confocal"]
+        # train_tiles = ["_1_Confocal", "_4_Confocal", "_6_Confocal", "_7_Confocal", "_9_Confocal", 
+        #             "_12_Confocal", "_10_Confocal", "_14_Confocal", "_15_Confocal", "_16_Confocal"]
+        # val_tiles = ["_2_Confocal", "_8_Confocal", "_11_Confocal"]
+        # test_tiles = ["_3_Confocal", "_5_Confocal", "_13_Confocal"]
+
+        train_tiles = ["_1_Epi", "_4_Epi", "_6_Epi", "_7_Epi", "_9_Epi", 
+                    "_12_Epi", "_10_Epi", "_14_Epi", "_15_Epi", "_16_Epi"]
+        val_tiles = ["_2_Epi", "_8_Epi", "_11_Epi"]
+        test_tiles = ["_3_Epi", "_5_Epi", "_13_Epi"]
+
         
         print(f"DEBUG: Total images - Pos: {len(pos_ims)}, Neg: {len(neg_ims)}")
         print(f"DEBUG: First few positive image paths:")

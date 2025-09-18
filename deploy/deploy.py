@@ -47,7 +47,7 @@ class Deploy:
         else:
             assert os.path.exists(deploypath), f'Validation TFRecord not found at {deploypath}'
 
-        self.deploy_main(p, deploypath, model_path, deploy_gedi_cnn=use_gedi_cnn, which_model=which_model)
+        self.deploy_main(p, deploypath, model_path, deploy_gedi_cnn=use_gedi_cnn, which_model=which_model, im_dir=im_dir)
 
     def generate_tfrecs(self, im_dir, default_lbl):
         """        
@@ -69,8 +69,8 @@ class Deploy:
         Rec.tiff2record(savedeploy, Rec.impaths, Rec.lbls)
         print(f'Saved tfrecords to {tfrec_dir}')
 
-    def deploy_main(self, p, deploy_tfrec, model_path, deploy_gedi_cnn, which_model=None):
-        p = param.Param()
+    def deploy_main(self, p, deploy_tfrec, model_path, deploy_gedi_cnn, which_model=None, im_dir=None):
+        # Don't create a new Param instance, use the one passed in
         res_dict = {'filepath': [], 'prediction': [], 'label': []}
 
         # if testing on CURATION
@@ -86,13 +86,23 @@ class Deploy:
         print(f'Running model: {import_path} (architecture: {p.which_model})')
         # p.res_csv_deploy = os.path.join(p.res_dir, 'deploy_results')
         # p.res_csv_deploy = p.res_csv_deploy if p.res_csv_deploy else os.path.join(p.res_dir, 'deploy_results')
-        p.res_csv_deploy = p.res_dir if p.res_dir else os.path.join(p.parent_dir, 'deploy_results')  
+        
+        print(f"\nOutput directories:")
+        print(f"Parent directory: {self.parent_dir}")
+        print(f"Results directory: {self.parent_dir}/deploy_results")
     
         if not os.path.exists(p.res_csv_deploy):
-            os.makedirs(p.res_csv_deploy, exist_ok=True)        
+            print(f"Creating results directory: {p.res_csv_deploy}")
+            os.makedirs(p.res_csv_deploy, exist_ok=True)
+        else:
+            print(f"Using existing results directory: {p.res_csv_deploy}")
 
-        #save_res = os.path.join(p.res_csv_deploy, deploy_tfrec.split('/')[-1].split('.')[0] + '.csv')
-        save_res = os.path.join(p.res_csv_deploy, deploy_tfrec.split('/')[-1].split('.')[0] + '.csv')
+        # Construct paths in deploy_results subfolder
+        deploy_results_dir = os.path.join(self.parent_dir, 'deploy_results')
+        if not os.path.exists(deploy_results_dir):
+            os.makedirs(deploy_results_dir, exist_ok=True)
+            
+        save_res = os.path.join(deploy_results_dir, 'deploy.csv')
         
         # Plops = plotops.Plotty(model_id)
 
@@ -207,20 +217,50 @@ class Deploy:
             'architecture': str(p.which_model)
         }
 
-        # Save summary to separate file
-        summary_path = os.path.join(p.res_csv_deploy, 'accuracy_summary.json')
+        # Add image_dir and label info to metrics
+        summary_metrics.update({
+            'image_dir': im_dir,
+            'default_label': self.default_lbl,
+            'timestamp': pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')
+        })
+
+        # Save summary to separate file in deploy_results with timestamp to avoid overwriting
+        base_json_name = 'accuracy_summary'
+        base_json_path = os.path.join(deploy_results_dir, f'{base_json_name}.json')
+        
+        # If file exists, create a new one with timestamp
+        if os.path.exists(base_json_path):
+            timestamp = pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')
+            summary_path = os.path.join(deploy_results_dir, f'{base_json_name}_{timestamp}.json')
+            print(f"Note: {base_json_name}.json already exists, saving as {os.path.basename(summary_path)}")
+        else:
+            summary_path = base_json_path
+            
         import json
         with open(summary_path, 'w') as f:
             json.dump(summary_metrics, f, indent=2)
 
-        print(f'Accuracy summary saved to: {summary_path}')
+        print(f'\nFiles saved:')
+        print(f'1. Accuracy summary (JSON): {summary_path}')
 
         # Also add accuracy column to the main CSV
         res_df = pd.DataFrame(res_dict)
         res_df['correct'] = res_df['prediction'] == res_df['label']
+        
+        # Check if CSV exists and create a new one with timestamp if it does
+        base_csv_name = 'deploy'
+        base_csv_path = os.path.join(deploy_results_dir, f'{base_csv_name}.csv')
+        
+        if os.path.exists(base_csv_path):
+            timestamp = pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')
+            save_res = os.path.join(deploy_results_dir, f'{base_csv_name}_{timestamp}.csv')
+            print(f"Note: {base_csv_name}.csv already exists, saving as {os.path.basename(save_res)}")
+        else:
+            save_res = base_csv_path
+            
         res_df.to_csv(save_res, index=False)
         # save csv of results
-        print('Result csv saved to {}'.format(save_res))
+        print('2. Results data (CSV): {}'.format(save_res))
         #print(f'Percentage of samples that equal {self.default_lbl}:', test_accuracy)
         print(f'Percentage of samples that equal {self.default_lbl} in deploy tfrecord: {test_accuracy * 100:.2f}%')
         print(f'Percentage of samples that equal {self.default_lbl} in deploy tfrecord: {test_accuracy * 100:.2f}%')
@@ -259,9 +299,15 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     print('ARGS:\n', args)
-    p = param.Param(parent_dir=args.parent, res_dir=args.resdir)
+    
+    # Use the resdir argument for results, or fall back to parent_dir/deploy_results
+    results_dir = args.resdir if args.resdir else os.path.join(args.parent, 'deploy_results')
+    
+    p = param.Param(
+        parent_dir=args.parent,
+        res_dir=results_dir  # Use the specified results directory
+    )
 
-    #Dep = Deploy(args.parent, args.preprocess_tfrecs, args.default_lbl)
     Dep = Deploy(args.parent, args.preprocess_tfrecs, args.default_lbl)
         
     Dep.run(p, args.im_dir, args.model_path, args.use_gedi_cnn, args.which_model)

@@ -4,6 +4,10 @@ Setting train/test/val from three different paths
 
 """
 
+import os
+# Force TensorFlow to use CPU due to CuDNN version mismatch
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+
 import tensorflow as tf
 import param_gedi as param
 from models.model import CNN
@@ -20,17 +24,21 @@ from glob import glob
 import random
 import tensorflow_addons as tfa
 import wandb
+from wandb.integration.keras import (
+    WandbMetricsLogger,
+    WandbModelCheckpoint,
+    WandbEvalCallback
+)
 
 
-__author__ = 'Josh Lamstein'
-__copyright__ = 'Gladstone Institutes 2020'
+__author__ = 'Finkbeiner Lab'
+__copyright__ = 'Gladstone Institutes 2025'
 
 
 class Train:
     def __init__(self, parent_dir, param_dict=None, preprocess_tfrecs=False, use_wandb=True):
         self.parent_dir = parent_dir
         self.p = param.Param(param_dict=param_dict, parent_dir=self.parent_dir)
-
         self.preprocess_tfrecs = preprocess_tfrecs
         self.use_wandb = use_wandb
         if self.use_wandb:
@@ -40,8 +48,8 @@ class Train:
             config={
                 "learning_rate": self.p.learning_rate,
                 "architecture": self.p.which_model,
-                "dataset": "TauKO",
-                "epochs": self.p.EPOCHS
+                "dataset": "TauPFF",
+                "epochs": self.p.EPOCHS,
             },
 )
             csv = os.path.join(self.p.parent_dir, 'wandb.csv')
@@ -56,10 +64,9 @@ class Train:
     def run(self, pos_dirs, neg_dirs, balance_method='cutoff'):
         assert isinstance(pos_dirs, list), 'pos_dirs must be list'
 
-        # bug: train.sh always process tfrecs regardless of 0 or 1, solved
         # add split_method, original: 'percentage'
         if self.preprocess_tfrecs or not os.path.exists(os.path.join(self.parent_dir, 'test.tfrecord')):
-            self.generate_tfrecs(pos_dirs, neg_dirs, balance_method, split_method='tiles')
+            self.generate_tfrecs(pos_dirs, neg_dirs, balance_method, split_method='percentage')
         else:
             assert os.path.exists(os.path.join(self.parent_dir, 'train.tfrecord')), 'set preprocess_tfrecs to true'
         self.train()
@@ -71,18 +78,62 @@ class Train:
             assert os.path.exists(os.path.join(self.parent_dir, 'retrain.tfrecord')), 'set preprocess_tfrecs to true'
         self.retrain()
 
-    def gather_imgs(self, pos_dirs, neg_dirs, filetype='png'):
-        pos_ims = []
-        neg_ims = []
-        for pos in pos_dirs:
-            pos_ims += glob(os.path.join(pos, f'*.{filetype}'))
-        for neg in neg_dirs:
-            neg_ims += glob(os.path.join(neg, f'*.{filetype}'))
-        random.Random(11).shuffle(pos_ims)
-        random.Random(11).shuffle(neg_ims)
-        return pos_ims, neg_ims
+    def gather_imgs(self, pos_dirs, neg_dirs, filetype='tif'):
+        """Gather images from matching subfolders in live/dead directories
+        
+        Directory structure:
+        live/
+        ├── T0_0/*.tif
+        ├── T1_12/*.tif
+        └── T12_144/*.tif
+        dead/
+        ├── T0_0/*.tif
+        ├── T1_12/*.tif
+        └── T12_144/*.tif
+        """
+        pos_ims = {}  # Dictionary to store images by timepoint
+        neg_ims = {}
+        
+        # Get all timepoint folders
+        timepoints = []
+        for pos_dir in pos_dirs:
+            timepoints.extend([f.name for f in os.scandir(pos_dir) if f.is_dir()])
+        timepoints = sorted(list(set(timepoints)))  # Unique, sorted timepoints
+        
+        print(f"\nFound {len(timepoints)} timepoints: {timepoints}")
+        
+        # Gather images for each timepoint
+        for tp in timepoints:
+            pos_ims[tp] = []
+            neg_ims[tp] = []
+            
+            # Get positive/live images for this timepoint
+            for pos_dir in pos_dirs:
+                tp_dir = os.path.join(pos_dir, tp)
+                if os.path.exists(tp_dir):
+                    pos_ims[tp].extend(glob(os.path.join(tp_dir, f'*.{filetype}')))
+                    
+            # Get negative/dead images for this timepoint
+            for neg_dir in neg_dirs:
+                tp_dir = os.path.join(neg_dir, tp)
+                if os.path.exists(tp_dir):
+                    neg_ims[tp].extend(glob(os.path.join(tp_dir, f'*.{filetype}')))
+            
+            # Shuffle images for this timepoint
+            random.Random(11).shuffle(pos_ims[tp])
+            random.Random(11).shuffle(neg_ims[tp])
+            
+            print(f"\nTimepoint {tp}:")
+            print(f"  Found {len(pos_ims[tp])} live images")
+            print(f"  Found {len(neg_ims[tp])} dead images")
+            if pos_ims[tp]:
+                print(f"  Sample live: {pos_ims[tp][0]}")
+            if neg_ims[tp]:
+                print(f"  Sample dead: {neg_ims[tp][0]}")
+    
+        return pos_ims, neg_ims, timepoints
 
-    def generate_tfrecs(self, pos_dirs, neg_dirs, split, balance_method='cutoff', split_method='tiles'):
+    def generate_tfrecs(self, pos_dirs, neg_dirs, split, balance_method='cutoff', split_method='percentage'):
         """
         Builds tfrecords from images sorted in directories by label
         Args:
@@ -96,11 +147,22 @@ class Train:
 
         split = [.7, .15, .15]  # Required parameter, ignored when split_method='tiles'
         tfrec_dir = self.parent_dir
-        pos_ims, neg_ims = self.gather_imgs(pos_dirs, neg_dirs, filetype='png')
-        
+        pos_ims_dict, neg_ims_dict, timepoints = self.gather_imgs(pos_dirs, neg_dirs, filetype='tif')
+
+        # Flatten the dictionaries into lists for Record class
+        pos_ims = []
+        neg_ims = []
+        for tp in timepoints:
+            pos_ims.extend(pos_ims_dict[tp])
+            neg_ims.extend(neg_ims_dict[tp])
+
         print(f"DEBUG: Sample image paths:")
-        print(f"Positive: {pos_ims[:3] if pos_ims else 'None'}")
-        print(f"Negative: {neg_ims[:3] if neg_ims else 'None'}")
+        print(f"Total positive images: {len(pos_ims)}")
+        print(f"Total negative images: {len(neg_ims)}")
+        if pos_ims:
+            print(f"Sample positive: {pos_ims[:2]}")
+        if neg_ims:
+            print(f"Sample negative: {neg_ims[:2]}")
 
         # SW: Too much dadta - set Cutoff to max_images_per_class
         # Shuffle deterministically using a fixed seed
@@ -227,57 +289,17 @@ class Train:
         callbacks = [cp_callback, cp_early, tb_callback]
 
         if self.use_wandb:
-            from wandb.integration.keras import (
-                WandbMetricsLogger,
-                WandbModelCheckpoint,
-                WandbEvalCallback
-            )
-
-            class MyEvalCallback(WandbEvalCallback):
-                def add_ground_truth(self, epoch, logs=None):
-                    import numpy as np
-                    images, labels = next(iter(val_gen))
-                    table = wandb.Table(columns=["image", "label"])
-                    for i in range(min(32, len(images))):
-                        img = images[i].numpy() if hasattr(images[i], 'numpy') else images[i]
-                        lbl = labels[i].numpy() if hasattr(labels[i], 'numpy') else labels[i]
-                        if img.max() <= 1.0:
-                            img = (img * 255).astype(np.uint8)
-                        # Handle different label formats
-                        if lbl.ndim > 0 and lbl.size > 1:
-                            # One-hot encoded or multi-dimensional - get the argmax
-                            scalar_lbl = int(np.argmax(lbl))
-                        else:
-                            # Already scalar or single element
-                            scalar_lbl = int(lbl.item() if hasattr(lbl, 'item') else lbl)
-                        table.add_data(wandb.Image(img), scalar_lbl)
-                    wandb.log({"ground_truth": table})
-
-                def add_model_predictions(self, epoch, logs=None):
-                    import numpy as np
-                    images, labels = next(iter(val_gen))
-                    preds = self.model.predict(images)
-                    pred_labels = preds.argmax(axis=1) if preds.shape[-1] > 1 else (preds > 0.5).astype(int)
-                    table = wandb.Table(columns=["image", "prediction"])
-                    for i in range(min(32, len(images))):
-                        img = images[i].numpy() if hasattr(images[i], 'numpy') else images[i]
-                        if img.max() <= 1.0:
-                            img = (img * 255).astype(np.uint8)
-                        scalar_pred = int(pred_labels[i].item() if hasattr(pred_labels[i], 'item') else pred_labels[i])
-                        table.add_data(wandb.Image(img), scalar_pred)
-                    wandb.log({"predictions": table})
-
-
+            # Get unique subfolder names by reading from the tfrecord files
+            subfolders = set()
+            # We'll get subfolders from the file structure instead
+            # since pos_ims and neg_ims are not available in this scope
+            
             wandb_callbacks = [
                 WandbMetricsLogger(log_freq='batch'),
                 WandbModelCheckpoint(
                     filepath=save_checkpoint_path,
                     monitor="val_accuracy",
                     save_best_only=True
-                ),
-                MyEvalCallback(
-                    data_table_columns=["image", "label"],
-                    pred_table_columns=["image", "prediction"]
                 )
             ]
             callbacks += wandb_callbacks
@@ -307,7 +329,7 @@ class Train:
         # Get accuracy, compare predictions with labels
         for i in range(int(test_length // self.p.BATCH_SIZE)):
             imgs, lbls, files = DatTest2.datagen()
-            # res = model.predict((imgs, lbls), steps=test_length // self.pBATCH_SIZE, workers=4, use_multiprocessing=True)
+            # res = model.predict((imgs, lbls), steps=test_length // self.p.BATCH_SIZE, workers=4, use_multiprocessing=True)
             nplbls = lbls.numpy()
             if self.p.output_size == 2:
                 test_results = np.argmax(res[i * self.p.BATCH_SIZE: (i + 1) * self.p.BATCH_SIZE], axis=1)
@@ -540,7 +562,13 @@ class Train:
 
 
             wandb_callbacks = [
-                WandbMetricsLogger(log_freq='batch'),
+                WandbMetricsLogger(
+                    log_freq='batch',
+                    log_additional_metrics={
+                        'live_accuracy': None,
+                        'dead_accuracy': None,
+                    }
+                ),
                 WandbModelCheckpoint(
                     filepath=save_checkpoint_path,
                     monitor="val_accuracy",
@@ -554,9 +582,9 @@ class Train:
             callbacks += wandb_callbacks
 
         history = model.fit(train_gen, steps_per_epoch=train_length // (self.p.BATCH_SIZE), epochs=self.p.EPOCHS,
-                            #class_weight=self.p.class_weights, 
-                            validation_data=val_gen,
-                            validation_steps=int(val_length // self.p.BATCH_SIZE), callbacks=callbacks)
+                             #class_weight=self.p.class_weights, 
+                             validation_data=val_gen,
+                             validation_steps=int(val_length // self.p.BATCH_SIZE), callbacks=callbacks)
 
         train_acc = history.history['accuracy']
         val_acc = history.history['val_accuracy']
@@ -606,6 +634,67 @@ class Train:
         model.save(export_path)
 
 
+class SubfolderEvalCallback(WandbEvalCallback):
+    def __init__(self, val_gen, subfolder_pairs, **kwargs):
+        super().__init__(**kwargs)
+        self.val_gen = val_gen
+        self.subfolder_pairs = subfolder_pairs  # Dict mapping subfolder names to their file indices
+        
+    def on_epoch_end(self, epoch, logs=None):
+        super().on_epoch_end(epoch, logs)
+        
+        # Get predictions on validation set
+        images, labels, filenames = next(iter(self.val_gen))
+        preds = self.model.predict(images)
+        pred_labels = preds.argmax(axis=1) if preds.shape[-1] > 1 else (preds > 0.5).astype(int)
+        true_labels = labels.numpy().argmax(axis=1) if labels.numpy().ndim > 1 else labels.numpy()
+        
+        # Track metrics per subfolder
+        subfolder_metrics = {}
+        for subfolder in self.subfolder_pairs:
+            # Get indices for this subfolder's files
+            subfolder_mask = [f.decode('utf-8').split('/')[-2] == subfolder for f in filenames]
+            if not any(subfolder_mask):
+                continue
+                
+            # Calculate accuracies for this subfolder
+            subfolder_preds = pred_labels[subfolder_mask]
+            subfolder_true = true_labels[subfolder_mask]
+            
+            live_mask = subfolder_true == 1
+            dead_mask = subfolder_true == 0
+            
+            subfolder_metrics[subfolder] = {
+                'accuracy': np.mean(subfolder_preds == subfolder_true),
+                'live_accuracy': np.mean(subfolder_preds[live_mask] == subfolder_true[live_mask]) if any(live_mask) else 0,
+                'dead_accuracy': np.mean(subfolder_preds[dead_mask] == subfolder_true[dead_mask]) if any(dead_mask) else 0
+            }
+            
+            # Log to wandb
+            wandb.log({
+                f"{subfolder}/accuracy": subfolder_metrics[subfolder]['accuracy'],
+                f"{subfolder}/live_accuracy": subfolder_metrics[subfolder]['live_accuracy'],
+                f"{subfolder}/dead_accuracy": subfolder_metrics[subfolder]['dead_accuracy'],
+                f"{subfolder}/confusion_matrix": wandb.plot.confusion_matrix(
+                    probs=None,
+                    y_true=subfolder_true,
+                    preds=subfolder_preds,
+                    class_names=["Dead", "Live"]
+                )
+            }, commit=False)
+        
+        # Log overall metrics
+        wandb.log({
+            "overall/accuracy": np.mean(pred_labels == true_labels),
+            "overall/confusion_matrix": wandb.plot.confusion_matrix(
+                probs=None,
+                y_true=true_labels,
+                preds=pred_labels,
+                class_names=["Dead", "Live"]
+            )
+        })
+
+
 if __name__ == '__main__':
     result = pyfiglet.figlet_format("CNN", font="slant")
     print(result)
@@ -646,6 +735,7 @@ if __name__ == '__main__':
 
     # Convert string "0"/"1" to boolean for preprocess_tfrecs
     args.preprocess_tfrecs = bool(int(args.preprocess_tfrecs))
+    args.use_wandb = bool(int(args.use_wandb))
     
     print('ARGS:\n', args)
 
