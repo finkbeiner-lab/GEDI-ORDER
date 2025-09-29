@@ -3,6 +3,9 @@ Deploy trained model
 Compare original gedi model to newly trained gedi model to human curation
 """
 
+import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'  # Force CPU execution to avoid CuDNN version conflict
+
 import tensorflow as tf
 import param_gedi as param
 import preprocessing.datagenerator as pipe

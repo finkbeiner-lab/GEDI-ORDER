@@ -209,7 +209,7 @@ class Train:
         # Initialize wandb for this timepoint
         if self.use_wandb:
             wandb.init(
-                project=f"H2B_timepoint_models",
+                project=f"Mito_timepoint_models",
                 name=f"{timepoint}_{self.p.which_model}",
                 config={
                     "learning_rate": self.p.learning_rate,
