@@ -42,7 +42,7 @@ class Deploy:
         
     def run(self, p, im_dir, model_path=None, use_gedi_cnn=True, which_model=None):
         # Look for existing validation TFRecord
-        deploypath = os.path.join(self.parent_dir, 'deploy.tfrecord')  # Change name here
+        deploypath = os.path.join(self.parent_dir, 'deploy_{}.tfrecord'.format(self.default_lbl))   # Change name here
         
         if self.preprocess_tfrecs:
             #self.generate_tfrecs(im_dir)
@@ -68,7 +68,9 @@ class Deploy:
             os.makedirs(tfrec_dir, exist_ok=True)   
         #Rec = Record(im_dir, tfrec_dir, lbl=self.default_lbl)
         Rec = Record(im_dir, tfrec_dir, lbl=lbl) 
-        savedeploy = os.path.join(self.parent_dir, 'deploy.tfrecord')
+        #savedeploy = os.path.join(self.parent_dir, 'deploy.tfrecord')
+        ### add label to the saved tfrecord
+        savedeploy = os.path.join(self.parent_dir, 'deploy_{}.tfrecord'.format(lbl))
         Rec.tiff2record(savedeploy, Rec.impaths, Rec.lbls)
         print(f'Saved tfrecords to {tfrec_dir}')
 

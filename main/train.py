@@ -19,7 +19,12 @@ import pyfiglet
 from glob import glob
 import random
 import tensorflow_addons as tfa
-import wandb
+try:
+    import wandb
+    WANDB_AVAILABLE = True
+except ImportError:
+    WANDB_AVAILABLE = False
+    wandb = None
 
 
 __author__ = 'Josh Lamstein'
@@ -32,16 +37,20 @@ class Train:
         self.p = param.Param(param_dict=param_dict, parent_dir=self.parent_dir)
 
         self.preprocess_tfrecs = preprocess_tfrecs
-        self.use_wandb = use_wandb
+        self.use_wandb = use_wandb and WANDB_AVAILABLE
         if self.use_wandb:
             run = wandb.init(
-            #entity="swang202",
-            #project="TauKO_mito_ko_vs_oeTau",
+            entity=os.environ.get("WANDB_ENTITY"),
+            project=os.environ.get("WANDB_PROJECT"),
+            group=os.environ.get("WANDB_RUN_GROUP"),
+            name=os.environ.get("WANDB_NAME"),
             config={
                 "learning_rate": self.p.learning_rate,
                 "architecture": self.p.which_model,
-                "dataset": "TauKO",
-                "epochs": self.p.EPOCHS
+                "dataset": os.environ.get("WANDB_PROJECT", "TauKO"),
+                "epochs": self.p.EPOCHS,
+                "batch_size": self.p.BATCH_SIZE,
+                "optimizer": self.p.optimizer
             },
 )
             csv = os.path.join(self.p.parent_dir, 'wandb.csv')
@@ -69,7 +78,7 @@ class Train:
             assert os.path.exists(os.path.join(self.parent_dir, 'retrain.tfrecord')), 'set preprocess_tfrecs to true'
         self.retrain()
 
-    def gather_imgs(self, pos_dirs, neg_dirs, filetype='tif'):
+    def gather_imgs(self, pos_dirs, neg_dirs, filetype='png'):
         pos_ims = []
         neg_ims = []
         for pos in pos_dirs:
@@ -109,7 +118,7 @@ class Train:
             print(f"Creating directory: {tfrec_dir}")
             os.makedirs(tfrec_dir, exist_ok=True)
             
-        pos_ims, neg_ims = self.gather_imgs(pos_dirs, neg_dirs, filetype='tif')
+        pos_ims, neg_ims = self.gather_imgs(pos_dirs, neg_dirs, filetype='png')
 
         # SW: Too much data - set Cutoff to max_images_per_class
         # Shuffle deterministically using a fixed seed
@@ -140,7 +149,7 @@ class Train:
         assert os.path.exists(data_train), 'check tfrecord path and that tfrecord exists'
 
         timestamp = update_timestring()
-        export_path = os.path.join(self.p.models_dir, '{}_{}.h5'.format(self.p.which_model, timestamp))
+        export_path = os.path.join(self.p.models_dir, '{}_{}.keras'.format(self.p.which_model, timestamp))
         export_info_path = os.path.join(self.p.run_info_dir, '{}_{}.csv'.format(self.p.which_model, timestamp))
         #changed .hdf5 to .keras
         save_checkpoint_path = os.path.join(self.p.ckpt_dir, '{}_{}.keras'.format(self.p.which_model, timestamp))
@@ -219,7 +228,7 @@ class Train:
 
         # callbacks, save checkpoints and tensorboard logs
         cp_callback = tf.keras.callbacks.ModelCheckpoint(save_checkpoint_path, monitor='val_accuracy', verbose=1,
-                                                         save_best_only=True, mode='max')
+                                                         save_best_only=True, mode='max', save_format='keras')
 
         cp_early = tf.keras.callbacks.EarlyStopping(
             monitor='val_loss', min_delta=0.001, patience=3, verbose=1,
@@ -231,12 +240,11 @@ class Train:
             update_freq='epoch')
         
         #callbacks = [cp_callback, cp_early]
-        callbacks = [cp_callback, cp_early, tb_callback]
+        callbacks = [cp_early, tb_callback]  # Temporarily disable checkpoint saving
 
         if self.use_wandb:
             from wandb.integration.keras import (
                 WandbMetricsLogger,
-                WandbModelCheckpoint,
                 WandbEvalCallback
             )
 
@@ -277,11 +285,6 @@ class Train:
 
             wandb_callbacks = [
                 WandbMetricsLogger(log_freq='batch'),
-                WandbModelCheckpoint(
-                    filepath=save_checkpoint_path,
-                    monitor="val_accuracy",
-                    save_best_only=True
-                ),
                 MyEvalCallback(
                     data_table_columns=["image", "label"],
                     pred_table_columns=["image", "prediction"]
@@ -344,7 +347,30 @@ class Train:
         run_df.to_csv(export_info_path)
 
         print('Saving model to {}'.format(export_path))
-        model.save(export_path)
+        model.save(export_path, save_format='keras')
+
+        # Log model to wandb
+        if self.use_wandb:
+            model_artifact = wandb.Artifact(
+                name=f"{self.p.which_model}_{timestamp}",
+                type="model",
+                description=f"Trained {self.p.which_model} model",
+                metadata={
+                    "test_accuracy": test_accuracy,
+                    "val_accuracy": val_acc[-1],
+                    "train_accuracy": train_acc[-1],
+                    "epochs": self.p.EPOCHS,
+                    "learning_rate": self.p.learning_rate
+                }
+            )
+            model_artifact.add_file(export_path)
+            wandb.log_artifact(model_artifact)
+            wandb.log({
+                "final_test_accuracy": test_accuracy,
+                "final_val_accuracy": val_acc[-1],
+                "final_train_accuracy": train_acc[-1]
+            })
+            wandb.finish()
 
 
     def retrain(self, base_model_file=None):
@@ -363,9 +389,9 @@ class Train:
         data_reval = os.path.join(tfrec_dir, 'val.tfrecord')
         data_retest = os.path.join(tfrec_dir, 'test.tfrecord')
         timestamp = update_timestring()
-        export_path = os.path.join(self.p.retrain_models_dir, '{}_{}.h5'.format(self.p.which_model, timestamp))
+        export_path = os.path.join(self.p.retrain_models_dir, '{}_{}.keras'.format(self.p.which_model, timestamp))
         export_info_path = os.path.join(self.p.retrain_run_info_dir, '{}_{}.csv'.format(self.p.which_model, timestamp))
-        save_checkpoint_path = os.path.join(self.p.retrain_ckpt_dir, '{}_{}.hdf5'.format(self.p.which_model, timestamp))
+        save_checkpoint_path = os.path.join(self.p.retrain_ckpt_dir, '{}_{}.keras'.format(self.p.which_model, timestamp))
         self.p.hyperparams['model'] = self.p.which_model
         self.p.hyperparams['timestamp'] = timestamp
         self.p.hyperparams['model_timestamp'] = self.p.which_model + '_' + timestamp
@@ -491,13 +517,13 @@ class Train:
 
         # callbacks, save checkpoints and tensorboard logs
         cp_callback = tf.keras.callbacks.ModelCheckpoint(save_checkpoint_path, monitor='val_accuracy', verbose=1,
-                                                         save_best_only=True, mode='max')
+                                                         save_best_only=True, mode='max', save_format='keras')
 
         cp_early = tf.keras.callbacks.EarlyStopping(
             monitor='loss', min_delta=0, patience=3, verbose=0,
             mode='auto', baseline=None, restore_best_weights=True
         )
-        callbacks = [cp_callback, cp_early]
+        callbacks = [cp_early]  # Temporarily disable checkpoint saving
 
         tb_callback = tf.keras.callbacks.TensorBoard(
             log_dir='/home/jlamstein/PycharmProjects/ASYN/log/{}'.format(self.p.which_model),
@@ -507,7 +533,6 @@ class Train:
         if self.use_wandb:
             from wandb.integration.keras import (
                 WandbMetricsLogger,
-                WandbModelCheckpoint,
                 WandbEvalCallback
             )
 
@@ -548,11 +573,6 @@ class Train:
 
             wandb_callbacks = [
                 WandbMetricsLogger(log_freq='batch'),
-                WandbModelCheckpoint(
-                    filepath=save_checkpoint_path,
-                    monitor="val_accuracy",
-                    save_best_only=True
-                ),
                 MyEvalCallback(
                     data_table_columns=["image", "label"],
                     pred_table_columns=["image", "prediction"]
@@ -610,7 +630,31 @@ class Train:
         run_df.to_csv(export_info_path)
 
         print('Saving model to {}'.format(export_path))
-        model.save(export_path)
+        model.save(export_path, save_format='keras')
+
+        # Log model to wandb
+        if self.use_wandb:
+            model_artifact = wandb.Artifact(
+                name=f"{self.p.which_model}_retrained_{timestamp}",
+                type="model",
+                description=f"Retrained {self.p.which_model} model",
+                metadata={
+                    "test_accuracy": test_accuracy,
+                    "val_accuracy": val_acc[-1],
+                    "train_accuracy": train_acc[-1],
+                    "epochs": self.p.EPOCHS,
+                    "learning_rate": self.p.learning_rate,
+                    "base_model": base_model_file
+                }
+            )
+            model_artifact.add_file(export_path)
+            wandb.log_artifact(model_artifact)
+            wandb.log({
+                "final_test_accuracy": test_accuracy,
+                "final_val_accuracy": val_acc[-1],
+                "final_train_accuracy": train_acc[-1]
+            })
+            wandb.finish()
 
 
 if __name__ == '__main__':
