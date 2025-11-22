@@ -40,15 +40,30 @@ class Deploy:
 
     #     self.deploy_main(p, deploypath, model_path, deploy_gedi_cnn=use_gedi_cnn, which_model=which_model)
         
-    def run(self, p, im_dir, model_path=None, use_gedi_cnn=True, which_model=None):
-        # Look for existing validation TFRecord
-        deploypath = os.path.join(self.parent_dir, 'deploy_{}.tfrecord'.format(self.default_lbl))   # Change name here
-        
+    def run(self, p, im_dir, model_path=None, use_gedi_cnn=True, which_model=None, existing_val_tfrecord=None):
+        """
+        Run deployment with two modes:
+        - preprocess_tfrecs=0: Use existing_val_tfrecord, ignore image_dir
+        - preprocess_tfrecs=1: Use image_dir, create tfrecord in parent_dir with label in name
+        """
+
         if self.preprocess_tfrecs:
-            #self.generate_tfrecs(im_dir)
-            self.generate_tfrecs(im_dir, self.default_lbl)  # SW: Pass the label 
+            # Mode 1: preprocess_tfrecs=1 - Create new tfrecord from image_dir
+            print(f"Mode: Creating new TFRecord from images in {im_dir}")
+            deploypath = os.path.join(self.parent_dir, 'deploy_{}.tfrecord'.format(self.default_lbl))
+            self.generate_tfrecs(im_dir, self.default_lbl)
+            print(f"Created TFRecord: {deploypath}")
         else:
-            assert os.path.exists(deploypath), f'Validation TFRecord not found at {deploypath}'
+            # Mode 2: preprocess_tfrecs=0 - Use existing tfrecord, ignore image_dir
+            print(f"Mode: Using existing TFRecord (ignoring image_dir)")
+            if existing_val_tfrecord:
+                deploypath = existing_val_tfrecord
+                print(f"Using provided TFRecord: {deploypath}")
+            else:
+                # Fall back to default location if no existing tfrecord provided
+                deploypath = os.path.join(self.parent_dir, 'deploy_{}.tfrecord'.format(self.default_lbl))
+                print(f"Looking for TFRecord at default location: {deploypath}")
+                assert os.path.exists(deploypath), f'Validation TFRecord not found at {deploypath}'
 
         self.deploy_main(p, deploypath, model_path, deploy_gedi_cnn=use_gedi_cnn, which_model=which_model, im_dir=im_dir)
 
@@ -300,7 +315,10 @@ if __name__ == '__main__':
     parser.add_argument('--default_lbl', type=int, action="store", default=0,
                         help='default label for tfrecords, 0 for negative, 1 for positive',
                         dest="default_lbl")
-                        
+    parser.add_argument('--existing_val_tfrecord', action="store", default=None,
+                        help='path to existing validation tfrecord file',
+                        dest="existing_val_tfrecord")
+
 
     args = parser.parse_args()
     print('ARGS:\n', args)
@@ -315,4 +333,4 @@ if __name__ == '__main__':
 
     Dep = Deploy(args.parent, args.preprocess_tfrecs, args.default_lbl)
         
-    Dep.run(p, args.im_dir, args.model_path, args.use_gedi_cnn, args.which_model)
+    Dep.run(p, args.im_dir, args.model_path, args.use_gedi_cnn, args.which_model, args.existing_val_tfrecord)
