@@ -37,7 +37,7 @@ class CNN:
         optimizer = tf.keras.optimizers.Adam(learning_rate=self.p.learning_rate)
         # optimizer = tfa.optimizers.AdamW(learning_rate=self.p.learning_rate, weight_decay=self.p.wd)
         raw_model.compile(optimizer=optimizer,
-                          loss='binary_crossentropy',
+                          loss='categorical_crossentropy',
                           metrics=['accuracy'])
 
         return raw_model
@@ -96,7 +96,7 @@ class CNN:
                                                 nesterov=True)
         # optimizer = tfa.optimizers.AdamW(learning_rate=self.p.learning_rate, weight_decay=self.p.wd)
         raw_model.compile(optimizer=optimizer,
-                          loss='binary_crossentropy',
+                          loss='categorical_crossentropy',
                           metrics=['accuracy'])
 
         return raw_model
@@ -133,7 +133,7 @@ class CNN:
         ])
         raw_model.summary()
         raw_model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=self.p.learning_rate),
-                          loss='binary_crossentropy',
+                          loss='categorical_crossentropy',
                           metrics=['accuracy'])
         return raw_model
 
@@ -222,7 +222,7 @@ class CNN:
         raw_model.summary()
 
         raw_model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=self.p.learning_rate),
-                          loss='binary_crossentropy',
+                          loss='categorical_crossentropy',
                           metrics=['accuracy'])
         return raw_model
 
@@ -298,7 +298,7 @@ class CNN:
             optimizer = tfa.optimizers.AdamW(learning_rate=self.p.learning_rate, weight_decay=self.p.weight_decay)
 
         raw_model.compile(optimizer=optimizer,
-                          loss='binary_crossentropy',
+                          loss='categorical_crossentropy',
                           metrics=['accuracy'])
         return raw_model
 
@@ -340,7 +340,7 @@ class CNN:
             optimizer = tfa.optimizers.AdamW(learning_rate=self.p.learning_rate, weight_decay=self.p.weight_decay)
 
         raw_model.compile(optimizer=optimizer,
-                          loss='binary_crossentropy',
+                          loss='categorical_crossentropy',
                           metrics=['accuracy'])
         return raw_model
 

@@ -22,14 +22,14 @@ class Param:
             self.BATCH_SIZE = 32
             self.optimizer = 'adam'  # sgd, adam, adamw
             self.momentum = 0.9
+            self.num_classes = 2
             # Data generator
             self.augmentbool = True
             self.random_brightness = 0.2
             self.min_contrast = 1
             self.max_contrast = 1.3
             self.target_size = (224, 224, 3)
-            self.orig_size = (300, 300, 1)  # (230, 230, 3) for catdog tfrecord / (300,300,1) for cells
-            self.class_weights = {0: 1., 1: 1.}  # rough ratio  # 2.75 vs 1 for original training dataset
+            self.orig_size = (200, 200, 1)  # Updated to match actual image size
             self.randomcrop = True
             self.histogram_eq = True
             self.weight_decay = 1e-5  # for AdamW
@@ -43,14 +43,14 @@ class Param:
             self.BATCH_SIZE = param_dict['batch_size']
             self.optimizer = param_dict['optimizer']  # sgd, adam
             self.momentum = param_dict['momentum']
+            self.num_classes = param_dict.get('num_classes', 2)
             # Data generator
             self.augmentbool = True
             self.random_brightness = 0.2
             self.min_contrast = 1
             self.max_contrast = 1.3
             self.target_size = (224, 224, 3)
-            self.orig_size = (300, 300, 1)  # (230, 230, 3) for catdog tfrecord / (300,300,1) for cells
-            self.class_weights = {0: 1., 1: 1.}  # rough ratio  # 2.75 vs 1 for original training dataset
+            self.orig_size = (200, 200, 1)  # Updated to match actual image size
             self.randomcrop = True
             self.histogram_eq = True
             self.weight_decay = 1e-5  # for AdamW
@@ -68,6 +68,9 @@ class Param:
             # self.weight_decay = param_dict['weight_decay']  # for AdamW
             # self.l2_regularize = param_dict['l2_regularize']
             # self.regularize = param_dict['regularize']
+
+        self.output_size = self.num_classes
+        self.class_weights = {i: 1. for i in range(self.num_classes)}
 
         self.training_max_value = 1.0001861
         self.training_min_value = 0
@@ -173,9 +176,6 @@ class Param:
         self.data_deploy = os.path.join('/mnt/finkbeinernas/robodata/Josh/GEDI-ORDER/testH23.tfrecord')
         # self.data_deploy = self.data_retrain
 
-        # self.max_gedi = 16117. # max value of training set
-        self.output_size = 2
-
         self.orig_width = 300
         self.orig_height = 300
         self.orig_channels = 1
@@ -207,8 +207,8 @@ class Param:
             'test_dir': self.data_test,
             'orig_size': self.orig_size,
             'target_size': self.target_size,
-            'class_weights_0': self.class_weights[0],
-            'class_weights_1': self.class_weights[1],
+            'num_classes': self.num_classes,
+            'class_weights': self.class_weights,
             'batch_size': self.BATCH_SIZE,
             'shuffle_size': self.shuffle_buffer_size,
             'epochs': self.EPOCHS,

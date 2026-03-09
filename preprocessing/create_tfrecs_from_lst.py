@@ -33,16 +33,22 @@ import random
 
 class Record:
 
-    def __init__(self, images_lst_live, images_lst_dead, tfrecord_dir, split, balance_method, split_method='percentage'):
+    def __init__(self, images_lst_live, images_lst_dead, tfrecord_dir, split, balance_method,
+                 split_method='percentage', tile_channel='Confocal',
+                 train_tiles=None, val_tiles=None, test_tiles=None):
         """
         Class for building tfrecords. Takes lists, combines them using cutoff or multiply balance methods.
         Args:
-            images_lst_live: Image lst with liv labels (1)
+            images_lst_live: Image lst with live labels (1)
             images_lst_dead: Image list with dead labels (0)
-            tfrecord_dir: Save directory for tfrecs
-            split: List to split data into training, validation, testing
-            split_method: 'percentage' for old method, 'wells' for well-based split
-            balance_method: Method to balance binary classes, 'cutoff' - remove data, 'multiply' - duplicate smaller data class to match larger class, None - leave unbalanced
+            tfrecord_dir:    Save directory for tfrecs
+            split:           List to split data into training, validation, testing
+            balance_method:  'cutoff' | 'multiply' | None
+            split_method:    'percentage' for random split, 'tiles' for tile-ID-based split
+            tile_channel:    Channel name in tile pattern e.g. 'Confocal' or 'Epi' (used when split_method='tiles')
+            train_tiles:     List of tile numbers for training (used when split_method='tiles')
+            val_tiles:       List of tile numbers for validation (used when split_method='tiles')
+            test_tiles:      List of tile numbers for test (used when split_method='tiles')
         """
         assert isinstance(images_lst_dead, list), 'images_lst_dead must be list'
         self.p = param.Param()
@@ -53,9 +59,13 @@ class Record:
         self.balance_method = balance_method
 
         if split_method == 'tiles':
-            # Use well-based splitting
+            # Use tile-ID-based splitting
             trainlive, vallive, testlive, traindead, valdead, testdead = self.split_by_tile_id(
-                self.impaths_live, self.impaths_dead)
+                self.impaths_live, self.impaths_dead,
+                channel=tile_channel,
+                train_nums=train_tiles,
+                val_nums=val_tiles,
+                test_nums=test_tiles)
         else:
             # Use original percentage-based splitting
             if self.balance_method == 'multiply':
@@ -137,9 +147,32 @@ class Record:
         return impaths, lbls
 
     def load_image(self, im_path):
-        img = imageio.imread(im_path)
-        img = img.astype(np.float32)
-        return img
+        try:
+            # Check if file exists and is not empty
+            import os
+            if not os.path.exists(im_path) or os.path.getsize(im_path) == 0:
+                print(f"Warning: Skipping empty or non-existent file: {im_path}")
+                return None
+
+            img = imageio.imread(im_path)
+            img = img.astype(np.float32)
+
+            # Ensure consistent dimensions - resize to orig_size if different
+            expected_shape = self.p.orig_size
+            if len(img.shape) == 2:  # Grayscale image
+                img = img.reshape(img.shape + (1,))
+
+            if img.shape != expected_shape:
+                import cv2
+                # Resize to expected dimensions
+                img = cv2.resize(img.squeeze(), (expected_shape[1], expected_shape[0]))
+                if len(expected_shape) == 3 and expected_shape[2] == 1:
+                    img = img.reshape(expected_shape)
+
+            return img
+        except Exception as e:
+            print(f"Warning: Failed to load image {im_path}: {e}")
+            return None
 
     def _int64_feature(self, value):
         return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
@@ -177,26 +210,42 @@ class Record:
     ## SW: Split images by tile ID to avoid data leakage
     # This function assumes that the filenames contain tile IDs in a specific format (4x4 or 3x3).
     # It splits the images into training, validation, and test sets based on these tile #.
-    def split_by_tile_id(self, pos_ims, neg_ims):
-        """Split images based on tile ID patterns in filenames"""
-        
-        # Define tile ID patterns for each split - look for _[number]_Confocal
-        # train_tiles = ["_1_Confocal", "_4_Confocal", "_6_Confocal", "_7_Confocal", "_9_Confocal", 
-        #             "_12_Confocal", "_10_Confocal", "_14_Confocal", "_15_Confocal", "_16_Confocal"]
-        # val_tiles = ["_2_Confocal", "_8_Confocal", "_11_Confocal"]
-        # test_tiles = ["_3_Confocal", "_5_Confocal", "_13_Confocal"]
+    def split_by_tile_id(self, pos_ims, neg_ims,
+                         channel='Confocal',
+                         train_nums=None,
+                         val_nums=None,
+                         test_nums=None):
+        """Split images based on tile ID patterns in filenames.
 
-        train_tiles = ["_1_Epi", "_4_Epi", "_6_Epi", "_7_Epi", "_9_Epi", 
-                    "_12_Epi", "_10_Epi", "_14_Epi", "_15_Epi", "_16_Epi"]
-        val_tiles = ["_2_Epi", "_8_Epi", "_11_Epi"]
-        test_tiles = ["_3_Epi", "_5_Epi", "_13_Epi"]
+        Args:
+            pos_ims:     list of positive image paths
+            neg_ims:     list of negative image paths
+            channel:     channel suffix in filename pattern, e.g. 'Confocal' or 'Epi'
+                         Patterns are built as  _<num>_<channel>
+            train_nums:  list of tile numbers assigned to training set
+                         Default: [1, 4, 6, 7, 9, 10, 12, 14, 15, 16, 19, 20]
+            val_nums:    list of tile numbers assigned to validation set
+                         Default: [2, 8, 11, 17]
+            test_nums:   list of tile numbers assigned to test set
+                         Default: [3, 5, 13, 18]
+        """
+        if train_nums is None:
+            train_nums = [1, 4, 6, 7, 9, 10, 12, 14, 15, 16, 19, 20]
+        if val_nums is None:
+            val_nums = [2, 8, 11, 17]
+        if test_nums is None:
+            test_nums = [3, 5, 13, 18]
 
-        
+        train_tiles = [f'_{n}_{channel}' for n in train_nums]
+        val_tiles   = [f'_{n}_{channel}' for n in val_nums]
+        test_tiles  = [f'_{n}_{channel}' for n in test_nums]
+
         print(f"DEBUG: Total images - Pos: {len(pos_ims)}, Neg: {len(neg_ims)}")
+        print(f"DEBUG: channel='{channel}', train_nums={train_nums}, val_nums={val_nums}, test_nums={test_nums}")
         print(f"DEBUG: First few positive image paths:")
         for i, img in enumerate(pos_ims[:3]):
             print(f"  {i}: {img}")
-        
+
         def assign_split(filename):
             for tile in train_tiles:
                 if tile in filename:
@@ -208,13 +257,13 @@ class Record:
                 if tile in filename:
                     return 'test'
             return None  # File doesn't match any tile pattern
-        
+
         # Test the pattern matching with first few files
         print(f"DEBUG: Testing pattern matching:")
         for img in pos_ims[:3]:
             result = assign_split(img)
             print(f"  {img} -> {result}")
-        
+
         # Split positive images
         pos_train, pos_val, pos_test = [], [], []
         unmatched_pos = []
@@ -228,7 +277,7 @@ class Record:
                 pos_test.append(img)
             else:
                 unmatched_pos.append(img)
-        
+
         # Split negative images
         neg_train, neg_val, neg_test = [], [], []
         unmatched_neg = []
@@ -242,21 +291,21 @@ class Record:
                 neg_test.append(img)
             else:
                 unmatched_neg.append(img)
-        
+
         print(f"Tile-based split results:")
         print(f"Train: {len(pos_train)} pos, {len(neg_train)} neg")
         print(f"Val:   {len(pos_val)} pos, {len(neg_val)} neg")
         print(f"Test:  {len(pos_test)} pos, {len(neg_test)} neg")
         print(f"Unmatched: {len(unmatched_pos)} pos, {len(unmatched_neg)} neg")
-        
+
         if unmatched_pos:
             print(f"Sample unmatched positive examples:")
             for img in unmatched_pos[:3]:
                 print(f"  {img}")
-        
+
         if len(pos_val) == 0 and len(neg_val) == 0:
             print("WARNING: No validation images found!")
-        
+
         return pos_train, pos_val, pos_test, neg_train, neg_val, neg_test
  
 
@@ -326,6 +375,10 @@ class Record:
 
                 img = self.load_image(filename)
 
+                # Skip corrupted/empty files
+                if img is None:
+                    continue
+
                 label = labels[i]
                 filename = str(filename)
                 filename = str.encode(filename)
@@ -343,6 +396,57 @@ class Record:
         print('Saved to ' + os.path.join(self.tfrecord_dir, tf_data_name))
 
         sys.stdout.flush()
+
+
+class MulticlassRecord(Record):
+    """TFRecord builder for N-class classification.
+
+    Args:
+        class_img_lists: list of image-path lists, one per class.
+                         Label for each class = its index in the list.
+        tfrecord_dir:    directory to write tfrecords
+        split:           [train_frac, val_frac, test_frac]
+        balance_method:  'cutoff' | 'multiply' | None
+    """
+
+    def __init__(self, class_img_lists, tfrecord_dir, split, balance_method='cutoff'):
+        self.p = param.Param()
+        self.tfrecord_dir = tfrecord_dir
+        self.balance_method = balance_method
+        self.num_classes = len(class_img_lists)
+
+        # Optional: cutoff all classes to the size of the smallest class
+        if balance_method == 'cutoff':
+            min_len = min(len(imgs) for imgs in class_img_lists)
+            class_img_lists = [random.sample(imgs, min_len) for imgs in class_img_lists]
+
+        all_train, all_val, all_test = [], [], []
+        all_train_lbls, all_val_lbls, all_test_lbls = [], [], []
+
+        for label, img_list in enumerate(class_img_lists):
+            n = len(img_list)
+            train = img_list[:int(n * split[0])]
+            val = img_list[int(n * split[0]):int(n * (split[0] + split[1]))]
+            test = img_list[int(n * (split[0] + split[1])):]
+            all_train.extend(train)
+            all_val.extend(val)
+            all_test.extend(test)
+            all_train_lbls.extend([label] * len(train))
+            all_val_lbls.extend([label] * len(val))
+            all_test_lbls.extend([label] * len(test))
+            print(f'Class {label}: {len(train)} train, {len(val)} val, {len(test)} test')
+
+        self.trainpaths, self.trainlbls = self._shuffle(all_train, all_train_lbls)
+        self.valpaths, self.vallbls = self._shuffle(all_val, all_val_lbls)
+        self.testpaths, self.testlbls = self._shuffle(all_test, all_test_lbls)
+
+    def _shuffle(self, paths, lbls):
+        paths = np.array(paths)
+        lbls = np.int16(np.array(lbls))
+        idx = np.arange(len(paths))
+        np.random.seed(0)
+        np.random.shuffle(idx)
+        return paths[idx], lbls[idx]
 
 
 if __name__ == '__main__':

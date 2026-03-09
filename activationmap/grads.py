@@ -26,8 +26,9 @@ def guided_relu(op, grad):
 
 
 class Grads:
-    def __init__(self, model_path, guidedbool, summary=True):
+    def __init__(self, model_path, guidedbool, summary=True, heatmap_only=False):
         # change this
+        self.heatmap_only = heatmap_only
         """
         Constructor takes path for h5 model, generating internal guided and unguided instances
         :param model_path: filename
@@ -339,12 +340,32 @@ class Grads:
         print('gen ggcam stacks')
 
         def tif_format(img):
-            img = img.astype(dtype=np.float)
+            img = img.astype(dtype=np.float64)
             img -= np.amin(img)
             img /= np.amax(img)
-            img *= 255.
-            img = img.astype(dtype=np.int8)
-            return img
+
+            if self.heatmap_only:
+                # Apply colormap for RGB heatmap with masking
+                import matplotlib.cm as cm
+                import matplotlib.pyplot as plt
+                import scipy.ndimage as ndimage
+
+                # Apply Gaussian smoothing for cleaner visualization
+                img_smoothed = ndimage.gaussian_filter(img, sigma=1.0, order=0)
+
+                # Mask low activation values (below 0.01) to focus on important regions
+                mask_threshold = 0.01
+                img_masked = np.where(img_smoothed > mask_threshold, img_smoothed, 0)
+
+                # Use 'bwr' colormap (blue->white->red)
+                colormap = cm.get_cmap('bwr')
+                colored_img = colormap(img_masked)[:, :, :3]  # Remove alpha channel
+                colored_img = (colored_img * 255).astype(np.uint8)
+                return colored_img
+            else:
+                img *= 255.
+                img = img.astype(dtype=np.int8)
+                return img
 
         grads_0, preds = self.guided_gradcam_gray(imgs, layer_name, class_id=0, ret_preds=True)
         grads_1, preds = self.guided_gradcam_gray(imgs, layer_name, class_id=1, ret_preds=True)
@@ -354,10 +375,21 @@ class Grads:
             # if np.argmax(lbl) == 1:
             #     grad_pair = grad_pair[::-1]
 
-            show_group = [np.sum(img, axis=-1)] + grad_pair
+            if self.heatmap_only:
+                # Output only the Grad-CAM heatmap without original image
+                show_group = grad_pair
+            else:
+                # Output original image + heatmap overlay
+                show_group = [np.sum(img, axis=-1)] + grad_pair
+
             show_group = list(map(tif_format, show_group))
 
-            res = [np.dstack(show_group)]
+            if self.heatmap_only:
+                # For heatmap-only, return just the gradient for the true class
+                true_class = np.argmax(lbl)
+                res = [show_group[true_class]]
+            else:
+                res = [np.dstack(show_group)]
             if self.verbose:
                 mem(res, 'res')
                 mem(show_group, 'show_group')

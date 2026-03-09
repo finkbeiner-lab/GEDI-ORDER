@@ -66,7 +66,7 @@ class Parser:
         img = tf.io.decode_raw(parsed['image'], tf.float32)
         lbl = tf.cast(parsed['label'], tf.int32)
         ratio = parsed['ratio']  # useful to have ratio, but model is a binary classifier with binary ground truth.
-        lbls = tf.one_hot(lbl, 2)  # one hot, verify this in pytest
+        lbls = tf.one_hot(lbl, self.p.output_size)  # one hot, verify this in pytest
         img = tf.reshape(img, [-1, self.p.orig_size[0], self.p.orig_size[1], self.p.orig_size[2]])
         # if self.p.orig_size[0] > self.p.target_size[0]:
         #     x0 = (self.p.orig_size[1] - self.p.target_size[1]) // 2
@@ -84,9 +84,16 @@ class Parser:
             # Remove alpha channel
             channels = tf.unstack(imgs, axis=-1)
             imgs = tf.stack([channels[0], channels[1], channels[2]], axis=-1)
+
+        # Handle size differences - resize if needed
+        if self.p.orig_size[0] != self.p.target_size[0] or self.p.orig_size[1] != self.p.target_size[1]:
+            imgs = tf.image.resize(imgs, (self.p.target_size[0], self.p.target_size[1]), method='bilinear')
+
         if self.p.randomcrop:
             if self.p.orig_size[0] > self.p.target_size[0]:
-                imgs = tf.image.random_crop(imgs, size=[self.p.BATCH_SIZE, 224, 224, 1])
+                # Use dynamic batch size instead of hardcoded BATCH_SIZE
+                batch_size = tf.shape(imgs)[0]
+                imgs = tf.image.random_crop(imgs, size=[batch_size, 224, 224, 1])
         else:
             if self.p.orig_size[0] > self.p.target_size[0]:
                 y0 = (self.p.orig_size[0] - self.p.target_size[0]) // 2

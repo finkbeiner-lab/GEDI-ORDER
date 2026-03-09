@@ -22,6 +22,7 @@ class Dataspring(Parser):
         self.p = p
         self.it = None
         self.verbose = verbose
+        self.is_training = True  # Track training mode for generator
 
     def count_data(self):
         "Count items in tfrecord"
@@ -42,6 +43,7 @@ class Dataspring(Parser):
             ds: tf dataset object
 
         """
+        self.is_training = istraining  # Store training mode for later use
         ds = tf.data.TFRecordDataset(self.tfrecord,
                                      num_parallel_reads=self.p.num_parallel_calls)  # possibly use multiple record files
         ds = ds.repeat(count)
@@ -118,16 +120,22 @@ class Dataspring(Parser):
 
         """
         while True:
-            imgs, lbls, files = next(self.it)
-            #X = {'input_layer': imgs, 'files': files}
-            #SW: structure of inputs error, expected: keras_tensor. Removing 'files' - 20250704
-            
-            #X = {'input_layer': imgs}
-            
-            #SW: model is expecting a plain tensor, not a dictionary
-            #yield X, lbls
-            
-            yield imgs, lbls
+            try:
+                imgs, lbls, files = next(self.it)
+                #X = {'input_layer': imgs, 'files': files}
+                #SW: structure of inputs error, expected: keras_tensor. Removing 'files' - 20250704
+
+                #X = {'input_layer': imgs}
+
+                #SW: model is expecting a plain tensor, not a dictionary
+                #yield X, lbls
+
+                yield imgs, lbls
+            except StopIteration:
+                # Recreate the iterator when dataset is exhausted
+                self.datagen_base(istraining=self.is_training)
+                imgs, lbls, files = next(self.it)
+                yield imgs, lbls
 
     def retrain_orig_generator(self):
         """
@@ -136,8 +144,11 @@ class Dataspring(Parser):
 
         """
         while True:
-            imgs, lbls, files = next(self.it)
-            yield imgs, lbls
+            try:
+                imgs, lbls, files = next(self.it)
+                yield imgs, lbls
+            except StopIteration:
+                return
 
 
 if __name__ == '__main__':

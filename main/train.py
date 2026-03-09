@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import os
 import argparse
-from preprocessing.create_tfrecs_from_lst import Record
+from preprocessing.create_tfrecs_from_lst import Record, MulticlassRecord
 import pyfiglet
 from glob import glob
 import random
@@ -50,7 +50,8 @@ class Train:
                 "dataset": os.environ.get("WANDB_PROJECT", "TauKO"),
                 "epochs": self.p.EPOCHS,
                 "batch_size": self.p.BATCH_SIZE,
-                "optimizer": self.p.optimizer
+                "optimizer": self.p.optimizer,
+                "num_classes": self.p.num_classes,
             },
 )
             csv = os.path.join(self.p.parent_dir, 'wandb.csv')
@@ -62,79 +63,98 @@ class Train:
         else:
             self.use_wandb = None
 
-    def run(self, pos_dirs, neg_dirs, split, balance_method='cutoff'):
-        assert isinstance(pos_dirs, list), 'pos_dirs must be list'
+    def run(self, class_dirs, balance_method='cutoff', split_method='percentage',
+            tile_channel='Confocal', train_tiles=None, val_tiles=None, test_tiles=None):
+        """
+        Args:
+            class_dirs: list of lists of directories, one list per class.
+                        Label = index. e.g. [[neg_dir1], [pos_dir1]] for binary,
+                        or [[class0_dir], [class1_dir], [class2_dir]] for 3-class.
+            split_method: 'percentage' or 'tile' — how to split train/val/test
+            tile_channel: channel name used in tile filenames (e.g. 'Confocal')
+            train_tiles: list of tile numbers for training set
+            val_tiles: list of tile numbers for validation set
+            test_tiles: list of tile numbers for test set
+        """
+        assert isinstance(class_dirs, list), 'class_dirs must be a list of lists'
 
         if self.preprocess_tfrecs or not os.path.exists(os.path.join(self.parent_dir, 'test.tfrecord')):
-            self.generate_tfrecs(pos_dirs, neg_dirs, balance_method)
+            self.generate_tfrecs(class_dirs, balance_method, split_method,
+                                 tile_channel, train_tiles, val_tiles, test_tiles)
         else:
             assert os.path.exists(os.path.join(self.parent_dir, 'train.tfrecord')), 'set preprocess_tfrecs to true'
         self.train()
 
-    def run_retrain(self, pos_dir, neg_dir, balance_method='cutoff'):
+    def run_retrain(self, class_dirs, balance_method='cutoff', split_method='percentage',
+                   tile_channel='Confocal', train_tiles=None, val_tiles=None, test_tiles=None):
         if self.preprocess_tfrecs:
-            self.generate_tfrecs(pos_dir, neg_dir, balance_method)
+            self.generate_tfrecs(class_dirs, balance_method, split_method,
+                                 tile_channel, train_tiles, val_tiles, test_tiles)
         else:
             assert os.path.exists(os.path.join(self.parent_dir, 'retrain.tfrecord')), 'set preprocess_tfrecs to true'
         self.retrain()
 
-    def gather_imgs(self, pos_dirs, neg_dirs, filetype='png'):
-        pos_ims = []
-        neg_ims = []
-        for pos in pos_dirs:
-            pos_ims += glob(os.path.join(pos, f'*.{filetype}'))
-        for neg in neg_dirs:
-            neg_ims += glob(os.path.join(neg, f'*.{filetype}'))
-        random.Random(11).shuffle(pos_ims)
-        random.Random(11).shuffle(neg_ims)
-        
-        # Print top 3 images from each list
-        print("\nTop 3 positive images:")
-        for img in pos_ims[:3]:
-            print(img)
-        print("\nTop 3 negative images:")
-        for img in neg_ims[:3]:
-            print(img)
-            
-        return pos_ims, neg_ims
-    
-    #tiles or 'percentage'
-    def generate_tfrecs(self, pos_dirs, neg_dirs, balance_method='cutoff', split_method='percentage'):
+    def gather_imgs(self, class_dirs, filetype='png'):
         """
-        Builds tfrecords from images sorted in directories by label
+        Gather images for each class.
         Args:
-            pos_dir: directory with positive images
-            neg_dir: directory with negative images
-            balance_method: method to handle unbalanced datasets, default set to cutoff larger samples
-
+            class_dirs: list of lists of directories, one list per class.
+                        e.g. [[neg_dir1, neg_dir2], [pos_dir1], [class2_dir1]]
         Returns:
-
+            all_class_imgs: list of image lists, one per class (label = index)
+        """
+        all_class_imgs = []
+        for class_idx, dirs in enumerate(class_dirs):
+            class_imgs = []
+            for d in dirs:
+                class_imgs += glob(os.path.join(d, f'*.{filetype}'))
+            random.Random(11).shuffle(class_imgs)
+            print(f"\nTop 3 class {class_idx} images:")
+            for img in class_imgs[:3]:
+                print(img)
+            all_class_imgs.append(class_imgs)
+        return all_class_imgs
+    
+    def generate_tfrecs(self, class_dirs, balance_method='cutoff', split_method='percentage',
+                        tile_channel='Confocal', train_tiles=None, val_tiles=None, test_tiles=None):
+        """
+        Builds tfrecords from images sorted in directories by label.
+        Args:
+            class_dirs: list of lists of directories, one list per class.
+                        Label for each class = its index in class_dirs.
+                        For binary: [[neg_dirs...], [pos_dirs...]]
+            balance_method: 'cutoff' | 'multiply' | None
+            split_method: 'percentage' | 'tile'
+            tile_channel: channel name in tile filenames (e.g. 'Confocal'), used when split_method='tile'
+            train_tiles: list of tile numbers for train split (default: [1,4,6,7,9,10,12,14,15,16,19,20])
+            val_tiles: list of tile numbers for val split (default: [2,8,11,17])
+            test_tiles: list of tile numbers for test split (default: [3,5,13,18])
         """
         split = [.7, .15, .15]
         tfrec_dir = self.parent_dir
-        
-        # Create the directory if it doesn't exist
+
         if not os.path.exists(tfrec_dir):
             print(f"Creating directory: {tfrec_dir}")
             os.makedirs(tfrec_dir, exist_ok=True)
-            
-        pos_ims, neg_ims = self.gather_imgs(pos_dirs, neg_dirs, filetype='png')
 
-        # SW: Too much data - set Cutoff to max_images_per_class
-        # Shuffle deterministically using a fixed seed
+        all_class_imgs = self.gather_imgs(class_dirs, filetype='png')
+
+        # Cap at 10000 images per class
         random.seed(42)
-        random.shuffle(pos_ims)
-        random.shuffle(neg_ims)
-        pos_ims = sorted(pos_ims)[:10000]
-        neg_ims = sorted(neg_ims)[:10000]
+        all_class_imgs = [sorted(imgs)[:10000] for imgs in all_class_imgs]
 
-        Rec = Record(pos_ims, neg_ims, tfrec_dir, split, balance_method, split_method=split_method)
-        savetrain = 'train.tfrecord'
-        saveval = 'val.tfrecord'
-        savetest = 'test.tfrecord'
-        Rec.tiff2record(savetrain, Rec.trainpaths, Rec.trainlbls)
-        Rec.tiff2record(saveval, Rec.valpaths, Rec.vallbls)
-        Rec.tiff2record(savetest, Rec.testpaths, Rec.testlbls)
+        if len(class_dirs) == 2:
+            # Use existing binary Record (neg=class 0, pos=class 1)
+            neg_ims, pos_ims = all_class_imgs[0], all_class_imgs[1]
+            Rec = Record(pos_ims, neg_ims, tfrec_dir, split, balance_method,
+                         split_method=split_method, tile_channel=tile_channel,
+                         train_tiles=train_tiles, val_tiles=val_tiles, test_tiles=test_tiles)
+        else:
+            Rec = MulticlassRecord(all_class_imgs, tfrec_dir, split, balance_method)
+
+        Rec.tiff2record('train.tfrecord', Rec.trainpaths, Rec.trainlbls)
+        Rec.tiff2record('val.tfrecord', Rec.valpaths, Rec.vallbls)
+        Rec.tiff2record('test.tfrecord', Rec.testpaths, Rec.testlbls)
         print(f'Saved tfrecords to {tfrec_dir}')
 
     def train(self):
@@ -319,12 +339,8 @@ class Train:
             imgs, lbls, files = DatTest2.datagen()
             # res = model.predict((imgs, lbls), steps=test_length // self.pBATCH_SIZE, workers=4, use_multiprocessing=True)
             nplbls = lbls.numpy()
-            if self.p.output_size == 2:
-                test_results = np.argmax(res[i * self.p.BATCH_SIZE: (i + 1) * self.p.BATCH_SIZE], axis=1)
-                labels = np.argmax(nplbls, axis=1)
-            elif self.p.output_size == 1:
-                test_results = np.where(res > 0, 1, 0)
-                labels = nplbls
+            test_results = np.argmax(res[i * self.p.BATCH_SIZE: (i + 1) * self.p.BATCH_SIZE], axis=1)
+            labels = np.argmax(nplbls, axis=1)
             test_acc = np.array(test_results) == np.array(labels)
             if isinstance(test_acc, bool):
                 test_acc = [test_acc]
@@ -660,19 +676,22 @@ class Train:
 if __name__ == '__main__':
     result = pyfiglet.figlet_format("CNN", font="slant")
     print(result)
-    parser = argparse.ArgumentParser(description='Train binary classifer CNN model')
-    positives = ['/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-1703/Livecrops_1', '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-1703/Livecrops_2_3']
-    negatives = ['/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-1703/Deadcrops_1', '/mnt/finkbeinernas/robodata/Shijie/ML/NSCLC-1703/Deadcrops_2_3']
+    parser = argparse.ArgumentParser(description='Train CNN classifier (binary or multi-class)')
     parser.add_argument('--datadir', action="store",
                         default='/mnt/finkbeinernas/robodata/Josh/GEDI-ORDER',
                         help='data parent directory',
                         dest='datadir')
-    parser.add_argument('--pos_dir', nargs='+',
-                        default=positives,
-                        help='directory with positive images', dest="pos_dir")
-    parser.add_argument('--neg_dir', nargs='+',
-                        default=negatives,
-                        help='directory with negative images', dest="neg_dir")
+    # Multi-class: repeat --class_dir once per class (label = order supplied)
+    # e.g. --class_dir /path/dead --class_dir /path/live   (binary)
+    #      --class_dir /path/c0   --class_dir /path/c1  --class_dir /path/c2  (3-class)
+    parser.add_argument('--class_dir', nargs='+', action='append', dest='class_dirs',
+                        help='Directories for one class; repeat for each class. '
+                             'Label = order supplied (0-indexed).')
+    # Backward-compatible binary shortcuts
+    parser.add_argument('--pos_dir', nargs='+', default=None,
+                        help='[binary] directory with positive (class 1) images', dest='pos_dir')
+    parser.add_argument('--neg_dir', nargs='+', default=None,
+                        help='[binary] directory with negative (class 0) images', dest='neg_dir')
     parser.add_argument('--balance_method', action="store", default='cutoff',
                         help='method to handle unbalanced data: cutoff, multiply or none', dest="balance_method")
     parser.add_argument('--preprocess_tfrecs', type=str, action="store", default=False,
@@ -688,27 +707,55 @@ if __name__ == '__main__':
     parser.add_argument('--which_model', default='vgg19', type=str)
     parser.add_argument('--optimizer', default='adam', type=str,
                         help='Optimizer to use: adam, sgd, adamw, etc.', dest='optimizer')
-    parser.add_argument('--learning_rate', default=0.0005, type=float,  
+    parser.add_argument('--learning_rate', default=0.0005, type=float,
                         help='Learning rate')
     parser.add_argument('--retrain', type=int, action="store", default=False,
-                        help='Save run info to wandb',
+                        help='Retrain on existing gedi-cnn model',
                         dest="retrain")
+    parser.add_argument('--split_method', default='percentage', type=str,
+                        help='How to split train/val/test: "percentage" (random) or "tile" (by tile ID)',
+                        dest='split_method')
+    parser.add_argument('--tile_channel', default='Confocal', type=str,
+                        help='Channel name in tile filenames, used when --split_method tile (e.g. "Confocal")',
+                        dest='tile_channel')
+    parser.add_argument('--train_tiles', nargs='+', type=int, default=None,
+                        help='Tile numbers for training set, used when --split_method tile '
+                             '(default: 1 4 6 7 9 10 12 14 15 16 19 20)',
+                        dest='train_tiles')
+    parser.add_argument('--val_tiles', nargs='+', type=int, default=None,
+                        help='Tile numbers for validation set, used when --split_method tile '
+                             '(default: 2 8 11 17)',
+                        dest='val_tiles')
+    parser.add_argument('--test_tiles', nargs='+', type=int, default=None,
+                        help='Tile numbers for test set, used when --split_method tile '
+                             '(default: 3 5 13 18)',
+                        dest='test_tiles')
     args = parser.parse_args()
 
     # Convert string "0"/"1" to boolean for preprocess_tfrecs
     args.preprocess_tfrecs = bool(int(args.preprocess_tfrecs))
-    
-    print('ARGS:\n', args)
 
-    # SW: make sure args is passed to Train
+    # Resolve class_dirs: prefer --class_dir, fall back to --pos_dir/--neg_dir
+    if args.class_dirs:
+        class_dirs = args.class_dirs
+    elif args.pos_dir and args.neg_dir:
+        class_dirs = [args.neg_dir, args.pos_dir]  # neg=0, pos=1
+    else:
+        raise ValueError('Provide either --class_dir (once per class) or both --pos_dir and --neg_dir')
+
+    num_classes = len(class_dirs)
+    print('ARGS:\n', args)
+    print(f'Number of classes: {num_classes}')
+
     param_dict = {
         'epochs': args.epochs,
         'batch_size': args.batch_size,
-        'learning_rate': args.learning_rate,  
-        'model': args.which_model,      
+        'learning_rate': args.learning_rate,
+        'model': args.which_model,
         'optimizer': args.optimizer,
         'balance_method': args.balance_method,
-        'momentum': 0.9       
+        'momentum': args.momentum,
+        'num_classes': num_classes,
     }
 
     Tr = Train(parent_dir=args.datadir, param_dict=param_dict, preprocess_tfrecs=args.preprocess_tfrecs,
@@ -717,4 +764,9 @@ if __name__ == '__main__':
         print('Retraining on gedi-cnn model...')
         Tr.retrain()
     else:
-        Tr.run(args.pos_dir, args.neg_dir, args.balance_method)  # generates tfrecs if arg is set to true and trains
+        Tr.run(class_dirs, args.balance_method,
+               split_method=args.split_method,
+               tile_channel=args.tile_channel,
+               train_tiles=args.train_tiles,
+               val_tiles=args.val_tiles,
+               test_tiles=args.test_tiles)
