@@ -23,6 +23,7 @@ class Param:
             self.optimizer = 'adam'  # sgd, adam, adamw
             self.momentum = 0.9
             self.num_classes = 2
+            self.max_per_class = 10000  # max images per class, 0 = no cap
             # Data generator
             self.augmentbool = True
             self.random_brightness = 0.2
@@ -44,6 +45,7 @@ class Param:
             self.optimizer = param_dict['optimizer']  # sgd, adam
             self.momentum = param_dict['momentum']
             self.num_classes = param_dict.get('num_classes', 2)
+            self.max_per_class = param_dict.get('max_per_class', 10000)
             # Data generator
             self.augmentbool = True
             self.random_brightness = 0.2
@@ -87,7 +89,11 @@ class Param:
                 os_name]
         else:
             self.parent_dir = parent_dir
-        if tfrec_dir is None:
+        if tfrec_dir is not None:
+            self.tfrec_dir = tfrec_dir
+        elif res_dir is not None:
+            self.tfrec_dir = res_dir  # will be set properly in res_dir block below
+        else:
             self.tfrec_dir = {
                 'hobbes': '/mnt/finkbeinernas/robodata/GEDI_CLUSTER/GEDI_DATA',
                 'calvin': '/run/media/jlamstein/data/gedi/transfer/tfrecs',
@@ -95,8 +101,6 @@ class Param:
                 'fb-gpu-compute01.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/GEDI_DATA/',
                 'fb-gpu-compute02.gladstone.internal': '/finkbeiner/imaging/smb-robodata/GEDI_CLUSTER/GEDI_DATA/'
             }[os_name]
-        else:
-            self.tfrec_dir = tfrec_dir
 
         if res_dir is None:
             self.res_dir = {'hobbes': '/mnt/finkbeinernas/robodata/GEDI_CLUSTER',

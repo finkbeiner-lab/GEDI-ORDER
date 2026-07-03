@@ -405,40 +405,95 @@ class MulticlassRecord(Record):
         class_img_lists: list of image-path lists, one per class.
                          Label for each class = its index in the list.
         tfrecord_dir:    directory to write tfrecords
-        split:           [train_frac, val_frac, test_frac]
+        split:           [train_frac, val_frac, test_frac]  (used for percentage split only)
         balance_method:  'cutoff' | 'multiply' | None
+        split_method:    'percentage' | 'tile'
+        tile_channel:    channel string in filename used to match tile pattern, e.g. 'Confocal'
+        train_tiles:     tile numbers for training set
+        val_tiles:       tile numbers for validation set
+        test_tiles:      tile numbers for test set
     """
 
-    def __init__(self, class_img_lists, tfrecord_dir, split, balance_method='cutoff'):
+    def __init__(self, class_img_lists, tfrecord_dir, split, balance_method='cutoff',
+                 split_method='percentage', tile_channel='Confocal',
+                 train_tiles=None, val_tiles=None, test_tiles=None):
         self.p = param.Param()
         self.tfrecord_dir = tfrecord_dir
         self.balance_method = balance_method
         self.num_classes = len(class_img_lists)
 
-        # Optional: cutoff all classes to the size of the smallest class
-        if balance_method == 'cutoff':
-            min_len = min(len(imgs) for imgs in class_img_lists)
-            class_img_lists = [random.sample(imgs, min_len) for imgs in class_img_lists]
-
         all_train, all_val, all_test = [], [], []
         all_train_lbls, all_val_lbls, all_test_lbls = [], [], []
 
-        for label, img_list in enumerate(class_img_lists):
-            n = len(img_list)
-            train = img_list[:int(n * split[0])]
-            val = img_list[int(n * split[0]):int(n * (split[0] + split[1]))]
-            test = img_list[int(n * (split[0] + split[1])):]
-            all_train.extend(train)
-            all_val.extend(val)
-            all_test.extend(test)
-            all_train_lbls.extend([label] * len(train))
-            all_val_lbls.extend([label] * len(val))
-            all_test_lbls.extend([label] * len(test))
-            print(f'Class {label}: {len(train)} train, {len(val)} val, {len(test)} test')
+        if split_method == 'tile':
+            _train_nums = train_tiles or [1, 4, 6, 7, 9, 10, 12, 14, 15, 16, 19, 20]
+            _val_nums   = val_tiles   or [2, 8, 11, 17]
+            _test_nums  = test_tiles  or [3, 5, 13, 18]
+
+            for label, img_list in enumerate(class_img_lists):
+                train, val, test, unmatched = self._split_by_tile(
+                    img_list, tile_channel, _train_nums, _val_nums, _test_nums)
+                print(f'Class {label}: {len(train)} train, {len(val)} val, '
+                      f'{len(test)} test, {len(unmatched)} unmatched')
+                all_train.extend(train); all_train_lbls.extend([label] * len(train))
+                all_val.extend(val);     all_val_lbls.extend([label] * len(val))
+                all_test.extend(test);   all_test_lbls.extend([label] * len(test))
+
+            # Balance each split independently so class ratios are equal within train/val/test
+            if balance_method == 'cutoff':
+                all_train, all_train_lbls = self._cutoff_balance_multiclass(all_train, all_train_lbls, self.num_classes)
+                all_val,   all_val_lbls   = self._cutoff_balance_multiclass(all_val,   all_val_lbls,   self.num_classes)
+                all_test,  all_test_lbls  = self._cutoff_balance_multiclass(all_test,  all_test_lbls,  self.num_classes)
+
+        else:
+            # Percentage-based split
+            if balance_method == 'cutoff':
+                min_len = min(len(imgs) for imgs in class_img_lists)
+                class_img_lists = [random.sample(imgs, min_len) for imgs in class_img_lists]
+
+            for label, img_list in enumerate(class_img_lists):
+                n = len(img_list)
+                train = img_list[:int(n * split[0])]
+                val   = img_list[int(n * split[0]):int(n * (split[0] + split[1]))]
+                test  = img_list[int(n * (split[0] + split[1])):]
+                all_train.extend(train); all_train_lbls.extend([label] * len(train))
+                all_val.extend(val);     all_val_lbls.extend([label] * len(val))
+                all_test.extend(test);   all_test_lbls.extend([label] * len(test))
+                print(f'Class {label}: {len(train)} train, {len(val)} val, {len(test)} test')
 
         self.trainpaths, self.trainlbls = self._shuffle(all_train, all_train_lbls)
-        self.valpaths, self.vallbls = self._shuffle(all_val, all_val_lbls)
-        self.testpaths, self.testlbls = self._shuffle(all_test, all_test_lbls)
+        self.valpaths,   self.vallbls   = self._shuffle(all_val,   all_val_lbls)
+        self.testpaths,  self.testlbls  = self._shuffle(all_test,  all_test_lbls)
+
+    def _split_by_tile(self, img_list, channel, train_nums, val_nums, test_nums):
+        """Assign each image to train/val/test based on tile number in its filename."""
+        train_pats = [f'_{n}_{channel}' for n in train_nums]
+        val_pats   = [f'_{n}_{channel}' for n in val_nums]
+        test_pats  = [f'_{n}_{channel}' for n in test_nums]
+        train, val, test, unmatched = [], [], [], []
+        for img in img_list:
+            if any(p in img for p in train_pats):
+                train.append(img)
+            elif any(p in img for p in val_pats):
+                val.append(img)
+            elif any(p in img for p in test_pats):
+                test.append(img)
+            else:
+                unmatched.append(img)
+        return train, val, test, unmatched
+
+    def _cutoff_balance_multiclass(self, paths, lbls, num_classes):
+        """Trim each class to the size of the smallest class within a split."""
+        by_class = {c: [] for c in range(num_classes)}
+        for p, l in zip(paths, lbls):
+            by_class[l].append(p)
+        min_len = min(len(v) for v in by_class.values() if len(v) > 0)
+        balanced_paths, balanced_lbls = [], []
+        for c in range(num_classes):
+            sampled = random.sample(by_class[c], min(min_len, len(by_class[c])))
+            balanced_paths.extend(sampled)
+            balanced_lbls.extend([c] * len(sampled))
+        return balanced_paths, balanced_lbls
 
     def _shuffle(self, paths, lbls):
         paths = np.array(paths)
