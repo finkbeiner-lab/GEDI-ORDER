@@ -377,6 +377,27 @@ class CNN:
                           metrics=['accuracy'])
         return raw_model
 
+    def efficientnetv2s(self, imsize):
+        """EfficientNetV2-S backbone with an N-class softmax head.
+
+        Stronger and more parameter-efficient than VGG/ResNet50. Delegates to
+        models.backbones.build_model so the same builder also serves the
+        regression/survival tasks.
+        """
+        from models.backbones import build_model
+        return build_model('efficientnetv2s', task='classification',
+                           num_outputs=self.p.output_size, imsize=imsize,
+                           learning_rate=self.p.learning_rate, optimizer=self.p.optimizer,
+                           weight_decay=self.p.weight_decay)
+
+    def convnext_tiny(self, imsize):
+        """ConvNeXt-Tiny backbone with an N-class softmax head (modern conv net)."""
+        from models.backbones import build_model
+        return build_model('convnext_tiny', task='classification',
+                           num_outputs=self.p.output_size, imsize=imsize,
+                           learning_rate=self.p.learning_rate, optimizer=self.p.optimizer,
+                           weight_decay=self.p.weight_decay)
+
 
 if __name__ == '__main__':
     Net = CNN()

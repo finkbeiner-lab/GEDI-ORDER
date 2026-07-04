@@ -308,6 +308,10 @@ class Train:
             model = net.vgg19(imsize=self.p.target_size)
         elif self.p.which_model == 'resnet50':
             model = net.resnet50(imsize=self.p.target_size)
+        elif self.p.which_model == 'efficientnetv2s':
+            model = net.efficientnetv2s(imsize=self.p.target_size)
+        elif self.p.which_model == 'convnext_tiny':
+            model = net.convnext_tiny(imsize=self.p.target_size)
         elif self.p.which_model == 'custom2':
             model = net.custom_model2(imsize=self.p.target_size)
         elif self.p.which_model == 'custom1':

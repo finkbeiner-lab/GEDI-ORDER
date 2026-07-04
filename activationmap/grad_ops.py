@@ -132,7 +132,7 @@ class GradOps:
     #     return img
 
     def img_parse(self, img, transformer=None):
-        img = np.array(img, dtype=np.float)
+        img = np.array(img, dtype=np.float64)
 
         orig_size, target_size, crop_type = img.shape[:2], self.batcher_params['target_size'], self.batcher_params[
             'crop_type']
