@@ -14,5 +14,3 @@ __pycache__/
 wandb/
 *.keras
 model_*.keras
-*.keras
-model_*.keras

@@ -51,7 +51,7 @@ class Record:
             test_tiles:      List of tile numbers for test (used when split_method='tiles')
         """
         assert isinstance(images_lst_dead, list), 'images_lst_dead must be list'
-        self.p = param.Param()
+        self.p = param.Param(parent_dir = tfrecord_dir, res_dir=tfrecord_dir)
 
         self.tfrecord_dir = tfrecord_dir
         self.impaths_live = images_lst_live

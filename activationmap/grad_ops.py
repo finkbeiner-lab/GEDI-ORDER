@@ -5,12 +5,14 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 import param_gedi as param
+import imageio
+import matplotlib.pyplot as plt
 
 
 class GradOps:
-    def __init__(self, vgg_normalize=True):
+    def __init__(self, p, vgg_normalize=True):
         os_type = platform.system()
-        self.p = param.Param()
+        self.p = p
         if os_type == 'Darwin':
             os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'  # Mac has KMP issues
 
@@ -129,16 +131,17 @@ class GradOps:
     #
     #     return img
 
-    def img_parse(self, img, transformer=None, rgb=True):
+    def img_parse(self, img, transformer=None):
         img = np.array(img, dtype=np.float)
 
         orig_size, target_size, crop_type = img.shape[:2], self.batcher_params['target_size'], self.batcher_params[
             'crop_type']
-        if img.shape[-1] == 4:
+        if img.shape[-1] == 4: # check alpha channel
             img = img[:, :, :-1]
             assert img.shape[-1] == 3
-        if not rgb:
-            img = np.repeat(np.array(img).reshape(orig_size), 3, -1).reshape(orig_size + (3,))  # Make 3d w/ channels
+        if img.shape[-1] != 3:  # check if grayscale
+            img = np.repeat(np.array(img).reshape(orig_size), 3, -1).reshape(
+                orig_size + (3,))  # Make 3d w/ channels last
 
         # Apply custom augments if applicable
         if transformer is not None:
@@ -155,9 +158,13 @@ class GradOps:
                 # Defaults to center crop
                 delta //= 2
             img = img[delta[0]:delta[0] + target_size[0], delta[1]:delta[1] + target_size[1], :]
-
-        # img -= np.amin(img)  # 2020/5/18, commented to match GEDI3-master normalization
-        # img /= np.amax(img)
+        cropped_image = img.copy()
+        if self.p.histogram_eq:
+            img = self.np_equalize_histogram(img)
+        img -= np.min(img)  # matches set max to one by image in datagenerator
+        img /= np.max(img)
+        cropped_image -= np.min(cropped_image)
+        cropped_image /= np.max(cropped_image)
 
         # img = (img - self.p.orig_min_value) / (self.p.orig_max_value - self.p.orig_min_value)
         # img = (img - self.p.training_min_value) / (self.p.training_max_value-self.p.training_min_value)
@@ -170,4 +177,38 @@ class GradOps:
             img[..., 1] -= self.mean_bgr[1]
             img[..., 2] -= self.mean_bgr[2]
 
-        return img
+        return img, cropped_image
+    def np_equalize_histogram(self, image):
+        values_range = np.array([0., 65535.], dtype=np.float32)  # before reduce to max value 1
+        histogram, bin_edges = np.histogram(image,bins=65536, range=values_range)
+        # histogram = tf.histogram_fixed_width(tf.cast(image, tf.float32), values_range, 65536)
+        cdf = np.cumsum(histogram)
+        # cdf = tf.cumsum(histogram)
+        cdf_min = cdf[np.min(np.where(cdf > 0))]
+        # cdf_min = cdf[tf.reduce_min(tf.where(tf.greater(cdf, 0)))]
+
+        img_shape = np.shape(image)
+        # print('im shape', image.get_shape())
+        pix_cnt = img_shape[0] * img_shape[1]
+        px_map = np.round(np.float32(cdf - cdf_min) * 65536. / np.float32(pix_cnt - 1))
+        px_map = np.uint16(px_map)
+        # print('px map shape', px_map.get_shape())
+
+        # eq_hist = tf.expand_dims(tf.gather_nd(px_map, tf.cast(image, tf.int32)), 2)
+        # print('eq hist shape', eq_hist.get_shape())
+        eq_hist = px_map[image.astype(np.int32)]
+        # eq_hist = np.expand_dims(eq_hist, axis=2)
+        eq_hist = eq_hist.astype(np.float32)
+        return eq_hist
+
+if __name__=='__main__':
+    f = '/gladstone/finkbeiner/linsley/Shijie_ML/Tau_PFF/Mito/Lipo_T8-12/PID20220313_2022-0309-MsNeuron-219-Tau-coTrans-PFFlipo_T8_96.0-0_G7_0_Epi-RFP16_0_0_1_BGs_MN_ALIGNED_3.tif'
+    im = imageio.v3.imread(f)
+    p = param.Param(parent_dir='/gladstone/finkbeiner/linsley/Shijie_ML/Tau_PFF/Mito/CNN_T8-12',
+                    res_dir='/gladstone/finkbeiner/linsley/GEDI_CLUSTER')
+    Gops = GradOps(p, True)
+    eq = Gops.np_equalize_histogram(im)
+    plt.imshow(im)
+    plt.show()
+    plt.imshow(eq)
+    plt.show()
